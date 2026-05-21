@@ -57,11 +57,25 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .agent-panel { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .85fr); gap: 12px; margin-bottom: 18px; }
 .agent-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
 .agent-card.recommend { border-left: 4px solid var(--todo); }
+.agent-card.inspect { border-left: 4px solid var(--accent); }
 .agent-card.health { border-left: 4px solid var(--progress); }
 .agent-kicker { color: var(--muted); font-size: 12px; font-weight: 700; margin-bottom: 5px; }
 .agent-title { font-size: 17px; font-weight: 750; line-height: 1.3; }
 .agent-title .id { color: var(--todo); margin-right: 8px; }
+.agent-card.inspect .agent-title .id { color: var(--accent); }
 .agent-reason { color: var(--muted); margin-top: 7px; font-size: 13px; }
+.handoff-note { margin-top: 10px; padding: 9px 10px; border-radius: 7px; background: #f8fafc; border: 1px solid var(--border); color: var(--text); font-size: 13px; }
+.handoff-note strong { display: block; margin-bottom: 3px; }
+.field-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.field-box { border: 1px solid var(--border); border-radius: 7px; background: #fff; padding: 8px; font-size: 12px; }
+.field-box strong { display: block; margin-bottom: 4px; color: var(--text); }
+.field-box span, .field-box li { color: var(--muted); }
+.field-box ul { padding-left: 16px; }
+.agent-command { margin-top: 10px; border: 1px solid #dbeafe; background: #eff6ff; border-radius: 7px; overflow: hidden; }
+.agent-command-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 9px; color: #1d4ed8; font-size: 12px; font-weight: 750; border-bottom: 1px solid #dbeafe; }
+.copy-command { border: 1px solid #bfdbfe; background: #fff; color: #1d4ed8; border-radius: 5px; padding: 2px 7px; font-size: 11px; cursor: pointer; }
+.copy-command:hover { background: #dbeafe; }
+.agent-command pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 9px; color: #1f2937; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .agent-metrics { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
 .metric-pill { border: 1px solid var(--border); background: var(--soft); border-radius: 99px; padding: 2px 8px; font-size: 12px; color: var(--muted); }
 .agent-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
@@ -71,11 +85,13 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .health-head strong { font-size: 14px; }
 .health-head span { color: var(--muted); font-size: 12px; }
 .issue-list { display: grid; gap: 6px; }
-.issue { display: grid; grid-template-columns: auto 1fr; gap: 6px; padding: 7px 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 7px; font-size: 12px; }
+.issue { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; padding: 7px 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 7px; font-size: 12px; }
 .issue.warn { background: #fef2f2; border-color: #fecaca; }
 .issue.ok { background: #f0fdf4; border-color: #bbf7d0; }
 .issue-id { font-weight: 750; color: var(--text); }
 .issue-text { color: var(--muted); }
+.issue-btn { border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 5px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
+.issue-btn:hover { color: var(--text); border-color: #c9ced8; }
 .tabs { display: inline-flex; gap: 4px; padding: 4px; background: #e9edf4; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 18px; }
 .tab-btn { border: 0; background: transparent; color: var(--muted); padding: 7px 12px; border-radius: 6px; font-weight: 650; cursor: pointer; }
 .tab-btn.active { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
@@ -86,6 +102,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .group-header .group-tag { background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; padding: 2px 10px; border-radius: 99px; }
 .group-header.completed .group-tag { background: var(--done); }
 .group-header.active .group-tag { background: var(--accent); }
+.group-header.blocked .group-tag { background: var(--blocked); }
 .group-header.backlog .group-tag { background: #9ca3af; }
 .group-header h3 { font-size: 16px; font-weight: 600; }
 .group-summary { color: var(--muted); font-size: 13px; }
@@ -130,10 +147,12 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .task-card.focus-upstream { border-color: var(--upstream); background: #eff6ff; opacity: 1; }
 .task-card.focus-downstream { border-color: var(--downstream); background: #fff7ed; opacity: 1; }
 
-.dep-drawer { margin-top: 12px; border: 1px solid #c7d2fe; border-left: 4px solid var(--accent); border-radius: 8px; background: #fff; box-shadow: 0 8px 22px rgba(15,23,42,0.08); overflow: hidden; }
+.dep-drawer-wrap { display: grid; grid-template-rows: 0fr; opacity: 0; transform: translateY(-6px); animation: drawerOpen .24s ease-out forwards; }
+.dep-drawer { min-height: 0; margin-top: 12px; border: 1px solid #c7d2fe; border-left: 4px solid var(--accent); border-radius: 8px; background: #fff; box-shadow: 0 8px 22px rgba(15,23,42,0.08); overflow: hidden; }
 .dep-drawer-head { display: flex; align-items: baseline; gap: 10px; padding: 10px 12px; background: #eef2ff; border-bottom: 1px solid #c7d2fe; }
 .dep-drawer-head strong { font-size: 13px; }
 .dep-drawer-head span { color: var(--muted); font-size: 12px; }
+.dep-inspect { padding: 12px; background: #fff; border-bottom: 1px solid var(--border); }
 .dep-drawer-body { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 10px; }
 .dep-section { background: #f8fafc; border: 1px solid var(--border); border-radius: 7px; padding: 8px; }
 .dep-title { font-size: 12px; font-weight: 750; margin-bottom: 6px; color: var(--text); }
@@ -149,6 +168,11 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .dep-status.blocked { background: #fee2e2; color: var(--blocked); }
 .dep-empty { color: var(--muted); font-size: 12px; }
 
+@keyframes drawerOpen {
+  from { grid-template-rows: 0fr; opacity: 0; transform: translateY(-6px); }
+  to { grid-template-rows: 1fr; opacity: 1; transform: translateY(0); }
+}
+
 .legend { display: inline-flex; gap: 12px; align-items: center; color: var(--muted); font-size: 12px; margin-left: 12px; }
 .legend span::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
 .legend .up::before { background: var(--upstream); }
@@ -163,6 +187,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 @media (max-width: 700px) {
   .header { align-items: flex-start; flex-direction: column; }
   .agent-panel { grid-template-columns: 1fr; }
+  .field-grid { grid-template-columns: 1fr; }
   .summary { flex-wrap: wrap; }
   .summary .cell { min-width: 33%; }
   .ms-track { flex-direction: column; gap: 8px; }
@@ -262,6 +287,9 @@ function parseTask(raw) {
     t[m[1]] = v;
   }
   t.dependencies = Array.isArray(t.dependencies) ? t.dependencies : [];
+  t.source_docs = Array.isArray(t.source_docs) ? t.source_docs : (t.source ? [t.source] : []);
+  t.acceptance = Array.isArray(t.acceptance) ? t.acceptance : [];
+  t.evidence = Array.isArray(t.evidence) ? t.evidence : [];
   return t;
 }
 
@@ -353,14 +381,16 @@ function renderMilestones() {
 function renderContent() {
   const content = document.getElementById('content');
   document.getElementById('emptyState')?.remove();
-  const groups = state.view === 'module' ? groupByModule() : groupByMilestone();
+  const groups = state.view === 'execution' ? groupByExecution() : state.view === 'module' ? groupByModule() : groupByMilestone();
   content.classList.toggle('highlighting', Boolean(state.focusId));
   content.innerHTML = `
+    ${renderAgentPanel()}
     <div class="tabs">
+      <button class="tab-btn ${state.view === 'execution' ? 'active' : ''}" data-view="execution">执行视角</button>
       <button class="tab-btn ${state.view === 'milestone' ? 'active' : ''}" data-view="milestone">里程碑视角</button>
       <button class="tab-btn ${state.view === 'module' ? 'active' : ''}" data-view="module">模块视角</button>
     </div>
-    <span class="hint">点击查看依赖按钮查看上下游依赖</span>
+    <span class="hint">${state.view === 'execution' ? '按 Agent 接手顺序组织任务，优先看可立即执行和被阻塞项' : '点击查看依赖按钮查看上下游依赖'}</span>
     ${state.focusId ? `<span class="legend"><span class="up">上游</span><span class="down">下游</span></span>` : ''}
     <div style="margin-top:18px;">${groups.map(renderGroup).join('')}</div>
   `;
@@ -376,6 +406,234 @@ function renderContent() {
     state.focusId = state.focusId === id ? null : id;
     renderContent();
   }));
+  content.querySelectorAll('.quick-focus').forEach(button => button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const id = button.dataset.taskId;
+    if (!id) return;
+    state.focusId = id;
+    renderContent();
+  }));
+  content.querySelectorAll('.copy-command').forEach(button => button.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    const task = state.byId.get(button.dataset.taskId);
+    if (!task) return;
+    const ok = await copyText(getAgentCommand(task));
+    button.textContent = ok ? '已复制' : '复制失败';
+    setTimeout(() => { button.textContent = '复制'; }, 1200);
+  }));
+}
+
+function renderAgentPanel() {
+  const rec = getRecommendedTask();
+  const issues = getHealthIssues();
+  const ready = state.tasks.filter(t => t._effective === 'todo').length;
+  const progress = state.tasks.filter(t => t.status === 'in_progress').length;
+  const blocked = state.tasks.filter(t => t._effective === 'blocked').length;
+  const mainHtml = renderRecommendedPanel(rec);
+  return `<div class="agent-panel">
+    ${mainHtml}
+    <div class="agent-card health">
+      <div class="health-head"><strong>协作健康检查</strong><span>${issues.length} 个提示</span></div>
+      <div class="agent-metrics" style="margin-top:0;margin-bottom:10px;">
+        <span class="metric-pill">${ready} 可执行</span>
+        <span class="metric-pill">${progress} 进行中</span>
+        <span class="metric-pill">${blocked} 阻塞</span>
+      </div>
+      <div class="issue-list">${issues.length ? issues.slice(0, 4).map(renderIssue).join('') : '<div class="issue ok"><span class="issue-id">OK</span><span class="issue-text">当前任务状态没有发现明显结构问题。</span></div>'}</div>
+    </div>
+  </div>`;
+}
+
+function renderRecommendedPanel(rec) {
+  return rec ? `<div class="agent-card recommend">
+    <div class="agent-kicker">推荐下一步</div>
+    <div class="agent-title"><span class="id">${esc(rec.id)}</span>${esc(rec.title || '')}</div>
+    <div class="agent-reason">${esc(getRecommendationReason(rec))}</div>
+    <div class="agent-metrics">
+      <span class="metric-pill">${state.children.get(rec.id)?.length || 0} 个后续</span>
+      <span class="metric-pill">${esc(rec.milestone || '无里程碑')}</span>
+      <span class="metric-pill">${esc(rec._module)}</span>
+    </div>
+    <div class="agent-actions">
+      <button class="inline-btn quick-focus" type="button" data-task-id="${esc(rec.id)}">查看依赖</button>
+      <button class="inline-btn quick-focus" type="button" data-task-id="${esc(rec.id)}">定位任务</button>
+    </div>
+  </div>` : `<div class="agent-card recommend">
+    <div class="agent-kicker">推荐下一步</div>
+    <div class="agent-title">暂无可立即执行任务</div>
+    <div class="agent-reason">当前没有 status: todo 且前置依赖已完成的任务，建议优先处理阻塞或验收进行中任务。</div>
+  </div>`;
+}
+
+function renderSelectedTaskPanel(task) {
+  return `<div class="agent-card inspect">
+    ${renderSelectedTaskContent(task)}
+  </div>`;
+}
+
+function renderSelectedTaskContent(task) {
+  return `
+    <div class="agent-kicker">当前任务诊断</div>
+    <div class="agent-title"><span class="id">${esc(task.id)}</span>${esc(task.title || '')}</div>
+    <div class="agent-reason">${esc(getTaskDiagnosis(task))}</div>
+    <div class="agent-metrics">
+      <span class="metric-pill">${statusLabel(task._effective || task.status)}</span>
+      <span class="metric-pill">${task._openDeps.length} 个阻塞来源</span>
+      <span class="metric-pill">${state.children.get(task.id)?.length || 0} 个后续</span>
+      <span class="metric-pill">${esc(task._module)}</span>
+    </div>
+    <div class="field-grid">
+      <div class="field-box">
+        <strong>下一步动作</strong>
+        <span>${esc(task.next_action || '未填写，当前只能使用通用推进模板。')}</span>
+      </div>
+      <div class="field-box">
+        <strong>验收标准</strong>
+        ${renderSmallList(task.acceptance, '未填写验收标准')}
+      </div>
+      <div class="field-box">
+        <strong>来源文档</strong>
+        ${renderSmallList(task.source_docs, '未填写来源文档')}
+      </div>
+    </div>
+    <div class="agent-command">
+      <div class="agent-command-title">
+        <span>Agent 指令草案</span>
+        <button class="copy-command" type="button" data-task-id="${esc(task.id)}">复制</button>
+      </div>
+      <pre>${esc(getAgentCommand(task))}</pre>
+    </div>
+  `;
+}
+
+function renderSmallList(items, emptyText) {
+  if (!items?.length) return `<span>${esc(emptyText)}</span>`;
+  return `<ul>${items.map(item => `<li>${esc(item)}</li>`).join('')}</ul>`;
+}
+
+function renderIssue(issue) {
+  return `<div class="issue ${issue.level}">
+    <span class="issue-id">${esc(issue.id)}</span>
+    <span class="issue-text">${esc(issue.text)}</span>
+    <button class="issue-btn quick-focus" type="button" data-task-id="${esc(issue.id)}">定位</button>
+  </div>`;
+}
+
+function getRecommendedTask() {
+  const ready = state.tasks.filter(t => t._effective === 'todo');
+  ready.sort((a, b) => getExecutionScore(b) - getExecutionScore(a) || (state.orderIdx.get(a.id) ?? 999) - (state.orderIdx.get(b.id) ?? 999));
+  return ready[0] || null;
+}
+
+function getExecutionScore(task) {
+  const directChildren = state.children.get(task.id) || [];
+  const blockedChildren = directChildren.filter(id => state.byId.get(id)?._effective === 'blocked').length;
+  const milestoneBias = task.milestone ? 1 : 0;
+  return directChildren.length * 2 + blockedChildren * 3 + milestoneBias;
+}
+
+function getRecommendationReason(task) {
+  const children = state.children.get(task.id) || [];
+  const blockedChildren = children.filter(id => state.byId.get(id)?._effective === 'blocked');
+  if (blockedChildren.length) return `它没有未完成前置依赖，并且完成后可能解锁 ${blockedChildren.length} 个当前阻塞任务。`;
+  if (children.length) return `它没有未完成前置依赖，并且完成后会影响 ${children.length} 个后续任务。`;
+  return '它没有未完成前置依赖，适合作为 Agent 下一步直接领取的任务。';
+}
+
+function getTaskDiagnosis(task) {
+  if (task._missingDeps?.length) return `任务依赖数据不完整，缺失依赖：${task._missingDeps.join(', ')}。`;
+  if (task._effective === 'blocked') return `当前任务不能直接推进，需要先完成 ${task._openDeps.length} 个前置任务。`;
+  if (task._effective === 'todo') return '当前任务没有未完成前置依赖，可以作为 Agent 下一步领取对象。';
+  if (task.status === 'in_progress') return task.owner || task.agent ? '当前任务已在推进中，继续前应确认最新上下文。' : '当前任务已在推进中，但缺少 owner/agent 标记，存在多 Agent 撞车风险。';
+  if (task.status === 'done') return '当前任务已完成，重点检查验收证据和它解锁的后续任务。';
+  return '当前任务状态可读取，但还缺少更细的接手字段。';
+}
+
+function getAgentHandoff(task) {
+  if (task._missingDeps?.length) return '依赖数据有误，暂不建议执行。';
+  if (task._effective === 'blocked') return `不建议领取，被 ${task._openDeps.length} 个前置任务阻塞。`;
+  if (task._effective === 'todo') return '可领取。';
+  if (task.status === 'in_progress') return task.owner || task.agent ? '进行中，接手前先确认上下文。' : '进行中，但缺少 owner/agent。';
+  if (task.status === 'done') return '已完成，适合复核证据或查看后续任务。';
+  return '状态信息不足。';
+}
+
+function getAgentCommand(task) {
+  const sources = task.source_docs?.length ? task.source_docs.join(', ') : `.ganttmd/modules/*.md`;
+  const nextAction = task.next_action || '按任务描述推进下一步工作';
+  const acceptance = task.acceptance?.length ? task.acceptance.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. 补充本任务的验收标准\n2. 完成后补充 evidence';
+  if (task._missingDeps?.length) {
+    return `任务 ${task.id} 的依赖数据不完整。\n先读取 ${sources}，修正 dependencies 中不存在的任务：${task._missingDeps.join(', ')}。\n修正后重新判断它是否可执行，不要直接开始实现。`;
+  }
+  if (task._effective === 'blocked') {
+    return `不建议领取 ${task.id}：${task.title || ''}\n当前被 ${task._openDeps.length} 个前置任务阻塞：${task._openDeps.join(', ')}。`;
+  }
+  if (task._effective === 'todo') {
+    return `领取任务 ${task.id}：${task.title || ''}\n1. 读取来源文档：${sources}\n2. 将该任务 status 更新为 in_progress，并补充 owner/agent 与 start_date。\n3. 下一步动作：${nextAction}\n4. 按以下验收标准收口：\n${acceptance}\n5. 完成后补充 evidence，再将 status 更新为 done。`;
+  }
+  if (task.status === 'in_progress') {
+    return `接续进行中任务 ${task.id}：${task.title || ''}\n1. 读取来源文档：${sources}\n2. 核对当前 owner/agent 与实际接手人是否一致。\n3. 下一步动作：${nextAction}\n4. 按以下验收标准检查进度：\n${acceptance}`;
+  }
+  if (task.status === 'done') {
+    const downstream = state.children.get(task.id) || [];
+    return `复核已完成任务 ${task.id}。\n读取来源文档：${sources}\n检查 evidence 是否覆盖以下验收标准：\n${acceptance}\n若已确认完成，下一步关注它的后续任务：${downstream.length ? downstream.join(', ') : '暂无后续任务'}。`;
+  }
+  return `读取 ${sources}，补充任务 ${task.id} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
+}
+
+function getHealthIssues() {
+  const issues = [];
+  for (const t of state.tasks) {
+    if (t._missingDeps?.length) {
+      issues.push({ level: 'warn', id: t.id, text: `依赖指向不存在任务：${t._missingDeps.join(', ')}` });
+    }
+    if (t.status === 'blocked' && t._openDeps.length === 0) {
+      issues.push({ level: 'warn', id: t.id, text: '标记为 blocked，但前置依赖已全部满足，建议刷新状态。' });
+    }
+    if (t.status === 'todo' && t._openDeps.length > 0) {
+      issues.push({ level: 'warn', id: t.id, text: `状态是 todo，但仍有 ${t._openDeps.length} 个未完成依赖。` });
+    }
+    if (t.status === 'in_progress' && !t.owner && !t.agent) {
+      issues.push({ level: '', id: t.id, text: '进行中任务缺少 owner/agent 字段，后续多 Agent 协作容易撞车。' });
+    }
+    if (!t.next_action) {
+      issues.push({ level: '', id: t.id, text: '缺少 next_action，Agent 接手时只能依赖通用模板。' });
+    }
+    if (!t.acceptance?.length) {
+      issues.push({ level: '', id: t.id, text: '缺少 acceptance，完成后不容易判断是否可验收。' });
+    }
+  }
+  return issues;
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand('copy');
+    textarea.remove();
+    return ok;
+  }
+}
+
+function groupByExecution() {
+  const ready = state.tasks.filter(t => t._effective === 'todo').sort((a, b) => getExecutionScore(b) - getExecutionScore(a));
+  const progress = state.tasks.filter(t => t.status === 'in_progress');
+  const blocked = state.tasks.filter(t => t._effective === 'blocked');
+  const done = state.tasks.filter(t => t.status === 'done');
+  return [
+    { id: 'NEXT', name: '可立即执行', status: ready.length ? 'in_progress' : 'backlog', tasks: ready },
+    { id: 'DOING', name: '进行中', status: progress.length ? 'in_progress' : 'backlog', tasks: progress },
+    { id: 'BLOCKED', name: '被阻塞', status: blocked.length ? 'blocked' : 'backlog', tasks: blocked },
+    { id: 'DONE', name: '已完成', status: 'done', tasks: done },
+  ].filter(g => g.tasks.length);
 }
 
 function groupByMilestone() {
@@ -410,10 +668,13 @@ function renderGroup(group) {
   const summary = `${group.tasks.length} 任务 · ${doneCnt} 完成 · ${progressCnt} 进行中 · ${readyCnt} 可执行 · ${blockedCnt} 阻塞`;
   const middle = state.view === 'module'
     ? `<span class="group-summary">${summary}</span>`
+    : state.view === 'execution'
+    ? `<h3>${esc(group.name)}</h3><span class="group-summary">${summary}</span>`
     : `<h3>${esc(group.name)}</h3><span class="group-summary">${summary}</span>`;
   let headerCls = 'backlog';
   if (pct === 100) headerCls = 'completed';
   else if (group.status === 'in_progress' || group.tasks.some(t => t.status === 'in_progress')) headerCls = 'active';
+  else if (group.status === 'blocked') headerCls = 'blocked';
   const drawer = group.tasks.some(t => t.id === state.focusId) ? renderDependencyDrawer(state.byId.get(state.focusId)) : '';
   return `<div class="group">
     <div class="group-header ${headerCls}">
@@ -465,11 +726,12 @@ function renderDependencyDrawer(task) {
   const satisfiedIds = task.dependencies.filter(id => !blockerIds.includes(id));
   const downstreamIds = state.children.get(task.id) || [];
   const blockerTitle = blockerIds.length ? `阻塞来源 · ${blockerIds.length}` : '阻塞来源 · 0';
-  return `<div class="dep-drawer">
+  return `<div class="dep-drawer-wrap"><div class="dep-drawer">
     <div class="dep-drawer-head">
       <strong>正在查看：${esc(task.id)}</strong>
       <span>${esc(task.title || '')}</span>
     </div>
+    <div class="dep-inspect">${renderSelectedTaskContent(task)}</div>
     <div class="dep-drawer-body">
       <div class="dep-section">
         <div class="dep-title ${blockerIds.length ? 'warn' : ''}">${blockerTitle}</div>
@@ -484,7 +746,7 @@ function renderDependencyDrawer(task) {
         ${renderDependencyList(downstreamIds, '暂无后续任务')}
       </div>
     </div>
-  </div>`;
+  </div></div>`;
 }
 
 function renderDependencyList(ids, emptyText) {
