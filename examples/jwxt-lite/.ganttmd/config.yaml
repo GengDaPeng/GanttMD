@@ -1,0 +1,26 @@
+project:
+  id: jwxt-lite
+  name: 教务系统进度样例
+  description: 从 jwxt 项目总控与模块规格推进文档抽取的 GanttMD 最小样例
+  source: /Users/gpp/project/gitee/jwxt
+
+milestones:
+  - id: M1
+    name: 核心模块规格首轮收敛
+    status: in_progress
+    description: 核心模块主规格、字段字典、接口清单和跨域依赖首轮关闭
+
+  - id: M2
+    name: 工程跑道建立
+    status: in_progress
+    description: 后端工程、数据库迁移、本地依赖、一键启动、CI 和工程规范跑道
+
+  - id: M5
+    name: 安全到校第一条纵切
+    status: in_progress
+    description: 登录、主数据、权限、模拟设备、到校事实、异常关闭、审计和工作台展示最小闭环
+
+  - id: M7
+    name: 统计与审计成型
+    status: backlog
+    description: 指标口径、审计查询、导出、监管视图和统计投影
