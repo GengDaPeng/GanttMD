@@ -1,7 +1,7 @@
 project:
-  id: jwxt-lite
-  name: 教务系统进度样例
-  description: 从 jwxt 项目总控与模块规格推进文档抽取的 GanttMD 最小样例
+  id: jwxt
+  name: 教务系统主控看板
+  description: 从 jwxt 项目总控、执行待办、模块推进、跨域总账和升级门总账抽取的 GanttMD 主控视图
   source: /Users/gpp/project/gitee/jwxt
 
 milestones:
@@ -24,3 +24,8 @@ milestones:
     name: 统计与审计成型
     status: backlog
     description: 指标口径、审计查询、导出、监管视图和统计投影
+
+  - id: M8
+    name: 真实设备接入与 V1 收敛
+    status: backlog
+    description: 真实设备事件替换模拟事件，完成设备专项、联调和 V1 收敛

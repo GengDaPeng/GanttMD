@@ -63,6 +63,7 @@ AGENTS.md                    # Agent 操作规则
 - [新项目初始化指南](docs/新项目初始化指南.md)：一个新项目从 0 创建 `.ganttmd/` 的步骤
 - [Agent 协作规则模板](docs/Agent协作规则模板.md)：可复制到项目 `AGENTS.md` 的规则模板
 - [任务字段说明](docs/任务字段说明.md)：任务字段怎么写、写到什么粒度
+- [AI 生成进度文档指南](docs/AI生成进度文档指南.md)：告诉 Agent 如何从项目文档生成 `.ganttmd/`
 
 ## 核心理念
 

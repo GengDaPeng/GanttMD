@@ -252,7 +252,7 @@ document.addEventListener('click', (event) => {
 
 function parseConfig(text) {
   const c = { project: {}, milestones: [] };
-  const nm = text.match(/^\s*name:\s*(.+)$/m);
+  const nm = text.match(/^\s*project:\s*\n(?:\s+.+:\s*.*\n)*?\s+name:\s*(.+)$/m) || text.match(/^\s*name:\s*(.+)$/m);
   if (nm) c.project.name = nm[1].trim();
   const blocks = text.split(/^\s+-\s+id:\s*/m).slice(1);
   for (const b of blocks) {
@@ -300,7 +300,8 @@ function loadData(modules, config) {
   for (const t of tasks) {
     t._openDeps = t.dependencies.filter(d => byId.has(d) && byId.get(d).status !== 'done');
     t._missingDeps = t.dependencies.filter(d => !byId.has(d));
-    t._effective = (t.status === 'todo' && t._openDeps.length > 0) ? 'blocked' : t.status;
+    t._manualBlocked = Boolean(t.blocked_reason);
+    t._effective = (t.status === 'todo' && (t._openDeps.length > 0 || t._manualBlocked)) ? 'blocked' : t.status;
   }
   for (const t of tasks) for (const dep of t.dependencies) if (children.has(dep)) children.get(dep).push(t.id);
   const order = topoSort(tasks);
@@ -542,6 +543,7 @@ function getRecommendationReason(task) {
 
 function getTaskDiagnosis(task) {
   if (task._missingDeps?.length) return `任务依赖数据不完整，缺失依赖：${task._missingDeps.join(', ')}。`;
+  if (task.blocked_reason) return `当前任务存在外部阻塞：${task.blocked_reason}。`;
   if (task._effective === 'blocked') return `当前任务不能直接推进，需要先完成 ${task._openDeps.length} 个前置任务。`;
   if (task._effective === 'todo') return '当前任务没有未完成前置依赖，可以作为 Agent 下一步领取对象。';
   if (task.status === 'in_progress') return task.owner || task.agent ? '当前任务已在推进中，继续前应确认最新上下文。' : '当前任务已在推进中，但缺少 owner/agent 标记，存在多 Agent 撞车风险。';
@@ -564,6 +566,9 @@ function getAgentCommand(task) {
   const acceptance = task.acceptance?.length ? task.acceptance.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. 补充本任务的验收标准\n2. 完成后补充 evidence';
   if (task._missingDeps?.length) {
     return `任务 ${task.id} 的依赖数据不完整。\n先读取 ${sources}，修正 dependencies 中不存在的任务：${task._missingDeps.join(', ')}。\n修正后重新判断它是否可执行，不要直接开始实现。`;
+  }
+  if (task.blocked_reason) {
+    return `不建议领取 ${task.id}：${task.title || ''}\n当前存在外部阻塞：${task.blocked_reason}。`;
   }
   if (task._effective === 'blocked') {
     return `不建议领取 ${task.id}：${task.title || ''}\n当前被 ${task._openDeps.length} 个前置任务阻塞：${task._openDeps.join(', ')}。`;
@@ -725,7 +730,8 @@ function renderDependencyDrawer(task) {
   const blockerIds = task._openDeps || [];
   const satisfiedIds = task.dependencies.filter(id => !blockerIds.includes(id));
   const downstreamIds = state.children.get(task.id) || [];
-  const blockerTitle = blockerIds.length ? `阻塞来源 · ${blockerIds.length}` : '阻塞来源 · 0';
+  const manualBlockers = task.blocked_reason ? [task.blocked_reason] : [];
+  const blockerTitle = blockerIds.length || manualBlockers.length ? `阻塞来源 · ${blockerIds.length + manualBlockers.length}` : '阻塞来源 · 0';
   return `<div class="dep-drawer-wrap"><div class="dep-drawer">
     <div class="dep-drawer-head">
       <strong>正在查看：${esc(task.id)}</strong>
@@ -735,7 +741,7 @@ function renderDependencyDrawer(task) {
     <div class="dep-drawer-body">
       <div class="dep-section">
         <div class="dep-title ${blockerIds.length ? 'warn' : ''}">${blockerTitle}</div>
-        ${renderDependencyList(blockerIds, '暂无未完成的前置依赖')}
+        ${renderBlockerList(task, blockerIds, manualBlockers)}
       </div>
       <div class="dep-section">
       <div class="dep-title">已满足依赖 · ${satisfiedIds.length}</div>
@@ -761,6 +767,19 @@ function renderDependencyList(ids, emptyText) {
       <span class="dep-status ${status}">${statusLabel(status)}</span>
     </div>`;
   }).join('')}</div>`;
+}
+
+function renderBlockerList(task, blockerIds, manualBlockers) {
+  const parts = [];
+  if (blockerIds.length) parts.push(renderDependencyList(blockerIds, ''));
+  if (manualBlockers.length) {
+    parts.push(`<div class="dep-list">${manualBlockers.map(text => `<div class="dep-item">
+      <span class="dep-id">外部</span>
+      <span class="dep-name">${esc(text)}</span>
+      <span class="dep-status blocked">被阻塞</span>
+    </div>`).join('')}</div>`);
+  }
+  return parts.length ? parts.join('') : `<div class="dep-empty">暂无未完成的前置依赖</div>`;
 }
 
 function getFocusSets() {
