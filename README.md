@@ -24,29 +24,21 @@ AI solo 开发者在复杂项目中的三个核心痛点：
 - **模块化任务管理**：按模块组织任务，文件数量可控
 - **依赖关系追踪**：自动检测依赖循环，支持跨模块依赖
 - **状态自动计算**：依赖未满足时自动标记 blocked
-- **里程碑和质量门**：可视化展示项目关键节点
+- **里程碑视图**：可视化展示项目关键节点
 - **AI Agent 操作规范**：定义标准的任务领取、更新、完成流程
 - **可视化甘特图**：Web 界面展示项目全局进度
 
 ## 快速开始
 
-```bash
-# 克隆仓库
-git clone https://github.com/your-username/ganttmd.git
-cd ganttmd
+当前 MVP 推荐复制式使用，不需要安装服务端或数据库：
 
-# 安装依赖
-pip install -e .
+1. 在目标项目创建 `.ganttmd/config.yaml`。
+2. 在 `.ganttmd/modules/*.md` 中维护任务。
+3. 将 `examples/jwxt-lite/index-v3.html` 复制到目标项目，例如 `tools/ganttmd/index.html`。
+4. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 复制到项目根目录 `AGENTS.md`。
+5. 用浏览器打开 `tools/ganttmd/index.html`，选择项目根目录查看看板。
 
-# 初始化项目
-ganttmd init my-project
-
-# 解析 Markdown 生成时间线
-ganttmd parse
-
-# 启动可视化服务
-ganttmd serve
-```
+详细步骤见 [GanttMD 落地使用说明](docs/GanttMD落地使用说明.md) 和 [新项目初始化指南](docs/新项目初始化指南.md)。
 
 ## 文件结构
 
@@ -57,17 +49,20 @@ ganttmd serve
 │   ├── user-management.md
 │   ├── permission-system.md
 │   └── ...
-├── milestones/
-│   └── overview.md          # 里程碑总览
-├── views/
-│   └── timeline.json        # 解析产物
-└── index.html               # 可视化页面
+tools/
+└── ganttmd/
+    └── index.html           # 可视化页面
+AGENTS.md                    # Agent 操作规则
 ```
 
 ## 文档
 
 - [设计方案](DESIGN.md)：完整的设计文档，包括架构、流程、阶段切分
 - [Markdown Schema](SCHEMA.md)：Markdown 文件格式规范
+- [GanttMD 落地使用说明](docs/GanttMD落地使用说明.md)：如何把当前 MVP 放进真实项目
+- [新项目初始化指南](docs/新项目初始化指南.md)：一个新项目从 0 创建 `.ganttmd/` 的步骤
+- [Agent 协作规则模板](docs/Agent协作规则模板.md)：可复制到项目 `AGENTS.md` 的规则模板
+- [任务字段说明](docs/任务字段说明.md)：任务字段怎么写、写到什么粒度
 
 ## 核心理念
 
@@ -75,7 +70,7 @@ ganttmd serve
 
 所有项目信息都存储在 Markdown 文件中：
 - 任务状态、依赖关系、优先级
-- 里程碑和质量门定义
+- 里程碑定义
 - Agent 配置
 
 AI Agent 只需要读写 Markdown，不需要学习新工具。
@@ -91,7 +86,7 @@ GanttMD 定义了标准的 AI Agent 操作规范：
 
 ### 可视化只读
 
-前端可视化层只读取 `timeline.json`（由解析脚本自动生成），不修改底层 Markdown。这保证了：
+前端可视化层只读取 `.ganttmd/` 下的 Markdown 和 YAML 文件，不修改底层 Markdown。这保证了：
 - 数据一致性
 - 版本控制友好
 - 多 Agent 并发安全
@@ -121,10 +116,9 @@ GanttMD 定义了标准的 AI Agent 操作规范：
 
 ## 技术栈
 
-- **解析脚本**：Python 3.11+
-- **Markdown 解析**：python-frontmatter
-- **前端**：HTML + JavaScript + CSS
-- **甘特图库**：待评估
+- **数据源**：Markdown fenced block + YAML 风格字段
+- **前端**：单文件 HTML + JavaScript + CSS
+- **运行方式**：浏览器本地打开，选择项目目录
 - **版本控制**：Git
 
 ## 贡献
@@ -141,7 +135,7 @@ MIT License
 
 - [ ] 项目初始化
 - [ ] Markdown schema 定义
-- [ ] 解析脚本核心功能
+- [ ] 单文件可视化页面
 - [ ] 依赖图构建和循环检测
 
 ### Phase 2：可视化（1 周）

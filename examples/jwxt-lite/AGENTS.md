@@ -9,6 +9,7 @@
 3. 每个任务由一个 `ganttmd-task` 代码块定义。
 4. 任务源状态只允许：`todo`、`in_progress`、`done`。
 5. `blocked` 不是源状态。若 `todo` 任务的依赖未全部 `done`，视图层显示为 blocked。
+6. 优先读取 `source_docs`、`next_action`、`acceptance`、`evidence` 等协作字段。
 
 ## 领取任务
 
@@ -18,21 +19,23 @@
 2. `dependencies` 中的任务是否全部为 `done`。
 3. 当前文件是否正在被用户或其他 Agent 修改。
 
-领取时只修改目标任务的 `status`：
+领取时更新目标任务的执行字段：
 
 ```yaml
 status: in_progress
+agent: codex
+start_date: 2026-05-21
 ```
 
 ## 完成任务
 
-完成任务时只修改目标任务的 `status`：
+完成任务时更新目标任务的完成字段：
 
 ```yaml
 status: done
 ```
 
-如果完成结果需要说明，把说明写在任务正文中，不要新增未定义字段。
+如果完成结果需要说明，把说明写在任务正文中，并补充 `evidence`。
 
 ## 阻塞说明
 
@@ -43,3 +46,20 @@ status: done
 ```
 
 依赖阻塞由视图层根据 `dependencies` 自动计算。
+
+## 协作字段
+
+样例任务支持以下协作字段：
+
+```yaml
+source_docs: [source-docs/00-项目总控执行待办.md]
+next_action: 明确下一步具体动作
+acceptance: [完成边界 1, 完成边界 2]
+evidence: []
+agent: codex
+owner: gpp
+start_date: 2026-05-21
+completed_date: 2026-05-21
+```
+
+`source_docs` 放来源文档路径，`next_action` 放下一步动作，`acceptance` 放任务级完成边界。不要把长篇业务设计搬进任务块。
