@@ -1,13 +1,15 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const TASK_STATUSES = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'blocked'];
-const TASK_KINDS = ['task', 'bugfix', 'ad_hoc', 'review', 'harness'];
-const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
-const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
-const ENGINEERING_TRACKS = ['backend', 'frontend', 'infra'];
-const DEFAULT_REVIEW_STALE_DAYS = 7;
-const DEFAULT_ARCHIVE_AFTER_DAYS = 30;
+const Rules = require('../tools/ganttmd/rules.js');
+
+const TASK_STATUSES = Rules.TASK_STATUSES;
+const TASK_KINDS = Rules.TASK_KINDS;
+const FOLLOWUP_STATUSES = Rules.FOLLOWUP_STATUSES;
+const FOLLOWUP_KINDS = Rules.FOLLOWUP_KINDS;
+const ENGINEERING_TRACKS = Rules.ENGINEERING_TRACKS;
+const DEFAULT_REVIEW_STALE_DAYS = Rules.DEFAULT_REVIEW_STALE_DAYS;
+const DEFAULT_ARCHIVE_AFTER_DAYS = Rules.DEFAULT_ARCHIVE_AFTER_DAYS;
 
 function resolveGanttRoot(projectRoot) {
   const absoluteRoot = path.resolve(projectRoot || process.cwd());
@@ -156,204 +158,72 @@ function loadProject(projectRoot = process.cwd()) {
   };
 }
 
-function issue(level, id, message, sourceFile, field) {
-  return { level, id, message, sourceFile, field };
+// 把共享规则模块输出的 issue（{level,id,text,field,sourceFile}）
+// 翻译成 CLI 历史输出格式（{level,id,message,sourceFile,field}）。
+// 保留 message 字段是为了兼容现有测试和 JSON 消费者。
+function toCliIssue(ruleIssue) {
+  return {
+    level: ruleIssue.level,
+    id: ruleIssue.id,
+    message: ruleIssue.text,
+    sourceFile: ruleIssue.sourceFile,
+    field: ruleIssue.field,
+  };
 }
 
 function validateProject(project, options = {}) {
   const issues = [];
   const taskById = new Map();
-  const milestoneIds = new Set(project.config.milestones.map((milestone) => milestone.id).filter(Boolean));
+  const milestoneIds = new Set(project.config.milestones.map((m) => m.id).filter(Boolean));
   const context = {
     now: options.now || new Date(),
-    reviewStaleDays: options.reviewStaleDays || DEFAULT_REVIEW_STALE_DAYS,
-    archiveAfterDays: options.archiveAfterDays || DEFAULT_ARCHIVE_AFTER_DAYS,
+    reviewStaleDays: options.reviewStaleDays != null ? options.reviewStaleDays : DEFAULT_REVIEW_STALE_DAYS,
+    archiveAfterDays: options.archiveAfterDays != null ? options.archiveAfterDays : DEFAULT_ARCHIVE_AFTER_DAYS,
+    milestoneIds: milestoneIds,
+    sourceDocExists: (relPath) => fs.existsSync(path.resolve(project.root, relPath)),
   };
 
+  // 第一遍：建索引、抓 ID 重复
   for (const task of project.tasks) {
     if (!task.id) {
-      issues.push(issue('warn', '(missing id)', '任务缺少 id', task.source_file, 'id'));
+      issues.push({ level: 'warn', id: '(missing id)', message: '任务缺少 id', sourceFile: task.source_file, field: 'id' });
       continue;
     }
     if (taskById.has(task.id)) {
-      issues.push(issue('warn', task.id, '任务 ID 重复', task.source_file, 'id'));
+      issues.push({ level: 'warn', id: task.id, message: '任务 ID 重复', sourceFile: task.source_file, field: 'id' });
     }
     taskById.set(task.id, task);
   }
 
+  // 第二遍：计算每个任务的派生字段（共享规则需要）
+  const childrenByDep = new Map();
   for (const task of project.tasks) {
-    validateTask(task, taskById, milestoneIds, project.root, context, issues);
+    for (const dep of task.dependencies) {
+      if (!childrenByDep.has(dep)) childrenByDep.set(dep, []);
+      childrenByDep.get(dep).push(task.id);
+    }
+  }
+
+  for (const task of project.tasks) {
+    if (!task.id) continue;
+    task._openDeps = task.dependencies.filter((d) => taskById.has(d) && taskById.get(d).status !== 'done');
+    task._missingDeps = task.dependencies.filter((d) => !taskById.has(d));
+    task._downstreamCount = (childrenByDep.get(task.id) || []).length;
+  }
+
+  // 第三遍：跑共享规则
+  for (const task of project.tasks) {
+    if (!task.id) continue;
+    const ruleIssues = Rules.checkTask(task, context);
+    for (const ri of ruleIssues) issues.push(toCliIssue(ri));
   }
 
   for (const followup of project.followups) {
-    validateFollowup(followup, context, issues);
+    const ruleIssues = Rules.checkFollowup(followup, context);
+    for (const ri of ruleIssues) issues.push(toCliIssue(ri));
   }
 
   return issues;
-}
-
-function parseDate(value) {
-  if (!value) return null;
-  const date = new Date(`${value}T00:00:00Z`);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function daysBetween(from, to) {
-  return Math.floor((to.getTime() - from.getTime()) / 86400000);
-}
-
-function validateTask(task, taskById, milestoneIds, projectRoot, context, issues) {
-  const id = task.id || '(missing id)';
-
-  if (!task.title) issues.push(issue('warn', id, '任务缺少 title', task.source_file, 'title'));
-  if (!task.status) issues.push(issue('warn', id, '任务缺少 status', task.source_file, 'status'));
-  if (task.status && !TASK_STATUSES.includes(task.status)) {
-    issues.push(issue('warn', id, `任务 status 非法：${task.status}`, task.source_file, 'status'));
-  }
-
-  if (task.kind && !TASK_KINDS.includes(task.kind)) {
-    issues.push(issue('warn', id, `任务 kind 非法：${task.kind}`, task.source_file, 'kind'));
-  }
-
-  if (task.status === 'in_progress' && !task.owner && !task.agent) {
-    issues.push(issue('warn', id, 'in_progress 任务缺少 owner/agent，容易造成多 Agent 撞车', task.source_file, 'owner'));
-  }
-
-  if (task.owner && task.agent && task.owner !== task.agent) {
-    issues.push(issue('warn', id, `owner 与 agent 不一致：${task.owner} / ${task.agent}`, task.source_file, 'agent'));
-  }
-
-  if (!task.track) {
-    issues.push(issue('warn', id, '任务缺少 track，无法挂载到主线视图', task.source_file, 'track'));
-  }
-
-  if (!task.milestone) {
-    issues.push(issue('warn', id, '任务缺少 milestone，无法挂载到里程碑视图', task.source_file, 'milestone'));
-  } else if (milestoneIds.size > 0 && !milestoneIds.has(task.milestone)) {
-    issues.push(issue('warn', id, `任务引用未知里程碑：${task.milestone}`, task.source_file, 'milestone'));
-  }
-
-  for (const dependency of task.dependencies) {
-    if (!taskById.has(dependency)) {
-      issues.push(issue('warn', id, `依赖指向不存在任务：${dependency}`, task.source_file, 'dependencies'));
-    }
-  }
-
-  if (task.status === 'blocked' && !task.blocked_reason) {
-    issues.push(issue('warn', id, '显式 blocked 任务必须填写 blocked_reason', task.source_file, 'blocked_reason'));
-  }
-
-  if (task.status === 'done' && task.evidence.length === 0) {
-    issues.push(issue('warn', id, 'done 任务缺少 evidence，不能只靠口头确认闭环', task.source_file, 'evidence'));
-  }
-
-  if (task.status === 'done' && ENGINEERING_TRACKS.includes(task.track) && !task.verification) {
-    issues.push(issue('warn', id, '工程类 done 任务缺少 verification', task.source_file, 'verification'));
-  }
-
-  if (task.status === 'review' && !task.review_status) {
-    issues.push(issue('warn', id, 'review 任务缺少 review_status', task.source_file, 'review_status'));
-  }
-
-  if (task.status === 'review') {
-    const updatedAt = parseDate(task.updated_at);
-    if (updatedAt) {
-      const age = daysBetween(updatedAt, context.now);
-      if (age > context.reviewStaleDays) {
-        issues.push(issue('warn', id, `review 状态超过 ${context.reviewStaleDays} 天未更新，请复核或退回`, task.source_file, 'updated_at'));
-      }
-    }
-  }
-
-  if (task.status === 'cancelled' && !task.cancel_reason && !task.resolution) {
-    issues.push(issue('warn', id, 'cancelled 任务缺少 cancel_reason 或 resolution', task.source_file, 'cancel_reason'));
-  }
-
-  const archiveDate = task.status === 'done'
-    ? parseDate(task.completed_date || task.closed_at)
-    : parseDate(task.closed_at || task.cancelled_at || task.completed_date);
-  if ((task.status === 'done' || task.status === 'cancelled') && archiveDate) {
-    const age = daysBetween(archiveDate, context.now);
-    if (age > context.archiveAfterDays) {
-      issues.push(issue('info', id, `${task.status} 任务已关闭 ${age} 天，可归档到历史任务文件`, task.source_file, task.status === 'done' ? 'completed_date' : 'closed_at'));
-    }
-  }
-
-  for (const sourceDoc of task.source_docs) {
-    const sourcePath = sourceDoc.split('§')[0].trim();
-    if (!sourcePath || sourcePath.startsWith('PR#') || sourcePath.startsWith('commit:')) continue;
-    if (!fs.existsSync(path.resolve(projectRoot, sourcePath))) {
-      issues.push(issue('warn', id, `来源文档不存在：${sourcePath}`, task.source_file, 'source_docs'));
-    }
-  }
-
-  if (task.source_docs.length === 0 && !['done', 'cancelled'].includes(task.status)) {
-    issues.push(issue('warn', id, '任务缺少 source_docs，Agent 接手时无法追溯正式依据', task.source_file, 'source_docs'));
-  }
-
-  if (!task.next_action && !['done', 'cancelled'].includes(task.status)) {
-    issues.push(issue('info', id, '未填写 next_action，Agent 接手时上下文会偏弱', task.source_file, 'next_action'));
-  }
-
-  if (toArray(task.acceptance).length === 0 && !['done', 'cancelled'].includes(task.status)) {
-    issues.push(issue('info', id, '未填写 acceptance，任务完成边界不清晰', task.source_file, 'acceptance'));
-  }
-}
-
-function validateFollowup(followup, context, issues) {
-  const id = followup.id || '(missing followup id)';
-  const requiredFields = ['id', 'title', 'kind', 'status', 'source_type', 'created_by', 'created_at', 'reason', 'suggestion', 'severity'];
-
-  for (const field of requiredFields) {
-    if (!followup[field]) {
-      issues.push(issue('warn', id, `follow-up 缺少 ${field}`, followup.source_file, field));
-    }
-  }
-
-  if (followup.status && !FOLLOWUP_STATUSES.includes(followup.status)) {
-    issues.push(issue('warn', id, `follow-up status 非法：${followup.status}`, followup.source_file, 'status'));
-  }
-
-  if (followup.kind && !FOLLOWUP_KINDS.includes(followup.kind)) {
-    issues.push(issue('warn', id, `follow-up kind 非法：${followup.kind}`, followup.source_file, 'kind'));
-  }
-
-  if (followup.source_type === 'pr_review' && (!followup.source_pr || !followup.source_rr)) {
-    issues.push(issue('warn', id, 'PR 审查来源 follow-up 必须填写 source_pr 和 source_rr', followup.source_file, 'source_pr'));
-  }
-
-  if (followup.kind === 'decision' && !followup.decision_owner) {
-    issues.push(issue('warn', id, '用户裁决类 follow-up 缺少 decision_owner', followup.source_file, 'decision_owner'));
-  }
-
-  const needsReviewDate = followup.status === 'accepted'
-    || (['open', 'accepted'].includes(followup.status) && (followup.kind === 'deferred' || followup.kind === 'external_wait'));
-  if (needsReviewDate && !followup.next_review_at) {
-    issues.push(issue('warn', id, '延期或外部等待 follow-up 必须填写 next_review_at', followup.source_file, 'next_review_at'));
-  }
-
-  if (['open', 'accepted'].includes(followup.status) && followup.next_review_at) {
-    const nextReviewAt = parseDate(followup.next_review_at);
-    if (nextReviewAt && nextReviewAt.getTime() < context.now.getTime()) {
-      issues.push(issue('warn', id, `follow-up 已超过 next_review_at：${followup.next_review_at}`, followup.source_file, 'next_review_at'));
-    }
-  }
-
-  if (followup.status === 'accepted') {
-    for (const field of ['accepted_by', 'accepted_at', 'decision']) {
-      if (!followup[field]) {
-        issues.push(issue('warn', id, `accepted follow-up 缺少 ${field}`, followup.source_file, field));
-      }
-    }
-  }
-
-  if (followup.status === 'converted' && (!followup.converted_task || !followup.resolution)) {
-    issues.push(issue('warn', id, 'converted follow-up 必须填写 converted_task 和 resolution', followup.source_file, 'converted_task'));
-  }
-
-  if ((followup.status === 'done' || followup.status === 'wontfix') && !followup.resolution) {
-    issues.push(issue('warn', id, '已关闭 follow-up 必须填写 resolution', followup.source_file, 'resolution'));
-  }
 }
 
 module.exports = {
@@ -361,6 +231,7 @@ module.exports = {
   TASK_KINDS,
   FOLLOWUP_STATUSES,
   FOLLOWUP_KINDS,
+  ENGINEERING_TRACKS,
   extractBlocks,
   loadProject,
   parseConfig,

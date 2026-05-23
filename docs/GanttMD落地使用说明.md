@@ -33,7 +33,7 @@ AGENTS.md
 - `.ganttmd/config.yaml`：项目、里程碑和视图配置。
 - `.ganttmd/modules/*.md`：任务状态真相源。
 - `.ganttmd/followups.md`：Agent 后续事项、用户裁决、延期复查和外部等待。
-- `tools/ganttmd/index.html`：只读可视化页面。
+- `tools/ganttmd/`：只读可视化页面（包含 `index.html` 和 `rules.js`，二者放在同一目录）。
 - `AGENTS.md`：告诉 Agent 如何读取和维护 GanttMD。
 
 ## 安装方式
@@ -44,7 +44,7 @@ AGENTS.md
 2. 创建 `.ganttmd/config.yaml`。
 3. 创建 `.ganttmd/modules/*.md`。
 4. 创建 `.ganttmd/followups.md`。
-5. 把当前可视化页面复制到 `tools/ganttmd/index.html`。
+5. 把本仓库的 `tools/ganttmd/` 整个文件夹复制过去（`index.html` 和 `rules.js` 必须在同一目录）。
 6. 把 [Agent 协作规则模板](Agent协作规则模板.md) 合并到目标项目 `AGENTS.md`。
 
 不需要数据库，也不需要服务端。页面用浏览器打开后选择项目目录即可读取。

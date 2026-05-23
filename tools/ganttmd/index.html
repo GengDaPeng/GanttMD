@@ -398,17 +398,20 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 
 <input type="file" id="filePicker" webkitdirectory multiple style="display:none">
 
+<script src="rules.js"></script>
 <script>
+const Rules = window.GanttMDRules;
 const pickBtn = document.getElementById('pickBtn');
 const mapBtn = document.getElementById('mapBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const filePicker = document.getElementById('filePicker');
 const HAS_FS_ACCESS = typeof window.showDirectoryPicker === 'function';
 const state = { page: 'board', view: 'execution', focusId: null, followupKind: 'all', modules: [], config: null, tasks: [], followups: [], byId: new Map(), children: new Map(), orderIdx: new Map(), criticalPaths: new Map(), criticalSet: new Set(), dirHandle: null, lastFiles: null, lastSource: '' };
-const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
-const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
-const TASK_STATUSES = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'blocked'];
-const TASK_KINDS = ['task', 'bugfix', 'ad_hoc', 'review', 'harness'];
+// 规则常量统一从 rules.js 引用，避免页面和 CLI 之间漂移
+const TASK_STATUSES = Rules.TASK_STATUSES;
+const TASK_KINDS = Rules.TASK_KINDS;
+const FOLLOWUP_STATUSES = Rules.FOLLOWUP_STATUSES;
+const FOLLOWUP_KINDS = Rules.FOLLOWUP_KINDS;
 const TRACK_LABELS = { spec: '规格主线', backend: '后端工程', frontend: '前端工程', infra: '基础设施', quality_gate: '质量门' };
 const MODULE_LABELS = { safety_attendance: '安全考勤', student: '学生管理', class: '班级管理', teacher: '教师管理', approval: '审批中心', settings: '系统设置', org_permission: '组织权限', statistics: '统计审计', foundation: '工程基础', crosscutting: '横切事项' };
 const BUILTIN_VIEWS = {
@@ -696,6 +699,8 @@ function loadData(modules, config, followups) {
     t._effective = (t.status === 'todo' && (t._openDeps.length > 0 || t._manualBlocked)) ? 'blocked' : t.status;
   }
   for (const t of tasks) for (const dep of t.dependencies) if (children.has(dep)) children.get(dep).push(t.id);
+  // 给共享规则 (rules.js) 用：每个任务的下游数量
+  for (const t of tasks) t._downstreamCount = (children.get(t.id) || []).length;
   const order = topoSort(tasks);
   state.modules = modules;
   state.config = config;
@@ -1674,124 +1679,31 @@ function getAgentCommand(task) {
   return `读取 ${sources}，补充任务 ${task.id} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
 }
 
+// 规则统一来自 tools/ganttmd/rules.js（与 CLI 校验器共享）。
+// 页面层只负责构造 ctx 和把派生字段补齐，规则本身不在这里维护。
 function getHealthIssues() {
+  const ctx = Rules.defaultContext({
+    now: new Date(),
+    milestoneIds: new Set((state.config?.milestones || []).map(m => m.id).filter(Boolean)),
+    sourceDocExists: null, // 浏览器无法访问文件系统，跳过此检查
+  });
   const issues = [...getFollowupIssues()];
-  const now = new Date();
   for (const t of state.tasks) {
-    if (!TASK_STATUSES.includes(t.status)) {
-      issues.push({ level: 'warn', id: t.id, text: `任务 status 非法：${t.status || '(空)'}` });
-    }
-    if (t.kind && !TASK_KINDS.includes(t.kind)) {
-      issues.push({ level: 'warn', id: t.id, text: `任务 kind 非法：${t.kind}` });
-    }
-    if (t._missingDeps?.length) {
-      issues.push({ level: 'warn', id: t.id, text: `依赖指向不存在任务：${t._missingDeps.join(', ')}` });
-    }
-    if (t.status === 'blocked' && t._openDeps.length === 0 && !t.blocked_reason) {
-      issues.push({ level: 'warn', id: t.id, text: '标记为 blocked，但没有未完成前置依赖，也没有 blocked_reason。' });
-    }
-    if (t.status === 'in_progress' && !t.owner && !t.agent) {
-      issues.push({ level: '', id: t.id, text: '进行中任务缺少 owner/agent 字段，后续多 Agent 协作容易撞车。' });
-    }
-    if (t.owner && t.agent && t.owner !== t.agent) {
-      issues.push({ level: 'warn', id: t.id, text: `owner 与 agent 不一致：${t.owner} / ${t.agent}` });
-    }
-    if (t.status === 'review' && !t.review_status) {
-      issues.push({ level: 'warn', id: t.id, text: 'review 任务缺少 review_status，无法判断复核结论。' });
-    }
-    if (t.status === 'review' && t.updated_at) {
-      const updatedAt = parseDateValue(t.updated_at);
-      if (updatedAt) {
-        const age = daysBetween(updatedAt, now);
-        if (age > 7) issues.push({ level: 'warn', id: t.id, text: `review 状态超过 7 天未更新，请复核或退回。` });
-      }
-    }
-    if (t.status === 'done' && !t.evidence?.length) {
-      issues.push({ level: 'warn', id: t.id, text: 'done 任务缺少 evidence，可能形成虚假闭环。' });
-    }
-    if (t.status === 'done' && ['backend', 'frontend', 'infra'].includes(t.track) && !t.verification) {
-      issues.push({ level: 'warn', id: t.id, text: `${t.track} 任务已完成但缺少 verification。` });
-    }
-    if (t.status === 'cancelled' && !t.cancel_reason && !t.resolution) {
-      issues.push({ level: 'warn', id: t.id, text: 'cancelled 任务缺少 cancel_reason 或 resolution。' });
-    }
-    const archiveDate = t.status === 'done'
-      ? parseDateValue(t.completed_date || t.closed_at)
-      : parseDateValue(t.closed_at || t.cancelled_at || t.completed_date);
-    if ((t.status === 'done' || t.status === 'cancelled') && archiveDate) {
-      const age = daysBetween(archiveDate, now);
-      if (age > 30) issues.push({ level: '', id: t.id, text: `${t.status} 任务已关闭 ${age} 天，可归档到历史任务文件。` });
-    }
-    if (!t.source_docs?.length && !['done', 'cancelled'].includes(t.status)) {
-      issues.push({ level: 'warn', id: t.id, text: '任务缺少 source_docs，Agent 接手时无法追溯正式依据。' });
-    }
-    if (!t.next_action) {
-      issues.push({ level: '', id: t.id, text: '缺少 next_action，Agent 接手时只能依赖通用模板。' });
-    }
-    if (!t.acceptance?.length) {
-      issues.push({ level: '', id: t.id, text: '缺少 acceptance，完成后不容易判断是否可验收。' });
-    }
-    const downstream = state.children.get(t.id) || [];
-    if (downstream.length >= 2 && !t.downstream_constraints?.length && t.status !== 'done') {
-      issues.push({ level: '', id: t.id, text: `有 ${downstream.length} 个下游任务但未填写 downstream_constraints，Agent 实现时可能做出对下游不兼容的设计决策。` });
+    for (const ri of Rules.checkTask(t, ctx)) {
+      issues.push({ level: ri.level, id: ri.id, text: ri.text });
     }
   }
   return issues;
 }
 
-function parseDateValue(value) {
-  if (!value) return null;
-  const date = new Date(`${value}T00:00:00Z`);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function daysBetween(from, to) {
-  return Math.floor((to.getTime() - from.getTime()) / 86400000);
-}
-
 function getFollowupIssues() {
+  const ctx = Rules.defaultContext({ now: new Date() });
   const issues = [];
-  const now = new Date();
-  const commonRequired = ['id', 'title', 'status', 'source_type', 'created_by', 'created_at', 'reason', 'suggestion', 'severity'];
   for (const f of state.followups) {
-    const id = f.id || 'FUP-UNKNOWN';
-    const missing = commonRequired.filter(key => !f[key]);
-    if (missing.length) {
-      issues.push({ level: 'warn', id, text: `Follow-up 缺少字段：${missing.join(', ')}` });
-    }
-    if (getFollowupStatus(f) === 'invalid') {
-      issues.push({ level: 'warn', id, text: `Follow-up status 非法：${f.status || '(空)'}` });
-    }
-    if (f.kind && !FOLLOWUP_KINDS.includes(f.kind)) {
-      issues.push({ level: 'warn', id, text: `Follow-up kind 非法：${f.kind}` });
-    }
-    if (getFollowupKind(f) === 'decision' && !f.decision_owner) {
-      issues.push({ level: 'warn', id, text: '用户裁决类 Follow-up 缺少 decision_owner。' });
-    }
-    const fStatus = getFollowupStatus(f);
-    if (((getFollowupKind(f) === 'deferred' && ['open', 'accepted'].includes(fStatus)) || f.status === 'accepted') && !f.next_review_at) {
-      issues.push({ level: 'warn', id, text: '延期或 accepted Follow-up 缺少 next_review_at。' });
-    }
-    if (['open', 'accepted'].includes(fStatus) && f.next_review_at) {
-      const nextReviewAt = parseDateValue(f.next_review_at);
-      if (nextReviewAt && nextReviewAt.getTime() < now.getTime()) {
-        issues.push({ level: 'warn', id, text: `Follow-up 已超过 next_review_at：${f.next_review_at}` });
-      }
-    }
-    if (f.source_type === 'pr_review' && (!f.source_pr || !f.source_rr)) {
-      issues.push({ level: 'warn', id, text: 'PR 审查来源必须填写 source_pr 和 source_rr。' });
-    }
-    if (f.status === 'accepted') {
-      const acceptedMissing = ['accepted_by', 'accepted_at', 'next_review_at', 'decision'].filter(key => !f[key]);
-      if (acceptedMissing.length) {
-        issues.push({ level: 'warn', id, text: `accepted 缺少主控复核字段：${acceptedMissing.join(', ')}` });
-      }
-    }
-    if (f.status === 'converted' && (!f.converted_task || !f.resolution)) {
-      issues.push({ level: 'warn', id, text: 'converted 必须填写 converted_task 和 resolution。' });
-    }
-    if ((f.status === 'done' || f.status === 'wontfix') && !f.resolution) {
-      issues.push({ level: 'warn', id, text: `${f.status} 必须填写 resolution。` });
+    // 页面侧把推断出的 kind 注入，避免共享规则误报"缺少 kind"
+    const enriched = Object.assign({}, f, { kind: f.kind || getFollowupKind(f) });
+    for (const ri of Rules.checkFollowup(enriched, ctx)) {
+      issues.push({ level: ri.level, id: ri.id, text: ri.text });
     }
   }
   return issues;
