@@ -6,7 +6,7 @@ project:
 
 views:
   enabled: [execution, milestone, module, panorama, risk, followup]
-  default: risk
+  default: execution
 
 milestones:
   - id: M1
