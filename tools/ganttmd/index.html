@@ -68,7 +68,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .ms-node.completed:not(:last-child)::after { background: var(--done); }
 
 .content { padding: 20px 28px 40px; }
-.agent-panel { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .85fr); gap: 12px; margin-bottom: 18px; }
+.agent-panel { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(0, 1.35fr); gap: 12px; margin-bottom: 18px; }
 .agent-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
 .agent-card.recommend { border-left: 4px solid var(--todo); }
 .agent-card.inspect { border-left: 4px solid var(--accent); }
@@ -99,7 +99,10 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .health-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .health-head strong { font-size: 14px; }
 .health-head span { color: var(--muted); font-size: 12px; }
-.issue-list { display: grid; gap: 6px; }
+.issue-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; max-height: 86px; overflow-y: auto; padding-right: 2px; }
+.issue-list::-webkit-scrollbar { width: 6px; }
+.issue-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+.issue-list::-webkit-scrollbar-track { background: #eef2f7; border-radius: 99px; }
 .issue { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; padding: 7px 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 7px; font-size: 12px; }
 .issue.warn { background: #fef2f2; border-color: #fecaca; }
 .issue.ok { background: #f0fdf4; border-color: #bbf7d0; }
@@ -346,6 +349,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
   .header { align-items: flex-start; flex-direction: column; }
   .header-actions { width: 100%; justify-content: space-between; }
   .agent-panel { grid-template-columns: 1fr; }
+  .issue-list { grid-template-columns: 1fr; max-height: 150px; }
   .field-grid { grid-template-columns: 1fr; }
   .evidence-grid { grid-template-columns: 1fr; }
   .summary { flex-wrap: wrap; }
@@ -937,7 +941,7 @@ function renderAgentPanel() {
         <span class="metric-pill">${fup.converted} converted</span>
         ${fup.invalid ? `<span class="metric-pill">${fup.invalid} invalid</span>` : ''}
       </div>
-      <div class="issue-list">${issues.length ? issues.slice(0, 4).map(renderIssue).join('') : '<div class="issue ok"><span class="issue-id">OK</span><span class="issue-text">当前任务状态没有发现明显结构问题。</span></div>'}</div>
+      <div class="issue-list">${issues.length ? issues.map(renderIssue).join('') : '<div class="issue ok"><span class="issue-id">OK</span><span class="issue-text">当前任务状态没有发现明显结构问题。</span></div>'}</div>
     </div>
   </div>`;
 }
