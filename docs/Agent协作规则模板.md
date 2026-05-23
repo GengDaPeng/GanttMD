@@ -136,6 +136,64 @@ acceptance: []
 
 字段补齐应基于真实项目文档，不要凭空编造。
 
+## Follow-up 规则
+
+本项目使用 `.ganttmd/followups.md` 跟踪后续事项。
+
+如果 Agent 在回复、审查、实现说明或任务总结中使用以下表达，必须判断是否登记 follow-up：
+
+- 后续再做
+- follow-up
+- 以后优化
+- 暂不处理
+- 后续补齐
+- 后续专项承接
+- 本轮不修
+
+普通 Agent 可以做：
+
+- 追加新的 `status: open` follow-up。
+- 对已有 follow-up 追加 `comment` / `evidence` 子项。
+- 标记 `created_by` 和 `created_at`。
+
+普通 Agent 不得做：
+
+- 删除 follow-up。
+- 修改已有 follow-up 的原始字段。
+- 把 follow-up 标记为 `done`。
+- 把 follow-up 标记为 `wontfix`。
+- 把 follow-up 标记为 `converted`。
+- 将 follow-up 转成正式任务。
+- 修改 `resolution` 或 `converted_task`。
+
+只有项目主控可以清理、关闭、合并或转正式任务。
+
+普通 Agent 新增 follow-up 时必须使用：
+
+```yaml
+status: open
+source_type: pr_review | task | discussion | user | ci
+```
+
+如果 follow-up 来自 PR 审查或 PR 评论，必须填写：
+
+```yaml
+source_type: pr_review
+source_pr: PR#27
+source_rr: RR-003
+```
+
+如果普通 Agent 认为某个 follow-up 应关闭或转正式任务，只能追加建议，不得直接改状态。
+
+项目主控把 follow-up 设置为 `accepted` 时，必须同时填写：
+
+```yaml
+accepted_by: project-control
+accepted_at: 2026-05-22
+next_review_at: 2026-06-10
+decision: 保留到下一次主控清理窗口复核
+```
+
 ## 不允许的行为
 
 Agent 不得：
@@ -144,5 +202,7 @@ Agent 不得：
 - 领取依赖未完成的任务。
 - 把 `blocked` 写入 `status`。
 - 完成任务但不补 `evidence`。
+- 口头写 follow-up 但不登记到 `.ganttmd/followups.md`。
+- 作为普通 Agent 清理、关闭、合并或转正式任务 follow-up。
 - 大范围重排任务文件，除非用户明确要求。
 - 修改与当前任务无关的任务状态。

@@ -8,6 +8,7 @@ GanttMD 的当前 MVP 目标不是替代 Jira、Linear 或完整项目管理系�
 your-project/
   .ganttmd/
     config.yaml
+    followups.md
     modules/
       backend.md
       frontend.md
@@ -43,8 +44,9 @@ GanttMD 不负责替代这些内容：
 1. 在目标项目根目录创建 `.ganttmd/`。
 2. 创建 `.ganttmd/config.yaml`。
 3. 创建 `.ganttmd/modules/*.md`。
-4. 把可视化页面复制到 `tools/ganttmd/index.html` 或项目约定目录。
-5. 在项目根目录 `AGENTS.md` 里加入 GanttMD 操作规则。
+4. 创建 `.ganttmd/followups.md`，用于登记 Agent 留下的后续事项。
+5. 把可视化页面复制到 `tools/ganttmd/index.html` 或项目约定目录。
+6. 在项目根目录 `AGENTS.md` 里加入 GanttMD 操作规则。
 
 不建议 MVP 阶段先做复杂 CLI。真实项目跑通后，再考虑 `ganttmd init`、`ganttmd validate`、`ganttmd serve`。
 
@@ -53,6 +55,7 @@ GanttMD 不负责替代这些内容：
 ```text
 .ganttmd/
   config.yaml
+  followups.md
   modules/
     project-setup.md
     backend.md
@@ -63,6 +66,16 @@ tools/
     index.html
 AGENTS.md
 ```
+
+V4 可在 `config.yaml` 中设置启用视图和默认视图：
+
+```yaml
+views:
+  enabled: [execution, milestone, module, risk, followup]
+  default: risk
+```
+
+当前只支持内置视图开关，不支持自定义筛选、分组和排序 DSL。
 
 如果项目已经有 `docs/`，不要把 GanttMD 任务文件放进 `docs/` 深层目录。`.ganttmd/` 应放在项目根目录，作为项目状态层的固定入口。
 
@@ -85,6 +98,7 @@ Agent 的工作流：
 5. 领取前改为 `in_progress`，补充 `owner` 或 `agent`。
 6. 执行时读取 `source_docs`。
 7. 完成后补充 `evidence`，再改为 `done`。
+8. 如果留下后续事项，登记到 `.ganttmd/followups.md`。
 
 ## 真相源规则
 
@@ -115,4 +129,3 @@ Agent 的工作流：
 - 与执行状态无关的背景知识。
 
 这些内容应留在需求、设计、讨论或审查文档中。
-

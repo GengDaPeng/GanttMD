@@ -8,6 +8,7 @@
 |------|------|------|------|
 | 项目配置 | `config.yaml` | 项目元信息、里程碑、质量门、Agent 配置 | 1 |
 | 模块任务文件 | `modules/*.md` | 某个模块的所有任务 | 等于模块数 |
+| Follow-up 清单 | `followups.md` | Agent 留下的后续事项、PR 审查尾项和主控清理结论 | 1 |
 | 里程碑总览 | `milestones/overview.md` | 里程碑路线图和状态 | 1 |
 | 时间线数据 | `views/timeline.json` | 解析产物（自动生成） | 1 |
 
@@ -175,7 +176,103 @@ updated: 2026-05-22
 - blocked_reason: 等待设备集成模块完成 SDK 封装
 ```
 
-## 2. 里程碑总览格式
+## 2. Follow-up 清单格式
+
+### 文件路径
+
+```
+.ganttmd/followups.md
+```
+
+Follow-up 清单用于承接 Agent 在实现、审查、总结或 PR 评论中留下的后续事项。没有登记到本文件的 follow-up，不视为进入项目跟踪。
+
+### 文档结构
+
+每个 follow-up 使用一个 fenced code block，语言名固定为 `ganttmd-followup`：
+
+````markdown
+### FUP-001 安全到校 queryStatuses 后续优化
+
+```ganttmd-followup
+id: FUP-001
+title: 安全到校 queryStatuses 后续优化
+status: open
+source_type: pr_review
+source_pr: PR#27
+source_rr: RR-003
+source_comment: https://example.com/review-comment
+source_commit: abcdef1
+source_task: S-BE-09
+created_by: codex
+created_at: 2026-05-22
+reason: 当前后端实现使用内存分页，后续应评估 SQL UNION 或日状态投影表替换
+suggestion: M5 验收前由项目主控判断是否转正式任务
+severity: medium
+owner: project-control
+target_milestone: M5
+resolution:
+converted_task:
+```
+````
+
+### 必填字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | string | Follow-up ID，全局唯一，建议使用 `FUP-001` |
+| `title` | string | 后续事项标题 |
+| `status` | enum | 状态：open / accepted / converted / done / wontfix |
+| `source_type` | enum | 来源类型：pr_review / task / discussion / user / ci |
+| `created_by` | string | 登记者 |
+| `created_at` | date | 登记日期 |
+| `reason` | string | 为什么留下该事项 |
+| `suggestion` | string | 建议主控如何处理 |
+| `severity` | enum | 严重度：high / medium / low |
+
+### 来源字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `source_task` | string | 来源任务 ID，来自任务执行时填写 |
+| `source_pr` | string | 来源 PR，例如 `PR#27` |
+| `source_rr` | string | 来源 review record，例如 `RR-003` |
+| `source_comment` | string | 来源评论链接或评论 ID |
+| `source_commit` | string | 来源提交 hash |
+
+当 `source_type: pr_review` 时，`source_pr` 和 `source_rr` 必填；否则无法从 PR 审查结论追溯到原始 follow-up。
+
+### 状态说明
+
+| 状态 | 含义 | 必填补充字段 | 设置权限 |
+|------|------|--------------|----------|
+| `open` | 已登记，等待主控清理 | 无 | 所有 Agent 可新增 |
+| `accepted` | 主控确认要处理，但尚未转正式任务 | `accepted_by` / `accepted_at` / `next_review_at` / `decision` | 仅项目主控 |
+| `converted` | 已转为 `.ganttmd/modules/*.md` 正式任务 | `converted_task` / `resolution` | 仅项目主控 |
+| `done` | 已处理完成，不需要转正式任务 | `resolution` | 仅项目主控 |
+| `wontfix` | 明确不做，保留原因 | `resolution` | 仅项目主控 |
+
+未知 `status` 视为非法数据，看板必须展示为 invalid，不能静默忽略。
+
+### 权限规则
+
+- 普通 Agent 只能追加新的 `status: open` 条目。
+- 普通 Agent 如需补充已有 follow-up，只能追加 `comment` 或 `evidence` 子项，不得修改原字段。
+- 普通 Agent 不得删除、关闭、合并、转正式任务或修改 `resolution`。
+- 项目主控可以清理、关闭、合并、转正式任务、修改状态和填写 `resolution`。
+
+### 转正式任务规则
+
+转正式任务时必须同时更新 follow-up 和模块任务文件：
+
+```yaml
+status: converted
+converted_task: S-XXX-01
+resolution: 已转为正式任务 S-XXX-01
+```
+
+`converted_task` 不应与 `source_task` 表达同一件事；如果来自 PR 审查，应优先用 `source_pr` / `source_rr` 标记来源，再把新建任务写入 `converted_task`。
+
+## 3. 里程碑总览格式
 
 ### 文件路径
 
@@ -249,7 +346,7 @@ M0 已完成
 | blocked | 被阻塞 |
 | cancelled | 已取消 |
 
-## 3. config.yaml 格式
+## 4. config.yaml 格式
 
 ### 文件路径
 
@@ -267,6 +364,11 @@ project:
   created: 2026-05-10
   owner: solo-developer
   version: 0.1.0
+
+# V4 视图开关
+views:
+  enabled: [execution, milestone, module, risk, followup]
+  default: execution
 
 # 里程碑定义
 milestones:
@@ -367,7 +469,41 @@ visualization:
     blocked: "#EF4444"             # 红色
 ```
 
-## 4. 跨模块依赖引用
+### views 配置
+
+V4 只开放视图开关，不开放完整 `filter / group_by / sort_by` DSL。
+
+```yaml
+views:
+  enabled: [execution, milestone, module, risk, followup]
+  default: execution
+```
+
+字段说明：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `enabled` | array | 启用哪些内置视图 |
+| `default` | string | 打开页面后默认进入哪个视图 |
+
+当前内置视图：
+
+| 视图 ID | 说明 |
+|---------|------|
+| `execution` | 执行视角，按可执行、进行中、阻塞、已完成组织任务 |
+| `milestone` | 里程碑视角，按里程碑组织任务 |
+| `module` | 模块视角，按模块组织任务 |
+| `risk` | 风险视角，聚合阻塞任务、未清理 Follow-up、非法 Follow-up 和严重健康检查 |
+| `followup` | Follow-up 视角，按 Follow-up 状态组织后续事项 |
+
+约束：
+
+- `enabled` 只能引用内置视图 ID。
+- `default` 必须存在于 `enabled` 中；否则页面回退到第一个可用视图。
+- V4 不支持项目自定义 `filter / group_by / sort_by / fields`。
+- 视图只是只读投影，不是任务真相源。
+
+## 5. 跨模块依赖引用
 
 ### 引用格式
 
@@ -402,7 +538,7 @@ dependencies: [S-ATT-01, S-PRM-02]
 | 用户管理 | USR | S-USR-01 |
 | 课程管理 | CRS | S-CRS-01 |
 
-## 5. 文件命名规范
+## 6. 文件命名规范
 
 ### 模块文件
 
@@ -415,12 +551,17 @@ dependencies: [S-ATT-01, S-PRM-02]
 - 路径：`milestones/overview.md`
 - 固定文件名
 
+### Follow-up 文件
+
+- 路径：`followups.md`
+- 固定文件名
+
 ### 配置文件
 
 - 路径：`config.yaml`
 - 固定文件名
 
-## 6. 格式验证规则
+## 7. 格式验证规则
 
 ### 必须满足
 
@@ -430,6 +571,8 @@ dependencies: [S-ATT-01, S-PRM-02]
 4. 完成的任务必须有 completed_date
 5. 进行中的任务必须有 start_date
 6. 阻塞的任务必须有 blocked_reason
+7. `followups.md` 中的 `source_type: pr_review` 必须有 `source_pr` 和 `source_rr`
+8. `status: accepted` 的 follow-up 必须有 `accepted_by`、`accepted_at`、`next_review_at` 和 `decision`
 
 ### 警告（不阻止解析）
 

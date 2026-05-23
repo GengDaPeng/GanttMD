@@ -11,7 +11,9 @@
 - `index.html`：Claude Code 版本展示原型。
 - `index-v2.html`：依赖关系与抽屉交互验证版本。
 - `index-v3.html`：执行视角、健康检查、Agent 指令草案和任务字段验证版本。
+- `index-v4.html`：内置视图配置驱动、风险视图和 `views.enabled/default` 验证版本。
 - `JWXT进度主控演示.md`：以 `jwxt` 进度主控身份演示如何从源文档抽取 GanttMD 任务。
+- `.ganttmd/followups.md`：Follow-up 清单，所有 Agent 可追加，只有主控可清理和转正式任务。
 
 ## 使用方式
 
@@ -29,6 +31,9 @@
 - 执行视角：推荐下一步、被阻塞任务、进行中任务和已完成任务分组。
 - Agent 指令草案：基于 `source_docs / next_action / acceptance` 模板化生成。
 - 任务字段健康检查：提示缺少 `next_action`、`acceptance`、`owner/agent` 等协作字段。
+- Follow-up 视角：展示 open / accepted / converted / done / wontfix / invalid 累积情况，并校验 PR 来源字段。
+- V4 风险视图：聚合阻塞任务、未清理 Follow-up 和严重健康检查提示。
+- V4 视图开关：通过 `.ganttmd/config.yaml` 的 `views.enabled/default` 控制启用视图和默认视图。
 
 ## 当前源文档快照
 

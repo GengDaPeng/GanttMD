@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GanttMD V3</title>
+<title>GanttMD V4</title>
 <style>
 :root {
   --bg: #f5f6f8;
@@ -108,6 +108,9 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .followup-pill.high { border-color: #fecaca; background: #fef2f2; color: var(--blocked); font-weight: 650; }
 .followup-pill.medium { border-color: #fde68a; background: #fffbeb; color: #b45309; font-weight: 650; }
 .tabs { display: inline-flex; gap: 4px; padding: 4px; background: #e9edf4; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 18px; }
+.view-nav { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.view-group { display: inline-flex; gap: 4px; padding: 4px; background: #e9edf4; border: 1px solid var(--border); border-radius: 8px; }
+.view-group-label { color: var(--muted); font-size: 12px; font-weight: 700; margin-right: 2px; padding: 7px 4px; }
 .tab-btn { border: 0; background: transparent; color: var(--muted); padding: 7px 12px; border-radius: 6px; font-weight: 650; cursor: pointer; }
 .tab-btn.active { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
 
@@ -196,6 +199,18 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 
 .empty { padding: 60px 24px; text-align: center; color: var(--muted); background: var(--panel); border: 2px dashed var(--border); border-radius: 10px; margin-top: 20px; }
 
+.risk-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-bottom: 16px; }
+.risk-card { background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--blocked); border-radius: 8px; padding: 12px; }
+.risk-card.followup-risk { border-left-color: var(--downstream); }
+.risk-card.health-risk { border-left-color: var(--progress); }
+.risk-card-title { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 750; margin-bottom: 8px; }
+.risk-card-title span { color: var(--muted); font-size: 12px; font-weight: 600; }
+.risk-list { display: grid; gap: 7px; }
+.risk-item { border: 1px solid var(--border); background: #fff; border-radius: 7px; padding: 8px; font-size: 12px; }
+.risk-item strong { display: block; font-size: 13px; margin-bottom: 3px; }
+.risk-item .risk-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; color: var(--muted); }
+.risk-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+
 @media (max-width: 700px) {
   .header { align-items: flex-start; flex-direction: column; }
   .agent-panel { grid-template-columns: 1fr; }
@@ -215,7 +230,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 
 <div class="header">
   <div>
-    <h1 id="title">GanttMD V3</h1>
+    <h1 id="title">GanttMD V4</h1>
     <div class="sub" id="subtitle">选择项目的 <code>.ganttmd</code> 目录（或包含它的父目录）查看进度。</div>
   </div>
   <button class="pick-btn" id="pickBtn">选择目录</button>
@@ -243,6 +258,14 @@ const pickBtn = document.getElementById('pickBtn');
 const filePicker = document.getElementById('filePicker');
 const state = { view: 'execution', focusId: null, modules: [], config: null, tasks: [], followups: [], byId: new Map(), children: new Map(), orderIdx: new Map() };
 const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
+const BUILTIN_VIEWS = {
+  execution: { id: 'execution', name: '执行视角', group: 'main', source: 'tasks', groupBy: 'execution_state', sortBy: 'recommended', fields: ['id', 'title', 'status', 'module', 'milestone', 'deps'], hint: '按 Agent 接手顺序组织任务，优先看可立即执行和被阻塞项' },
+  milestone: { id: 'milestone', name: '里程碑视角', group: 'main', source: 'tasks', groupBy: 'milestone', sortBy: 'topo', fields: ['id', 'title', 'status', 'module', 'deps'], hint: '按里程碑组织任务，观察阶段推进和阶段内阻塞' },
+  module: { id: 'module', name: '模块视角', group: 'main', source: 'tasks', groupBy: 'module', sortBy: 'topo', fields: ['id', 'title', 'status', 'milestone', 'deps'], hint: '按模块组织任务，观察责任域内的完成、进行中和阻塞分布' },
+  risk: { id: 'risk', name: '风险视角', group: 'main', source: 'mixed', groupBy: 'item_type', sortBy: 'severity', include: { tasks: { effectiveStatus: ['blocked'] }, followups: { status: ['open', 'accepted', 'invalid'] } }, hint: '汇总被阻塞任务、未清理 Follow-up、非法 Follow-up 和严重健康检查' },
+  followup: { id: 'followup', name: 'Follow-up', group: 'governance', source: 'followups', groupBy: 'status', sortBy: 'created_at', hint: '所有 Agent 可追加 open follow-up；只有项目主控可以清理、关闭或转正式任务' },
+};
+const DEFAULT_ENABLED_VIEWS = ['execution', 'milestone', 'module', 'risk', 'followup'];
 
 pickBtn.addEventListener('click', () => filePicker.click());
 filePicker.addEventListener('change', async (e) => {
@@ -266,9 +289,15 @@ document.addEventListener('click', (event) => {
 });
 
 function parseConfig(text) {
-  const c = { project: {}, milestones: [] };
+  const c = { project: {}, milestones: [], views: { enabled: [...DEFAULT_ENABLED_VIEWS], default: 'execution' } };
   const nm = text.match(/^\s*project:\s*\n(?:\s+.+:\s*.*\n)*?\s+name:\s*(.+)$/m) || text.match(/^\s*name:\s*(.+)$/m);
   if (nm) c.project.name = nm[1].trim();
+  const enabled = text.match(/^\s*enabled:\s*\[([^\]]+)\]/m);
+  if (enabled) {
+    c.views.enabled = enabled[1].split(',').map(s => s.trim()).filter(id => BUILTIN_VIEWS[id]);
+  }
+  const defaultView = text.match(/^\s*default:\s*([a-zA-Z_-]+)\s*$/m);
+  if (defaultView && BUILTIN_VIEWS[defaultView[1]]) c.views.default = defaultView[1];
   const blocks = text.split(/^\s+-\s+id:\s*/m).slice(1);
   for (const b of blocks) {
     const lines = b.split('\n');
@@ -347,8 +376,9 @@ function loadData(modules, config, followups) {
   state.byId = byId;
   state.children = children;
   state.orderIdx = new Map(order.map((id,i) => [id,i]));
+  state.view = getInitialView(config);
 
-  const projectName = config?.project?.name || 'GanttMD V3';
+  const projectName = config?.project?.name || 'GanttMD V4';
   document.getElementById('title').textContent = projectName;
   document.getElementById('subtitle').textContent = `共 ${tasks.length} 个任务 · ${modules.length} 个模块`;
 
@@ -415,22 +445,32 @@ function renderMilestones() {
   }).join('');
 }
 
+function getInitialView(config) {
+  const enabled = getEnabledViews(config);
+  const preferred = config?.views?.default || 'execution';
+  return enabled.some(v => v.id === preferred) ? preferred : enabled[0]?.id || 'execution';
+}
+
+function getEnabledViews(config = state.config) {
+  const ids = config?.views?.enabled?.length ? config.views.enabled : DEFAULT_ENABLED_VIEWS;
+  const known = ids.filter(id => BUILTIN_VIEWS[id]);
+  return (known.length ? known : DEFAULT_ENABLED_VIEWS).map(id => BUILTIN_VIEWS[id]);
+}
+
 function renderContent() {
   const content = document.getElementById('content');
   document.getElementById('emptyState')?.remove();
-  const groups = state.view === 'followup' ? [] : state.view === 'execution' ? groupByExecution() : state.view === 'module' ? groupByModule() : groupByMilestone();
+  const view = BUILTIN_VIEWS[state.view] ? state.view : getInitialView(state.config);
+  state.view = view;
+  const viewConfig = BUILTIN_VIEWS[view];
+  const groups = (viewConfig?.source === 'followups' || viewConfig?.source === 'mixed') ? [] : getTaskGroupsForView(view);
   content.classList.toggle('highlighting', Boolean(state.focusId));
   content.innerHTML = `
     ${renderAgentPanel()}
-    <div class="tabs">
-      <button class="tab-btn ${state.view === 'execution' ? 'active' : ''}" data-view="execution">执行视角</button>
-      <button class="tab-btn ${state.view === 'milestone' ? 'active' : ''}" data-view="milestone">里程碑视角</button>
-      <button class="tab-btn ${state.view === 'module' ? 'active' : ''}" data-view="module">模块视角</button>
-      <button class="tab-btn ${state.view === 'followup' ? 'active' : ''}" data-view="followup">Follow-up</button>
-    </div>
+    ${renderViewNav()}
     <span class="hint">${getViewHint()}</span>
     ${state.focusId ? `<span class="legend"><span class="up">上游</span><span class="down">下游</span></span>` : ''}
-    <div style="margin-top:18px;">${state.view === 'followup' ? renderFollowupView() : groups.map(renderGroup).join('')}</div>
+    <div style="margin-top:18px;">${renderCurrentViewBody(view, groups)}</div>
   `;
   content.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
     state.view = btn.dataset.view;
@@ -461,6 +501,39 @@ function renderContent() {
   }));
 }
 
+function getTaskGroupsForView(view) {
+  const viewConfig = BUILTIN_VIEWS[view];
+  const groupBy = viewConfig?.groupBy || 'milestone';
+  if (groupBy === 'execution_state') return groupByExecution();
+  if (groupBy === 'module') return groupByModule();
+  return groupByMilestone();
+}
+
+function renderCurrentViewBody(view, groups) {
+  const viewConfig = BUILTIN_VIEWS[view];
+  if (viewConfig?.source === 'followups') return renderFollowupView();
+  if (viewConfig?.source === 'mixed') return renderRiskView();
+  return groups.map(renderGroup).join('');
+}
+
+function renderViewNav() {
+  const views = getEnabledViews();
+  const main = views.filter(v => v.group === 'main');
+  const governance = views.filter(v => v.group === 'governance');
+  return `<div class="view-nav">
+    ${renderViewGroup('主视图', main)}
+    ${governance.length ? renderViewGroup('治理', governance) : ''}
+  </div>`;
+}
+
+function renderViewGroup(label, views) {
+  if (!views.length) return '';
+  return `<div class="view-group">
+    <span class="view-group-label">${esc(label)}</span>
+    ${views.map(view => `<button class="tab-btn ${state.view === view.id ? 'active' : ''}" data-view="${esc(view.id)}">${esc(view.name)}</button>`).join('')}
+  </div>`;
+}
+
 function renderAgentPanel() {
   const rec = getRecommendedTask();
   const issues = getHealthIssues();
@@ -488,9 +561,7 @@ function renderAgentPanel() {
 }
 
 function getViewHint() {
-  if (state.view === 'execution') return '按 Agent 接手顺序组织任务，优先看可立即执行和被阻塞项';
-  if (state.view === 'followup') return '所有 Agent 可追加 open follow-up；只有项目主控可以清理、关闭或转正式任务';
-  return '点击查看依赖按钮查看上下游依赖';
+  return BUILTIN_VIEWS[state.view]?.hint || '点击查看依赖按钮查看上下游依赖';
 }
 
 function renderRecommendedPanel(rec) {
@@ -614,6 +685,77 @@ function renderFollowupCard(item) {
       ${item.converted_task ? `<span class="followup-pill">转任务 ${esc(item.converted_task)}</span>` : ''}
     </div>
   </div>`;
+}
+
+function renderRiskView() {
+  const blockedTasks = state.tasks.filter(t => t._effective === 'blocked');
+  const activeFollowups = state.followups.filter(f => ['open', 'accepted', 'invalid'].includes(getFollowupStatus(f)));
+  const seriousIssues = getHealthIssues().filter(issue => issue.level === 'warn');
+  const total = blockedTasks.length + activeFollowups.length + seriousIssues.length;
+  return `<div class="agent-card health" style="margin-bottom:16px;">
+    <div class="health-head"><strong>风险视图</strong><span>${total} 个待主控关注信号</span></div>
+    <div class="agent-metrics" style="margin-top:0;">
+      <span class="metric-pill">${blockedTasks.length} 阻塞任务</span>
+      <span class="metric-pill">${activeFollowups.length} 未清理 Follow-up</span>
+      <span class="metric-pill">${seriousIssues.length} 严重提示</span>
+    </div>
+  </div>
+  <div class="risk-grid">
+    <div class="risk-card">
+      <div class="risk-card-title">阻塞任务 <span>${blockedTasks.length} 项</span></div>
+      ${renderRiskTaskList(blockedTasks)}
+    </div>
+    <div class="risk-card followup-risk">
+      <div class="risk-card-title">未清理 Follow-up <span>${activeFollowups.length} 项</span></div>
+      ${renderRiskFollowupList(activeFollowups)}
+    </div>
+    <div class="risk-card health-risk">
+      <div class="risk-card-title">健康检查风险 <span>${seriousIssues.length} 项</span></div>
+      ${renderRiskIssueList(seriousIssues)}
+    </div>
+  </div>`;
+}
+
+function renderRiskTaskList(tasks) {
+  if (!tasks.length) return `<div class="risk-empty">暂无阻塞任务。</div>`;
+  return `<div class="risk-list">${tasks.map(task => `<div class="risk-item">
+    <strong>${esc(task.id)} ${esc(task.title || '')}</strong>
+    <div>${esc(getTaskDiagnosis(task))}</div>
+    <div class="risk-meta">
+      <span>${esc(task._module)}</span>
+      <span>${esc(task.milestone || '无里程碑')}</span>
+      <span>${task._openDeps.length} 个前置阻塞</span>
+      ${task.blocked_reason ? `<span>外部阻塞</span>` : ''}
+    </div>
+    <div style="margin-top:7px;"><button class="inline-btn quick-focus" type="button" data-task-id="${esc(task.id)}">查看依赖</button></div>
+  </div>`).join('')}</div>`;
+}
+
+function renderRiskFollowupList(items) {
+  if (!items.length) return `<div class="risk-empty">暂无未清理 Follow-up。</div>`;
+  return `<div class="risk-list">${items.map(item => {
+    const status = getFollowupStatus(item);
+    return `<div class="risk-item">
+      <strong>${esc(item.id || '')} ${esc(item.title || '')}</strong>
+      <div>${esc(item.reason || '')}</div>
+      <div class="risk-meta">
+        <span>${esc(status)}</span>
+        <span>${esc(item.severity || 'medium')}</span>
+        ${item.source_pr ? `<span>${esc(item.source_pr)}</span>` : ''}
+        ${item.source_rr ? `<span>${esc(item.source_rr)}</span>` : ''}
+        ${item.source_task ? `<span>来源 ${esc(item.source_task)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderRiskIssueList(issues) {
+  if (!issues.length) return `<div class="risk-empty">暂无严重健康检查提示。</div>`;
+  return `<div class="risk-list">${issues.map(issue => `<div class="risk-item">
+    <strong>${esc(issue.id)}</strong>
+    <div>${esc(issue.text)}</div>
+    ${state.byId.has(issue.id) ? `<div style="margin-top:7px;"><button class="inline-btn quick-focus" type="button" data-task-id="${esc(issue.id)}">定位任务</button></div>` : ''}
+  </div>`).join('')}</div>`;
 }
 
 function getFollowupStats() {

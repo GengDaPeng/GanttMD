@@ -34,7 +34,7 @@ AI solo 开发者在复杂项目中的三个核心痛点：
 
 1. 在目标项目创建 `.ganttmd/config.yaml`。
 2. 在 `.ganttmd/modules/*.md` 中维护任务。
-3. 将 `examples/jwxt-lite/index-v3.html` 复制到目标项目，例如 `tools/ganttmd/index.html`。
+3. 将 `examples/jwxt-lite/index-v4.html` 复制到目标项目，例如 `tools/ganttmd/index.html`。
 4. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 复制到项目根目录 `AGENTS.md`。
 5. 用浏览器打开 `tools/ganttmd/index.html`，选择项目根目录查看看板。
 
@@ -49,6 +49,7 @@ AI solo 开发者在复杂项目中的三个核心痛点：
 │   ├── user-management.md
 │   ├── permission-system.md
 │   └── ...
+├── followups.md             # Agent 后续事项清单
 tools/
 └── ganttmd/
     └── index.html           # 可视化页面
@@ -64,6 +65,19 @@ AGENTS.md                    # Agent 操作规则
 - [Agent 协作规则模板](docs/Agent协作规则模板.md)：可复制到项目 `AGENTS.md` 的规则模板
 - [任务字段说明](docs/任务字段说明.md)：任务字段怎么写、写到什么粒度
 - [AI 生成进度文档指南](docs/AI生成进度文档指南.md)：告诉 Agent 如何从项目文档生成 `.ganttmd/`
+- [Follow-up 清单机制](docs/Follow-up清单机制.md)：防止 Agent 口头 follow-up 不落入项目跟踪
+
+## V4 视图
+
+V4 页面使用内置视图配置驱动，并在 `config.yaml` 中开放极简视图开关：
+
+```yaml
+views:
+  enabled: [execution, milestone, module, risk, followup]
+  default: risk
+```
+
+V4 只允许启用/关闭内置视图和选择默认视图，不暴露完整 `filter / group_by / sort_by` DSL。当前新增的 `risk` 视图用于聚合阻塞任务、未清理 Follow-up、非法 Follow-up 和严重健康检查提示。
 
 ## 核心理念
 

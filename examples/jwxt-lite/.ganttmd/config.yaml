@@ -4,6 +4,10 @@ project:
   description: 从 jwxt 项目总控、执行待办、模块推进、跨域总账和升级门总账抽取的 GanttMD 主控视图
   source: /Users/gpp/project/gitee/jwxt
 
+views:
+  enabled: [execution, milestone, module, risk, followup]
+  default: risk
+
 milestones:
   - id: M1
     name: 核心模块规格首轮收敛
