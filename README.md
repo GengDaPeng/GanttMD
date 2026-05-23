@@ -138,12 +138,18 @@ source_rr: RR-003
 - [任务字段说明](docs/任务字段说明.md)：任务字段怎么写。
 - [Follow-up 清单机制](docs/Follow-up清单机制.md)：follow-up 权限、来源和状态规则。
 
-## 校验脚本的方向
+## 命令行校验
 
-当前页面已经包含一部分健康检查。后续可以把这些检查抽成命令行脚本，例如：
+页面已经包含一部分健康检查。仓库也提供命令行校验脚本，适合 Agent 提交前或 CI 合并前运行：
 
 ```bash
 npm run validate -- /path/to/project
+```
+
+也可以直接校验样例：
+
+```bash
+npm run validate -- examples/jwxt-lite
 ```
 
 脚本的职责不是运行项目，也不是替代页面，而是读取 `.ganttmd/` 并检查：
@@ -151,12 +157,21 @@ npm run validate -- /path/to/project
 - 任务 ID 是否重复。
 - `dependencies` 是否指向不存在的任务。
 - `status`、`kind`、`review_status` 是否非法。
+- 任务是否缺少 `milestone` 或 `track`。
+- `milestone` 是否指向配置中不存在的里程碑。
+- `source_docs` 是否指向不存在的正式文档。
 - `done` 任务是否缺少 `evidence`。
 - 工程任务完成后是否缺少 `verification`。
 - PR follow-up 是否缺少 `source_pr` 或 `source_rr`。
 - `accepted` follow-up 是否缺少复核时间和主控决策。
 
 这样 Agent 在提交前、CI 在合并前都能发现结构问题。
+
+如需给其他工具消费结果，可以使用 JSON 输出：
+
+```bash
+npm run validate -- /path/to/project --json
+```
 
 ## 示例
 

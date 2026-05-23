@@ -154,6 +154,18 @@ acceptance: []
 
 字段补齐应基于真实项目文档，不要凭空编造。
 
+## 提交前校验
+
+如果目标项目安装了 GanttMD 校验脚本，Agent 在提交 `.ganttmd/` 改动前必须运行：
+
+```bash
+npm run validate -- .
+```
+
+如果项目没有安装 npm 脚本，但仓库内有 GanttMD 工具目录，应按项目说明运行等价命令。
+
+校验出现警告时，不要用口头说明绕过。应优先修复 `.ganttmd/` 字段、依赖或 follow-up 来源；确实需要保留异常时，必须在回复中说明原因，并让项目主控裁决。
+
 ## Follow-up 规则
 
 本项目使用 `.ganttmd/followups.md` 跟踪后续事项。

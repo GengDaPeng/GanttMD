@@ -144,3 +144,32 @@ Agent 的工作流：
 
 不同浏览器对目录句柄支持不同。外部 Chrome 对自动刷新目录支持更好；部分内嵌浏览器只适合手动重新选择目录。为了保证稳定，基础导入应始终保留 `选择目录` 的手动方式。
 
+## 命令行校验
+
+GanttMD 提供命令行校验脚本，用来在 Agent 提交前或 CI 合并前检查 `.ganttmd/` 的结构问题：
+
+```bash
+npm run validate -- /path/to/project
+```
+
+如果命令返回警告，退出码为 `1`；只有提示或没有问题时，退出码为 `0`。当前校验重点包括：
+
+- 任务 ID 重复或缺失。
+- 任务依赖指向不存在的任务。
+- 任务或 follow-up 状态值非法。
+- 任务缺少 `milestone` 或 `track`。
+- 任务引用配置中不存在的里程碑。
+- `source_docs` 指向不存在的正式文档。
+- `done` 任务缺少 `evidence`。
+- 工程类 `done` 任务缺少 `verification`。
+- `review` 任务缺少 `review_status`。
+- PR 审查来源 follow-up 缺少 `source_pr` 或 `source_rr`。
+- `accepted` follow-up 缺少主控、决策或复核时间。
+
+Agent 在改动 `.ganttmd/` 后，建议先运行：
+
+```bash
+npm run validate -- .
+```
+
+如果页面和命令行结果不一致，应以命令行输出为结构性校验依据，再回到页面确认视觉展示是否符合预期。
