@@ -24,6 +24,20 @@ GanttMD 不替代需求文档、技术设计、模块规格、接口清单或测
 - Agent 经常把“后续再做”停留在口头总结里，没有进入项目跟踪。
 - 完成任务缺少 PR、commit、verification、review_status 等证据链。
 
+## 什么时候不该用 GanttMD
+
+GanttMD 是 AI Agent 驱动的小型项目的任务状态层，不是通用项目管理工具。下列场景不要用它替代专业工具：
+
+- **替代 Jira / Linear / Asana**：没有用户分配、工时、Sprint、Kanban Swimlane、自动通知等团队协作能力，10 人以上团队会很快撑爆。
+- **承载需求文档本身**：任务块只引用正式文档，不复制需求正文。把模块规格写进 `next_action` 或 `acceptance` 会让任务块膨胀失控。
+- **代替 PR / Code Review**：交付证据通过 `evidence` 引用 PR，但代码讨论本身仍在 PR 评论区，不要搬到 follow-up 里。
+- **跨项目组合视图**：当前只看单个项目目录，不支持跨仓库聚合。
+- **长生命周期路线图**（一年以上跨度）：里程碑机制偏轻量，更适合 3-6 个月可见的近期路线，长期愿景仍属正式文档。
+- **强实时协同**：页面是只读的，多人同时改 Markdown 仍需 Git 解决冲突，不适合需要秒级同步的场景。
+- **业务报表 / KPI 仪表盘**：GanttMD 关心的是任务结构和证据，不是业务指标。
+
+如果项目主要痛点是上面这些，请用专业工具。GanttMD 解决的是 **AI Agent 协作时的任务状态、依赖、阻塞、证据链和 follow-up 治理**。
+
 ## 快速开始
 
 在目标项目中创建：
@@ -45,17 +59,13 @@ your-project/
 
 然后：
 
-1. 从本仓库复制当前可视化页面到目标项目，例如 `tools/ganttmd/index.html`。
+1. 从本仓库复制 `tools/ganttmd/index.html` 到目标项目（推荐保留同名路径）。
 2. 按 [新项目初始化指南](docs/新项目初始化指南.md) 创建 `.ganttmd/config.yaml` 和 `.ganttmd/modules/*.md`。
 3. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 合并到目标项目的 `AGENTS.md`。
 4. 用浏览器打开 `tools/ganttmd/index.html`。
 5. 点击“选择目录”，选择目标项目根目录或 `.ganttmd/` 所在目录。
 
-也可以直接打开样例：
-
-```text
-examples/jwxt-lite/index-v6.html
-```
+也可以直接用本仓库的样例：用浏览器打开 `tools/ganttmd/index.html`，然后选择 `examples/jwxt-lite/` 目录。
 
 ## 任务文件示例
 
@@ -137,6 +147,7 @@ source_rr: RR-003
 - [AI 生成进度文档指南](docs/AI生成进度文档指南.md)：让 Agent 从现有项目文档生成 `.ganttmd/`。
 - [任务字段说明](docs/任务字段说明.md)：任务字段怎么写。
 - [Follow-up 清单机制](docs/Follow-up清单机制.md)：follow-up 权限、来源和状态规则。
+- [jwxt 项目反馈](docs/feedback-from-jwxt.md)：第一个真实接入项目的 dogfooding 反馈集中地。
 
 ## 命令行校验
 

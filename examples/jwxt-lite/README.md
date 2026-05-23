@@ -11,16 +11,16 @@
 - `.ganttmd/followups.md`：Follow-up、用户裁决、延期复查、外部等待和风险事项。
 - `source-docs/`：从 `jwxt` 复制来的进度文档快照，只作来源证据。
 - `AGENTS.md`：Agent 操作协议样例。
-- `index-v6.html`：当前推荐查看页面。
 
-历史讨论稿和旧截图已移入 `archive/examples-jwxt-lite/`。
+可视化页面位于仓库根目录的 `tools/ganttmd/index.html`（仓库唯一正典）。历史讨论稿和旧截图已移入 `archive/examples-jwxt-lite/`。
 
 ## 使用方式
 
-1. 用浏览器打开 `index-v6.html`。
+1. 用浏览器打开仓库根目录的 `tools/ganttmd/index.html`。
 2. 点击页面上的“选择目录”。
-3. 选择本目录或本目录下的 `.ganttmd` 目录。
+3. 选择本目录（`examples/jwxt-lite/`）或本目录下的 `.ganttmd/` 目录。
 4. 查看执行、里程碑、主线、模块、风险和 Follow-up 视图。
+5. 当 `.ganttmd/` 数据被修改后，点页面右上角的「↻ 刷新」按钮即可重新读取，无需再次选择目录。
 
 ## 当前展示能力
 
