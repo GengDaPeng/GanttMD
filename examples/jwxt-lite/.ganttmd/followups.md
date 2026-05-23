@@ -9,6 +9,7 @@
 ```ganttmd-followup
 id: FUP-001
 title: 安全到校 queryStatuses 后续优化
+kind: followup
 status: open
 source_type: pr_review
 source_pr: PR#27
@@ -32,6 +33,7 @@ converted_task:
 ```ganttmd-followup
 id: FUP-002
 title: 安全到校 escalation run 真相源
+kind: followup
 status: open
 source_type: pr_review
 source_pr: PR#27
@@ -55,6 +57,7 @@ converted_task:
 ```ganttmd-followup
 id: FUP-003
 title: 设备接入备选方案评估
+kind: external_wait
 status: accepted
 source_type: task
 source_pr:
@@ -82,6 +85,7 @@ converted_task:
 ```ganttmd-followup
 id: FUP-004
 title: 数据生命周期专项排期
+kind: deferred
 status: converted
 source_type: pr_review
 source_pr: PR#24
@@ -98,4 +102,55 @@ owner: project-control
 target_milestone: M3
 resolution: 已转为正式任务 S-BE-08
 converted_task: S-BE-08
+```
+
+### FUP-005 S-FE-02 是否必须等待 S-QA-13 / S-QA-14 完全定稿
+
+```ganttmd-followup
+id: FUP-005
+title: S-FE-02 是否必须等待 S-QA-13 / S-QA-14 完全定稿
+kind: decision
+status: open
+source_type: task
+source_pr:
+source_rr:
+source_comment:
+source_commit:
+source_task: S-FE-02
+created_by: claude
+created_at: 2026-05-22
+decision_owner: user
+next_review_at: 2026-05-28
+reason: S-FE-02 当前依赖 S-QA-13 和 S-QA-14，但二者尚未完全定稿；若强等待会阻塞 M5 纵切，若降低依赖强度可能引入测试规范偏差
+suggestion: 项目负责人裁决：A) 强等待 S-QA-13/14 定稿；B) 降低 S-FE-02 对 S-QA-13/14 的依赖强度，允许并行
+severity: high
+owner: project-control
+target_milestone: M5
+resolution:
+converted_task:
+```
+
+### FUP-006 海康设备到货时间高风险
+
+```ganttmd-followup
+id: FUP-006
+title: 海康设备到货时间高风险
+kind: risk
+status: open
+source_type: task
+source_pr:
+source_rr:
+source_comment:
+source_commit:
+source_task: S-DEV-01
+created_by: claude
+created_at: 2026-05-22
+next_review_at: 2026-06-01
+reason: 海康沟通持续阻塞，若 M5 前仍无真实设备到货，M8 真实设备接入与 V1 收敛将整体后延 2-4 周
+suggestion: 主控评估是否启动备选品牌设备采购或推动校方协调海康优先级
+severity: high
+owner: project-control
+target_milestone: M8
+resolution:
+converted_task:
 ```

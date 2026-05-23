@@ -78,6 +78,7 @@ decision: 保留为 M5 风险清理项，暂不转正式任务
 ```yaml
 id: FUP-001
 title: queryStatuses 后续优化
+kind: followup
 status: open
 source_type: pr_review
 source_pr: PR#27
@@ -108,6 +109,33 @@ converted_task:
 | `source_task` | 来源任务 ID |
 
 来自 PR 评论区或 PR 审查结论的 follow-up，`source_type` 必须是 `pr_review`，并且 `source_pr` 和 `source_rr` 必填。
+
+`kind` 用来区分事项性质：
+
+| kind | 含义 |
+| --- | --- |
+| `followup` | 普通后续事项 |
+| `decision` | 等待用户或主控裁决 |
+| `deferred` | 已接受延期，等待复查 |
+| `external_wait` | 等待外部资料或第三方反馈 |
+| `risk` | 高风险事项 |
+
+用户裁决不单独新增文件，优先写为：
+
+```yaml
+kind: decision
+decision_owner: user
+status: open
+```
+
+延期接受不写入任务状态，优先写为：
+
+```yaml
+kind: deferred
+status: accepted
+next_review_at: 2026-06-10
+decision: 主控接受延期，M5 验收前复查
+```
 
 ## 5. 普通 Agent 写入规则
 

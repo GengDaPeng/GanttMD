@@ -55,7 +55,9 @@ Agent 开始任何项目推进任务前，必须先读取：
 ```yaml
 status: todo
 status: in_progress
+status: review
 status: done
+status: cancelled
 ```
 
 不要把 `blocked` 写成源状态。
@@ -109,6 +111,22 @@ evidence: [docs/xxx.md, commit:abcdef]
 ```
 
 如果只完成了部分内容，不要改为 `done`。应更新任务正文说明剩余问题。
+
+如果任务已有产出但等待复核、PR 或用户判断，应使用：
+
+```yaml
+status: review
+review_status: pending
+evidence: [PR#27]
+```
+
+如果任务明确不做，应使用：
+
+```yaml
+status: cancelled
+cancel_reason: 明确取消原因
+resolution: 后续如何处理或并入哪里
+```
 
 ## 如何处理阻塞
 

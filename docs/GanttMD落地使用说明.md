@@ -1,83 +1,100 @@
-# GanttMD 落地使用说明
+# GanttMD 使用说明
 
-GanttMD 的当前 MVP 目标不是替代 Jira、Linear 或完整项目管理系统，而是在 AI 编程项目里提供一个人和 Agent 都能读懂、都能维护的项目状态层。
-
-它的最小形态由四部分组成：
-
-```text
-your-project/
-  .ganttmd/
-    config.yaml
-    followups.md
-    modules/
-      backend.md
-      frontend.md
-      product.md
-  AGENTS.md
-  tools/ganttmd/index.html
-```
-
-## 使用边界
-
-GanttMD 负责回答这些问题：
+GanttMD 是项目的任务状态层。它帮助人和 Agent 共同回答：
 
 - 当前项目有哪些里程碑。
-- 哪些任务已经完成、正在进行、可以领取、被依赖阻塞。
-- 某个任务为什么不能领取。
+- 哪些任务已完成、进行中、待复核、可领取或被阻塞。
+- 某个任务依赖哪些前置任务。
 - Agent 下一步应该优先看哪个任务。
-- Agent 领取任务前应该读哪些来源文档。
+- 哪些 follow-up、用户裁决、延期项和外部等待还没有清理。
 
-GanttMD 不负责替代这些内容：
+GanttMD 不替代正式需求、技术设计、模块规格、接口清单、测试规范或代码审查记录。任务只引用这些文档，不复制正文。
 
-- 完整需求文档。
-- 详细业务设计。
-- 代码审查记录。
-- 长篇讨论过程。
-- 项目知识库。
+## 目录结构
 
-任务卡片只保留执行所需的最小信息。详细上下文仍然放在项目原有文档里，通过 `source_docs` 引用。
-
-## 安装方式
-
-当前阶段推荐使用复制式安装：
-
-1. 在目标项目根目录创建 `.ganttmd/`。
-2. 创建 `.ganttmd/config.yaml`。
-3. 创建 `.ganttmd/modules/*.md`。
-4. 创建 `.ganttmd/followups.md`，用于登记 Agent 留下的后续事项。
-5. 把可视化页面复制到 `tools/ganttmd/index.html` 或项目约定目录。
-6. 在项目根目录 `AGENTS.md` 里加入 GanttMD 操作规则。
-
-不建议 MVP 阶段先做复杂 CLI。真实项目跑通后，再考虑 `ganttmd init`、`ganttmd validate`、`ganttmd serve`。
-
-## 推荐目录
+推荐放在目标项目根目录：
 
 ```text
 .ganttmd/
   config.yaml
   followups.md
   modules/
-    project-setup.md
     backend.md
     frontend.md
-    qa.md
+    quality.md
 tools/
   ganttmd/
     index.html
 AGENTS.md
 ```
 
-V4 可在 `config.yaml` 中设置启用视图和默认视图：
+其中：
+
+- `.ganttmd/config.yaml`：项目、里程碑和视图配置。
+- `.ganttmd/modules/*.md`：任务状态真相源。
+- `.ganttmd/followups.md`：Agent 后续事项、用户裁决、延期复查和外部等待。
+- `tools/ganttmd/index.html`：只读可视化页面。
+- `AGENTS.md`：告诉 Agent 如何读取和维护 GanttMD。
+
+## 安装方式
+
+当前 MVP 推荐复制式使用：
+
+1. 在目标项目创建 `.ganttmd/`。
+2. 创建 `.ganttmd/config.yaml`。
+3. 创建 `.ganttmd/modules/*.md`。
+4. 创建 `.ganttmd/followups.md`。
+5. 把当前可视化页面复制到 `tools/ganttmd/index.html`。
+6. 把 [Agent 协作规则模板](Agent协作规则模板.md) 合并到目标项目 `AGENTS.md`。
+
+不需要数据库，也不需要服务端。页面用浏览器打开后选择项目目录即可读取。
+
+## config.yaml
+
+最小配置：
 
 ```yaml
+project:
+  id: demo
+  name: 示例项目
+
 views:
-  enabled: [execution, milestone, module, risk, followup]
-  default: risk
+  enabled: [execution, milestone, track, module, risk, followup]
+  default: execution
+
+milestones:
+  - id: M1
+    name: 项目骨架建立
+    status: in_progress
+    description: 明确需求边界、工程骨架和最小闭环
 ```
 
-当前只支持内置视图开关，不支持自定义筛选、分组和排序 DSL。
+里程碑是路线图事实。即使某个里程碑暂时没有拆出任务，也可以先写入 `config.yaml`，页面会显示为 `0 任务 · 未拆解`。
 
-如果项目已经有 `docs/`，不要把 GanttMD 任务文件放进 `docs/` 深层目录。`.ganttmd/` 应放在项目根目录，作为项目状态层的固定入口。
+## 任务文件
+
+每个任务用一个 `ganttmd-task` fenced code block：
+
+````markdown
+### S-BE-01 后端工程骨架专项设计
+
+```ganttmd-task
+id: S-BE-01
+title: 后端工程骨架专项设计
+status: todo
+dependencies: []
+milestone: M1
+track: backend
+module: foundation
+priority: P0
+source_docs: [docs/技术方案.md]
+next_action: 明确后端目录、模块边界和启动入口
+acceptance: [目录结构确定, 本地启动路径明确, 后续实现任务可承接]
+evidence: []
+```
+````
+
+任务块外可以写补充说明，但机器稳定读取的字段必须写在代码块内。
 
 ## 日常工作流
 
@@ -85,30 +102,20 @@ views:
 
 1. 打开 `tools/ganttmd/index.html`。
 2. 选择项目根目录。
-3. 查看执行视角，确认推荐下一步和阻塞项。
-4. 必要时调整 `.ganttmd/modules/*.md` 里的任务字段。
-5. 把复杂决策写回正式需求、设计或规范文档。
+3. 查看执行视角、风险视角和 Follow-up。
+4. 必要时调整 `.ganttmd/` 文件。
+5. 复杂决策写回正式文档。
 
 Agent 的工作流：
 
-1. 读取 `AGENTS.md`。
+1. 读取目标项目 `AGENTS.md`。
 2. 读取 `.ganttmd/config.yaml`。
 3. 扫描 `.ganttmd/modules/*.md`。
-4. 选择 `status: todo` 且依赖已完成的任务。
-5. 领取前改为 `in_progress`，补充 `owner` 或 `agent`。
+4. 找到 `status: todo` 且依赖已完成的任务。
+5. 领取前改为 `in_progress`，补 `agent` 或 `owner`。
 6. 执行时读取 `source_docs`。
-7. 完成后补充 `evidence`，再改为 `done`。
-8. 如果留下后续事项，登记到 `.ganttmd/followups.md`。
-
-## 真相源规则
-
-`.ganttmd/modules/*.md` 是任务状态真相源。
-
-可视化页面只读取任务文件，不直接修改任务文件。这样做有三个好处：
-
-- Git diff 清楚。
-- 人和 Agent 都能审查任务状态变化。
-- 不需要引入数据库或 SaaS。
+7. 完成后补 `evidence`、必要时补 `verification` 和 `review_status`。
+8. 如有后续事项，写入 `.ganttmd/followups.md`。
 
 ## 什么时候更新 GanttMD
 
@@ -116,10 +123,11 @@ Agent 的工作流：
 
 - 新增任务。
 - 任务开始执行。
+- 任务进入复核。
 - 任务完成。
 - 依赖关系变化。
-- 任务被拆分或合并。
-- 发现任务缺少来源文档、下一步动作或验收边界。
+- 任务被取消。
+- 发现 follow-up、用户裁决或外部等待。
 
 不应该更新：
 
@@ -129,3 +137,10 @@ Agent 的工作流：
 - 与执行状态无关的背景知识。
 
 这些内容应留在需求、设计、讨论或审查文档中。
+
+## 页面刷新
+
+当前页面主要使用浏览器目录选择能力读取本地文件。
+
+不同浏览器对目录句柄支持不同。外部 Chrome 对自动刷新目录支持更好；部分内嵌浏览器只适合手动重新选择目录。为了保证稳定，基础导入应始终保留 `选择目录` 的手动方式。
+

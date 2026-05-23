@@ -7,7 +7,7 @@
 1. 读取 `.ganttmd/config.yaml`，确认项目和里程碑。
 2. 扫描 `.ganttmd/modules/*.md`。
 3. 每个任务由一个 `ganttmd-task` 代码块定义。
-4. 任务源状态只允许：`todo`、`in_progress`、`done`。
+4. 任务源状态只允许：`todo`、`in_progress`、`review`、`done`、`cancelled`。
 5. `blocked` 不是源状态。若 `todo` 任务的依赖未全部 `done`，视图层显示为 blocked。
 6. 优先读取 `source_docs`、`next_action`、`acceptance`、`evidence` 等协作字段。
 
@@ -60,6 +60,8 @@ agent: codex
 owner: gpp
 start_date: 2026-05-21
 completed_date: 2026-05-21
+review_status: pending
+verification: 测试命令、CI 或手工验证说明
 ```
 
 `source_docs` 放来源文档路径，`next_action` 放下一步动作，`acceptance` 放任务级完成边界。不要把长篇业务设计搬进任务块。

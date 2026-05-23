@@ -31,6 +31,7 @@ Agent 应生成：
 ```text
 .ganttmd/
   config.yaml
+  followups.md
   modules/
     system-control.md
     module-specs.md
@@ -66,12 +67,13 @@ Agent 应生成：
 | --- | --- | --- |
 | `[x]` | `done` | 已完成，有证据更好 |
 | `[~]` | `in_progress` | 进行中 |
+| 等待复核 / PR / 用户确认 | `review` | 已有产出但尚未闭环 |
 | `[>]` | `todo` | 下一步优先做 |
 | `[ ]` | `todo` | 未开始 |
 | `[!]` | `todo` | 不直接写 blocked，由依赖或正文说明风险 |
 | `[-]` | 不进入当前执行队列，或写入低优先级模块 | 暂缓项不要默认推荐给 Agent |
 
-`blocked` 不写入源状态。若任务依赖未完成，页面自动显示阻塞。
+`blocked` 默认不写入源状态。若任务依赖未完成，页面自动显示阻塞。
 
 外部业务阻塞写在任务正文：
 
@@ -181,7 +183,7 @@ Agent 应按以下流程生成：
 5. 为每个任务写字段。
 6. 检查 ID 是否重复。
 7. 检查依赖是否指向存在任务。
-8. 打开 V3 页面或运行静态检查确认任务可读。
+8. 打开当前 GanttMD 页面或运行静态检查确认任务可读。
 9. 输出“生成依据”和“未纳入事项”。
 
 ## 8. 输出前自检
@@ -208,11 +210,12 @@ Agent 完成 `.ganttmd/` 后必须自检：
 
 要求：
 1. 只从已有文档和用户明确指令抽取任务，不凭空规划。
-2. status 只允许 todo / in_progress / done。
-3. blocked 由 dependencies 自动计算，不写入 status。
-4. 每个任务尽量补 source_docs、next_action、acceptance、evidence。
-5. next_action 写下一步动作，不写文档名。
-6. acceptance 写 2-4 条任务级完成边界，不搬运完整业务验收文档。
-7. 完成后输出：新增任务、更新任务、未纳入事项、风险和需要用户裁决的问题。
+2. status 只允许 todo / in_progress / review / done / cancelled。
+3. 如果任务已有产出但等待复核，使用 review。
+4. blocked 由 dependencies 和 blocked_reason 自动计算，不写入 status。
+5. 每个任务尽量补 source_docs、next_action、acceptance、evidence。
+6. next_action 写下一步动作，不写文档名。
+7. acceptance 写 2-4 条任务级完成边界，不搬运完整业务验收文档。
+8. PR 审查或总结中的后续事项必须登记到 .ganttmd/followups.md。
+9. 完成后输出：新增任务、更新任务、未纳入事项、风险和需要用户裁决的问题。
 ```
-
