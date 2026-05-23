@@ -74,10 +74,12 @@ updated: {YYYY-MM-DD}
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `title` | string | 任务标题，简洁明了 |
-| `status` | enum | 任务状态：backlog / todo / in_progress / review / done / blocked |
-| `priority` | enum | 优先级：P0 / P1 / P2 |
+| `status` | enum | 任务源状态：todo / in_progress / review / done / cancelled |
+| `priority` | enum | 优先级：P0 / P1 / P2 / P3 |
 | `dependencies` | array | 前置任务 ID 列表（可以是同模块或跨模块） |
 | `milestone` | string | 所属里程碑 ID |
+| `track` | string | 工程主线：spec / backend / frontend / infra / quality_gate |
+| `module` | string | 业务模块：student / class / teacher / approval / settings / org_permission / safety_attendance 等 |
 
 #### 可选字段
 
@@ -89,6 +91,13 @@ updated: {YYYY-MM-DD}
 | `estimate` | string | 预估时间（如 3d、1w、2w） |
 | `tags` | array | 标签列表，用于分类和筛选 |
 | `blocked_reason` | string | 阻塞原因（仅 status=blocked 时填写） |
+| `source_docs` | array | 来源正式文档路径或章节 |
+| `next_action` | string | 当前下一步动作 |
+| `acceptance` | array | 任务级完成边界摘要 |
+| `evidence` | array | 完成证据，如 PR、commit、文档章节、截图 |
+| `verification` | string | 测试命令、CI、手工验证或未验证原因 |
+| `review_status` | enum | pending / passed / must_fix / deferred |
+| `updated_at` | date | 最后更新日期 |
 
 ### 任务 ID 规范
 
@@ -103,12 +112,51 @@ updated: {YYYY-MM-DD}
 
 | 状态 | 进入条件 | 退出条件 | 说明 |
 |------|----------|----------|------|
-| backlog | 任务创建 | 人决定排入 todo | 未排入开发计划 |
-| todo | backlog 或阻塞解除 | AI Agent 领取 | 等待执行 |
+| todo | 任务创建或阻塞解除 | AI Agent 领取 | 等待执行 |
 | in_progress | AI Agent 领取 | 完成或阻塞 | 执行中 |
 | review | AI Agent 标记完成 | 人确认 | 等待人确认 |
-| done | 人或 AI 确认 | 终态 | 已完成 |
-| blocked | 前置依赖未满足 | 依赖完成 | 被阻塞 |
+| done | 人或复核通过 | 终态 | 已真实闭环，必须有 evidence |
+| cancelled | 主控明确不做 | 终态 | 已取消，必须有取消原因或 resolution |
+
+`blocked` 默认是派生状态：当任务仍有未完成前置依赖，或存在 `blocked_reason` 时，看板可显示为被阻塞。若团队显式写 `status: blocked`，必须填写 `blocked_reason`，否则 health check 应提示异常。
+
+`accepted_deferred` 不属于任务执行状态。延期接受、等待复查、用户裁决等治理决策应写入 `.ganttmd/followups.md`，例如 `kind: deferred` 或 `kind: decision`，并通过 `next_review_at` 复查。
+
+### track 与 module
+
+`track` 和 `module` 必须拆开：
+
+- `track` 表达工程主线，建议先使用 `spec / backend / frontend / infra / quality_gate`。
+- `module` 表达业务模块，例如 `student / class / teacher / approval / settings / org_permission / safety_attendance`。
+
+示例：
+
+```yaml
+id: S-BE-09
+title: 安全到校后端 API 最小闭环
+track: backend
+module: safety_attendance
+```
+
+这样可以同时回答“后端工程主线进展如何”和“安全考勤模块进展如何”。
+
+### evidence 与 verification
+
+`done` 任务必须具备可追溯证据。证据要求按任务类型区分：
+
+| 任务类型 | 必须 evidence | 建议 evidence |
+| --- | --- | --- |
+| 代码实现 | PR 或 commit | verification / review_status |
+| 工程配置 | commit 或配置文件路径 | verification |
+| 规格/设计文档 | 正式文档章节 | review_status |
+| 调研/裁决 | decision 记录 | source_docs |
+
+health check 至少应提示：
+
+- `done` 无 `evidence`。
+- `track: backend / frontend / infra` 的 `done` 任务无 `verification`。
+- `review` 无 `review_status`。
+- `cancelled` 无取消原因。
 
 ### 示例：考勤系统模块
 

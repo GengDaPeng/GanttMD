@@ -16,6 +16,8 @@
   --progress: #f59e0b;
   --done: #10b981;
   --blocked: #ef4444;
+  --review: #8b5cf6;
+  --cancelled: #9ca3af;
   --accent: #6366f1;
   --upstream: #2563eb;
   --downstream: #d97706;
@@ -148,6 +150,8 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .task-card.status-done { border-left-color: var(--done); }
 .task-card.status-in_progress { border-left-color: var(--progress); }
 .task-card.status-todo { border-left-color: var(--todo); }
+.task-card.status-review { border-left-color: var(--review); background: #faf5ff; }
+.task-card.status-cancelled { border-left-color: var(--cancelled); background: #f3f4f6; opacity: .72; }
 .task-card.status-blocked { border-left-color: var(--blocked); background: #fff7f7; }
 .task-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .task-id { font-size: 12px; font-weight: 700; color: var(--muted); }
@@ -158,6 +162,8 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .badge.in_progress { background: var(--progress); }
 .badge.done { background: var(--done); }
 .badge.blocked { background: var(--blocked); }
+.badge.review { background: var(--review); }
+.badge.cancelled { background: var(--cancelled); }
 .mod-tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #f0f0f5; color: #555; }
 .rel-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 7px; }
 .rel-pill { font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--border); background: var(--soft); color: var(--muted); }
@@ -175,6 +181,10 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .task-card.focus-downstream.status-todo { border-left-color: var(--todo); }
 .task-card.focus-upstream.status-in_progress,
 .task-card.focus-downstream.status-in_progress { border-left-color: var(--progress); }
+.task-card.focus-upstream.status-review,
+.task-card.focus-downstream.status-review { border-left-color: var(--review); }
+.task-card.focus-upstream.status-cancelled,
+.task-card.focus-downstream.status-cancelled { border-left-color: var(--cancelled); }
 .task-card.focus-upstream.status-blocked,
 .task-card.focus-downstream.status-blocked { border-left-color: var(--blocked); }
 .task-card.focus-upstream::after,
@@ -202,6 +212,8 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .dep-status { grid-column: 2; justify-self: start; }
 .dep-status.done { background: #dcfce7; color: #047857; }
 .dep-status.in_progress { background: #fef3c7; color: #b45309; }
+.dep-status.review { background: #f3e8ff; color: #7c3aed; }
+.dep-status.cancelled { background: #f3f4f6; color: #6b7280; }
 .dep-status.blocked { background: #fee2e2; color: var(--blocked); }
 .dep-empty { color: var(--muted); font-size: 12px; }
 .drawer-details { margin-top: 10px; border: 1px solid var(--border); border-radius: 7px; background: #fff; overflow: hidden; }
@@ -347,6 +359,7 @@ const mapBtn = document.getElementById('mapBtn');
 const filePicker = document.getElementById('filePicker');
 const state = { page: 'board', view: 'execution', focusId: null, modules: [], config: null, tasks: [], followups: [], byId: new Map(), children: new Map(), orderIdx: new Map(), criticalPaths: new Map(), criticalSet: new Set() };
 const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
+const TASK_STATUSES = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'blocked'];
 const BUILTIN_VIEWS = {
   execution: { id: 'execution', name: '执行视角', group: 'main', source: 'tasks', groupBy: 'execution_state', sortBy: 'recommended', fields: ['id', 'title', 'status', 'module', 'milestone', 'deps'], hint: '按 Agent 接手顺序组织任务，优先看可立即执行和被阻塞项' },
   milestone: { id: 'milestone', name: '里程碑视角', group: 'main', source: 'tasks', groupBy: 'milestone', sortBy: 'topo', fields: ['id', 'title', 'status', 'module', 'deps'], hint: '按里程碑组织任务，观察阶段推进和阶段内阻塞' },
@@ -602,6 +615,7 @@ function renderSummary() {
   const allTasks = state.tasks;
   const done = allTasks.filter(t=>t.status==='done').length;
   const prog = allTasks.filter(t=>t.status==='in_progress').length;
+  const review = allTasks.filter(t=>t.status==='review').length;
   const blocked = allTasks.filter(t=>t._effective==='blocked').length;
   const ready = allTasks.filter(t=>t._effective==='todo').length;
   const summaryEl = document.getElementById('summary');
@@ -609,6 +623,7 @@ function renderSummary() {
   summaryEl.innerHTML = [
     cell(allTasks.length, '总任务'), cell(done, '已完成', '--done'),
     cell(prog, '进行中', '--progress'), cell(ready, '可执行', '--todo'),
+    cell(review, '待复核', '--review'),
     cell(blocked, '被阻塞', '--blocked'),
   ].join('');
 }
@@ -1293,7 +1308,9 @@ function getTaskDiagnosis(task) {
   if (task._effective === 'blocked') return `当前任务不能直接推进，需要先完成 ${task._openDeps.length} 个前置任务。`;
   if (task._effective === 'todo') return '当前任务没有未完成前置依赖，可以作为 Agent 下一步领取对象。';
   if (task.status === 'in_progress') return task.owner || task.agent ? '当前任务已在推进中，继续前应确认最新上下文。' : '当前任务已在推进中，但缺少 owner/agent 标记，存在多 Agent 撞车风险。';
+  if (task.status === 'review') return '当前任务已有产出，等待复核、PR 或用户判断。';
   if (task.status === 'done') return '当前任务已完成，重点检查验收证据和它解锁的后续任务。';
+  if (task.status === 'cancelled') return '当前任务已取消，通常不进入默认推进队列。';
   return '当前任务状态可读取，但还缺少更细的接手字段。';
 }
 
@@ -1302,7 +1319,9 @@ function getAgentHandoff(task) {
   if (task._effective === 'blocked') return `不建议领取，被 ${task._openDeps.length} 个前置任务阻塞。`;
   if (task._effective === 'todo') return '可领取。';
   if (task.status === 'in_progress') return task.owner || task.agent ? '进行中，接手前先确认上下文。' : '进行中，但缺少 owner/agent。';
+  if (task.status === 'review') return '待复核，不建议直接继续实现。';
   if (task.status === 'done') return '已完成，适合复核证据或查看后续任务。';
+  if (task.status === 'cancelled') return '已取消，不建议领取。';
   return '状态信息不足。';
 }
 
@@ -1329,9 +1348,15 @@ function getAgentCommand(task) {
   if (task.status === 'in_progress') {
     return `接续进行中任务 ${task.id}：${task.title || ''}\n1. 读取来源文档：${sources}\n2. 核对当前 owner/agent 与实际接手人是否一致。\n3. 下一步动作：${nextAction}\n4. 按以下验收标准检查进度：\n${acceptance}${constraintText}${cpText}`;
   }
+  if (task.status === 'review') {
+    return `复核任务 ${task.id}：${task.title || ''}\n1. 读取来源文档：${sources}\n2. 检查 evidence、verification 和 review_status 是否完整。\n3. 如复核通过，将 status 更新为 done；如必须修，登记修复任务或退回 in_progress。${constraintText}${cpText}`;
+  }
   if (task.status === 'done') {
     const downstream = state.children.get(task.id) || [];
     return `复核已完成任务 ${task.id}。\n读取来源文档：${sources}\n检查 evidence 是否覆盖以下验收标准：\n${acceptance}\n若已确认完成，下一步关注它的后续任务：${downstream.length ? downstream.join(', ') : '暂无后续任务'}。`;
+  }
+  if (task.status === 'cancelled') {
+    return `任务 ${task.id} 已取消。\n读取 ${sources}，确认取消原因、剩余风险和是否需要登记 follow-up。`;
   }
   return `读取 ${sources}，补充任务 ${task.id} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
 }
@@ -1339,17 +1364,32 @@ function getAgentCommand(task) {
 function getHealthIssues() {
   const issues = [...getFollowupIssues()];
   for (const t of state.tasks) {
+    if (!TASK_STATUSES.includes(t.status)) {
+      issues.push({ level: 'warn', id: t.id, text: `任务 status 非法：${t.status || '(空)'}` });
+    }
     if (t._missingDeps?.length) {
       issues.push({ level: 'warn', id: t.id, text: `依赖指向不存在任务：${t._missingDeps.join(', ')}` });
     }
-    if (t.status === 'blocked' && t._openDeps.length === 0) {
-      issues.push({ level: 'warn', id: t.id, text: '标记为 blocked，但前置依赖已全部满足，建议刷新状态。' });
+    if (t.status === 'blocked' && t._openDeps.length === 0 && !t.blocked_reason) {
+      issues.push({ level: 'warn', id: t.id, text: '标记为 blocked，但没有未完成前置依赖，也没有 blocked_reason。' });
     }
     if (t.status === 'todo' && t._openDeps.length > 0) {
       issues.push({ level: 'warn', id: t.id, text: `状态是 todo，但仍有 ${t._openDeps.length} 个未完成依赖。` });
     }
     if (t.status === 'in_progress' && !t.owner && !t.agent) {
       issues.push({ level: '', id: t.id, text: '进行中任务缺少 owner/agent 字段，后续多 Agent 协作容易撞车。' });
+    }
+    if (t.status === 'review' && !t.review_status) {
+      issues.push({ level: 'warn', id: t.id, text: 'review 任务缺少 review_status，无法判断复核结论。' });
+    }
+    if (t.status === 'done' && !t.evidence?.length) {
+      issues.push({ level: 'warn', id: t.id, text: 'done 任务缺少 evidence，可能形成虚假闭环。' });
+    }
+    if (t.status === 'done' && ['backend', 'frontend', 'infra'].includes(t.track) && !t.verification) {
+      issues.push({ level: 'warn', id: t.id, text: `${t.track} 任务已完成但缺少 verification。` });
+    }
+    if (t.status === 'cancelled' && !t.cancel_reason && !t.resolution) {
+      issues.push({ level: 'warn', id: t.id, text: 'cancelled 任务缺少 cancel_reason 或 resolution。' });
     }
     if (!t.next_action) {
       issues.push({ level: '', id: t.id, text: '缺少 next_action，Agent 接手时只能依赖通用模板。' });
@@ -1416,11 +1456,13 @@ async function copyText(text) {
 function groupByExecution() {
   const ready = state.tasks.filter(t => t._effective === 'todo').sort((a, b) => getExecutionScore(b) - getExecutionScore(a));
   const progress = state.tasks.filter(t => t.status === 'in_progress');
+  const review = state.tasks.filter(t => t.status === 'review');
   const blocked = state.tasks.filter(t => t._effective === 'blocked');
   const done = state.tasks.filter(t => t.status === 'done');
   return [
     { id: 'NEXT', name: '可立即执行', status: ready.length ? 'in_progress' : 'backlog', tasks: ready },
     { id: 'DOING', name: '进行中', status: progress.length ? 'in_progress' : 'backlog', tasks: progress },
+    { id: 'REVIEW', name: '待复核', status: review.length ? 'review' : 'backlog', tasks: review },
     { id: 'BLOCKED', name: '被阻塞', status: blocked.length ? 'blocked' : 'backlog', tasks: blocked },
     { id: 'DONE', name: '已完成', status: 'done', tasks: done },
   ].filter(g => g.tasks.length);
@@ -1466,6 +1508,7 @@ function renderGroup(group) {
   let headerCls = 'backlog';
   if (pct === 100) headerCls = 'completed';
   else if (group.status === 'in_progress' || group.tasks.some(t => t.status === 'in_progress')) headerCls = 'active';
+  else if (group.status === 'review' || group.tasks.some(t => t.status === 'review')) headerCls = 'active';
   else if (group.status === 'blocked') headerCls = 'blocked';
   return `<div class="group">
     <div class="group-header ${headerCls}">
@@ -1614,7 +1657,7 @@ function getRelationClass(id, focus) {
   return 'dimmed';
 }
 
-function statusLabel(s) { return {done:'已完成',in_progress:'进行中',todo:'可执行',blocked:'被阻塞'}[s]||s; }
+function statusLabel(s) { return {done:'已完成',in_progress:'进行中',todo:'可执行',review:'待复核',cancelled:'已取消',blocked:'被阻塞'}[s]||s; }
 function esc(v) { return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 </script>
 </body>
