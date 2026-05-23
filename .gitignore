@@ -3,3 +3,4 @@ node_modules/
 
 # Spec Kit 生成的本机 Agent 集成文件，不作为项目真相源同步
 .agents/
+.specify/
