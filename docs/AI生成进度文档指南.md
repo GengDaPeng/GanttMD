@@ -32,7 +32,7 @@ Agent 应生成：
 .ganttmd/
   config.yaml
   followups.md
-  modules/
+  tasks/
     system-control.md
     module-specs.md
     backend.md
@@ -40,7 +40,7 @@ Agent 应生成：
     device.md
 ```
 
-具体模块文件可以按项目情况调整。不要机械按代码目录拆分，应按推进主线拆分。
+具体任务文件可以按项目情况调整。不要机械按代码目录拆分，应按维护便利拆分；任务归属由任务块里的 `track` 和 `domain` 表达。
 
 ## 3. 抽取任务的判断标准
 
@@ -206,7 +206,7 @@ Agent 完成 `.ganttmd/` 后必须自检：
 你是本项目的 GanttMD 进度主控。
 
 请先读取项目现有进度文档、总控看板、执行待办、模块推进清单和风险总账。
-然后生成或更新 .ganttmd/config.yaml 与 .ganttmd/modules/*.md。
+然后生成或更新 `.ganttmd/config.yaml` 与 `.ganttmd/tasks/*.md`。
 
 要求：
 1. 只从已有文档和用户明确指令抽取任务，不凭空规划。

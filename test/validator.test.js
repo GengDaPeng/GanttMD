@@ -103,6 +103,41 @@ converted_task: S-BE-08
   assert(!issues.some((issue) => issue.level === 'warn' && issue.id === 'FUP-2' && issue.field === 'next_review_at'));
 });
 
+test('校验器优先支持 tasks 目录并兼容 domain 字段', () => {
+  const root = createProject({
+    '.ganttmd/config.yaml': `project:
+  name: Tasks Directory
+
+milestones:
+  - id: M1
+    name: 第一阶段
+`,
+    '.ganttmd/tasks/main.md': `# 主任务
+
+\`\`\`ganttmd-task
+id: T-1
+title: 新任务目录
+status: todo
+dependencies: []
+milestone: M1
+track: quality
+domain: notification
+source_docs: [docs/existing.md]
+next_action: 验证新目录
+acceptance: [完成]
+\`\`\`
+`,
+    'docs/existing.md': '# exists',
+  });
+
+  const project = loadProject(root);
+  const issues = validateProject(project);
+
+  assert.equal(project.tasks.length, 1);
+  assert.equal(project.tasks[0].domain, 'notification');
+  assert(!issues.some((issue) => issue.level === 'warn'));
+});
+
 test('校验器能发现任务缺主线、未知里程碑和不存在的来源文档', () => {
   const root = createProject({
     '.ganttmd/config.yaml': `project:

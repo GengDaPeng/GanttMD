@@ -7,7 +7,7 @@
 ## 目录说明
 
 - `.ganttmd/config.yaml`：样例项目、M0-M8 里程碑和视图配置。
-- `.ganttmd/modules/*.md`：任务数据，使用 `ganttmd-task` fenced block。
+- `.ganttmd/modules/*.md`：任务数据，使用 `ganttmd-task` fenced block。该样例仍保留旧目录以验证兼容性；新项目推荐 `.ganttmd/tasks/*.md`。
 - `.ganttmd/followups.md`：Follow-up、用户裁决、延期复查、外部等待和风险事项。
 - `source-docs/`：从 `jwxt` 复制来的进度文档快照，只作来源证据。
 - `AGENTS.md`：Agent 操作协议样例。
@@ -27,7 +27,7 @@
 - 完整里程碑路线图：M0-M8，包括暂未拆解的里程碑。
 - 执行视角：推荐下一步、进行中、待复核、被阻塞、已完成。
 - 主线视角：按 `track` 查看规格、后端、前端、基础设施和质量门。
-- 模块视角：按 `module` 查看业务域任务。
+- 领域视角：按 `domain` 查看业务域或能力域任务；旧字段 `module` 会作为兼容别名读取。
 - 风险视角：聚合阻塞任务、未清理 Follow-up、用户裁决、延期复查和健康检查。
 - Follow-up 视角：按状态和类型查看后续事项。
 - 证据链：展示 `evidence`、`verification`、`review_status`、`priority` 和更新时间。
@@ -42,4 +42,3 @@
 - `00-模块规格推进清单.md`
 - `00-跨域依赖收口总账.md`
 - `00-延期能力与升级门总账.md`
-

@@ -7,6 +7,8 @@ const TASK_STATUSES = Rules.TASK_STATUSES;
 const TASK_KINDS = Rules.TASK_KINDS;
 const FOLLOWUP_STATUSES = Rules.FOLLOWUP_STATUSES;
 const FOLLOWUP_KINDS = Rules.FOLLOWUP_KINDS;
+const TASK_TRACKS = Rules.TASK_TRACKS;
+const TRACK_ALIASES = Rules.TRACK_ALIASES;
 const ENGINEERING_TRACKS = Rules.ENGINEERING_TRACKS;
 const DEFAULT_REVIEW_STALE_DAYS = Rules.DEFAULT_REVIEW_STALE_DAYS;
 const DEFAULT_ARCHIVE_AFTER_DAYS = Rules.DEFAULT_ARCHIVE_AFTER_DAYS;
@@ -132,11 +134,15 @@ function parseConfig(text) {
 
 function loadProject(projectRoot = process.cwd()) {
   const ganttRoot = resolveGanttRoot(projectRoot);
+  const tasksRoot = path.join(ganttRoot, 'tasks');
   const modulesRoot = path.join(ganttRoot, 'modules');
-  const moduleFiles = listMarkdownFiles(modulesRoot);
+  const taskFiles = [
+    ...listMarkdownFiles(tasksRoot),
+    ...listMarkdownFiles(modulesRoot),
+  ];
 
   const tasks = [];
-  for (const filePath of moduleFiles) {
+  for (const filePath of taskFiles) {
     const relativeFile = path.relative(ganttRoot, filePath);
     const text = readTextIfExists(filePath);
     for (const block of extractBlocks(text, 'ganttmd-task')) {
@@ -231,6 +237,8 @@ module.exports = {
   TASK_KINDS,
   FOLLOWUP_STATUSES,
   FOLLOWUP_KINDS,
+  TASK_TRACKS,
+  TRACK_ALIASES,
   ENGINEERING_TRACKS,
   extractBlocks,
   loadProject,

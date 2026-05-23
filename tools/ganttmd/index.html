@@ -412,13 +412,13 @@ const TASK_STATUSES = Rules.TASK_STATUSES;
 const TASK_KINDS = Rules.TASK_KINDS;
 const FOLLOWUP_STATUSES = Rules.FOLLOWUP_STATUSES;
 const FOLLOWUP_KINDS = Rules.FOLLOWUP_KINDS;
-const TRACK_LABELS = { spec: '规格主线', backend: '后端工程', frontend: '前端工程', infra: '基础设施', quality_gate: '质量门' };
-const MODULE_LABELS = { safety_attendance: '安全考勤', student: '学生管理', class: '班级管理', teacher: '教师管理', approval: '审批中心', settings: '系统设置', org_permission: '组织权限', statistics: '统计审计', foundation: '工程基础', crosscutting: '横切事项' };
+const TRACK_LABELS = { spec: '规格主线', backend: '后端工程', frontend: '前端工程', infra: '基础设施', quality: '质量主线', docs: '文档主线', ops: '运维主线' };
+const DOMAIN_LABELS = { safety_attendance: '安全考勤', student: '学生管理', class: '班级管理', teacher: '教师管理', approval: '审批中心', settings: '系统设置', org_permission: '组织权限', statistics: '统计审计', foundation: '工程基础', crosscutting: '横切事项', notification: '通知能力', auth: '权限认证', audit: '审计能力', device: '设备接入', none: '无领域归属' };
 const BUILTIN_VIEWS = {
-  execution: { id: 'execution', name: '执行视角', group: 'main', source: 'tasks', groupBy: 'execution_state', sortBy: 'recommended', fields: ['id', 'title', 'status', 'module', 'milestone', 'deps'], hint: '按 Agent 接手顺序组织任务，优先看可立即执行和被阻塞项' },
-  milestone: { id: 'milestone', name: '里程碑视角', group: 'main', source: 'tasks', groupBy: 'milestone', sortBy: 'topo', fields: ['id', 'title', 'status', 'module', 'deps'], hint: '按里程碑组织任务，观察阶段推进和阶段内阻塞' },
-  module: { id: 'module', name: '模块视角', group: 'main', source: 'tasks', groupBy: 'module', sortBy: 'topo', fields: ['id', 'title', 'status', 'milestone', 'deps'], hint: '按模块组织任务，观察责任域内的完成、进行中和阻塞分布' },
-  track: { id: 'track', name: '主线视角', group: 'main', source: 'tasks', groupBy: 'track', sortBy: 'topo', fields: ['id', 'title', 'status', 'module', 'milestone', 'deps'], hint: '按工程主线组织任务，观察规格、后端、前端、基础设施和质量门的推进' },
+  execution: { id: 'execution', name: '执行视角', group: 'main', source: 'tasks', groupBy: 'execution_state', sortBy: 'recommended', fields: ['id', 'title', 'status', 'domain', 'milestone', 'deps'], hint: '按 Agent 接手顺序组织任务，优先看可立即执行和被阻塞项' },
+  milestone: { id: 'milestone', name: '里程碑视角', group: 'main', source: 'tasks', groupBy: 'milestone', sortBy: 'topo', fields: ['id', 'title', 'status', 'domain', 'deps'], hint: '按里程碑组织任务，观察阶段推进和阶段内阻塞' },
+  module: { id: 'module', name: '领域视角', group: 'main', source: 'tasks', groupBy: 'domain', sortBy: 'topo', fields: ['id', 'title', 'status', 'milestone', 'deps'], hint: '按业务域或能力域组织任务，观察责任域内的完成、进行中和阻塞分布' },
+  track: { id: 'track', name: '主线视角', group: 'main', source: 'tasks', groupBy: 'track', sortBy: 'topo', fields: ['id', 'title', 'status', 'domain', 'milestone', 'deps'], hint: '按工作主线组织任务，观察规格、后端、前端、基础设施、质量、文档和运维推进' },
   risk: { id: 'risk', name: '风险视角', group: 'main', source: 'mixed', groupBy: 'item_type', sortBy: 'severity', include: { tasks: { effectiveStatus: ['blocked'] }, followups: { status: ['open', 'accepted', 'invalid'] } }, hint: '汇总被阻塞任务、未清理 Follow-up、非法 Follow-up 和严重健康检查' },
   followup: { id: 'followup', name: 'Follow-up', group: 'governance', source: 'followups', groupBy: 'status', sortBy: 'created_at', hint: '所有 Agent 可追加 open follow-up；只有项目主控可以清理、关闭或转正式任务' },
 };
@@ -550,14 +550,14 @@ document.addEventListener('click', (event) => {
 });
 
 function loadFromTextEntries(entries, options = {}) {
-  const isModule = entry => entry.name.endsWith('.md') && (entry.path.includes('.ganttmd/modules/') || entry.path.startsWith('modules/'));
+  const isTaskFile = entry => entry.name.endsWith('.md') && (entry.path.includes('.ganttmd/tasks/') || entry.path.startsWith('tasks/') || entry.path.includes('.ganttmd/modules/') || entry.path.startsWith('modules/'));
   const isConfig = entry => entry.path.includes('.ganttmd/config.yaml') || entry.path.includes('.ganttmd/config.yml') || entry.path === 'config.yaml' || entry.path === 'config.yml';
   const isFollowup = entry => entry.path.includes('.ganttmd/followups.md') || entry.path === 'followups.md';
-  const modules = entries.filter(isModule).map(entry => parseModule(entry.path, entry.text));
+  const modules = entries.filter(isTaskFile).map(entry => parseModule(entry.path, entry.text));
   const cfgFile = entries.find(isConfig);
   const followupFile = entries.find(isFollowup);
   if (!modules.length) {
-    showLoadMessage(`没有在「${options.sourceName || '所选目录'}」中找到 .ganttmd/modules/*.md。请确认选择的是项目根目录或 .ganttmd 目录。`);
+    showLoadMessage(`没有在「${options.sourceName || '所选目录'}」中找到 .ganttmd/tasks/*.md 或 .ganttmd/modules/*.md。请确认选择的是项目根目录或 .ganttmd 目录。`);
     return false;
   }
   const config = cfgFile ? parseConfig(cfgFile.text) : null;
@@ -646,19 +646,20 @@ function parseTask(raw) {
 }
 
 function getTaskTrack(task) {
-  if (task.track) return task.track;
+  if (task.track) return Rules.normalizeTrack(task.track);
   const id = task.id || '';
   const text = `${task.title || ''} ${task._module || ''}`;
   if (id.includes('-BE-')) return 'backend';
   if (id.includes('-FE-')) return 'frontend';
-  if (id.includes('-QA-') || id.includes('-GATE-')) return 'quality_gate';
+  if (id.includes('-QA-') || id.includes('-GATE-')) return 'quality';
   if (id.includes('-DEV-')) return 'infra';
   if (id.includes('-MOD-') || id.includes('-ATT-') || id.includes('-STAT-')) return 'spec';
   if (/工程|跑道|CI|Redis|Prisma|数据库|设备/.test(text)) return 'infra';
   return 'spec';
 }
 
-function getTaskBusinessModule(task) {
+function getTaskDomain(task) {
+  if (task.domain) return task.domain;
   if (task.module) return task.module;
   const id = task.id || '';
   const title = task.title || '';
@@ -679,11 +680,12 @@ function getTaskBusinessModule(task) {
 }
 
 function trackLabel(track) {
-  return TRACK_LABELS[track] || track || '未标主线';
+  const normalized = Rules.normalizeTrack(track);
+  return TRACK_LABELS[normalized] || normalized || '未标主线';
 }
 
-function moduleLabel(module) {
-  return MODULE_LABELS[module] || module || '未标业务模块';
+function domainLabel(domain) {
+  return DOMAIN_LABELS[domain] || domain || '未标领域';
 }
 
 function loadData(modules, config, followups) {
@@ -692,7 +694,7 @@ function loadData(modules, config, followups) {
   const children = new Map(tasks.map(t => [t.id, []]));
   for (const t of tasks) {
     t._track = getTaskTrack(t);
-    t._businessModule = getTaskBusinessModule(t);
+    t._domain = getTaskDomain(t);
     t._openDeps = t.dependencies.filter(d => byId.has(d) && byId.get(d).status !== 'done');
     t._missingDeps = t.dependencies.filter(d => !byId.has(d));
     t._manualBlocked = Boolean(t.blocked_reason);
@@ -896,7 +898,7 @@ function getTaskGroupsForView(view) {
   const groupBy = viewConfig?.groupBy || 'milestone';
   if (groupBy === 'execution_state') return groupByExecution();
   if (groupBy === 'track') return groupByTrack();
-  if (groupBy === 'module') return groupByModule();
+  if (groupBy === 'domain') return groupByDomain();
   return groupByMilestone();
 }
 
@@ -1030,7 +1032,7 @@ function renderProjectMapPage() {
       <div class="map-head">
         <div>
           <div class="map-title">项目全景图</div>
-          <div class="map-sub">从需求文档、阶段目标、模块主线、关键任务到治理闭环，串起项目从开头到结束的主要对象。</div>
+          <div class="map-sub">从需求文档、阶段目标、领域主线、关键任务到治理闭环，串起项目从开头到结束的主要对象。</div>
         </div>
         <button class="inline-btn map-back" type="button">返回看板</button>
       </div>
@@ -1057,7 +1059,7 @@ function getProjectMapRows() {
   return [
     { label: '输入与基线', items: getSourceDocSummary() },
     { label: '阶段目标', items: getMilestoneMapItems() },
-    { label: '模块主线', items: getModuleMapItems() },
+    { label: '领域主线', items: getModuleMapItems() },
     { label: '关键任务链', items: getKeyTaskMapItems() },
     { label: '治理闭环', items: getGovernanceMapItems() },
   ].filter(row => row.items.length);
@@ -1223,7 +1225,7 @@ function renderRecommendedPanel(rec) {
       <span class="metric-pill">${state.children.get(rec.id)?.length || 0} 个后续</span>
       <span class="metric-pill">${esc(rec.milestone || '无里程碑')}</span>
       <span class="metric-pill">${esc(trackLabel(rec._track))}</span>
-      <span class="metric-pill">${esc(moduleLabel(rec._businessModule))}</span>
+      <span class="metric-pill">${esc(domainLabel(rec._domain))}</span>
       ${state.criticalSet.has(rec.id) ? `<span class="metric-pill" style="border-color:#c7d2fe;background:#eef2ff;color:var(--accent);font-weight:700;">关键路径</span>` : ''}
       ${rec.downstream_constraints?.length ? `<span class="metric-pill" style="border-color:#fde68a;background:#fffbeb;color:#b45309;">⚠${rec.downstream_constraints.length} 下游约束</span>` : ''}
     </div>
@@ -1258,7 +1260,7 @@ function renderSelectedTaskContent(task) {
       <span class="metric-pill">${task._openDeps.length} 个阻塞来源</span>
       <span class="metric-pill">${state.children.get(task.id)?.length || 0} 个后续</span>
       <span class="metric-pill">${esc(trackLabel(task._track))}</span>
-      <span class="metric-pill">${esc(moduleLabel(task._businessModule))}</span>
+      <span class="metric-pill">${esc(domainLabel(task._domain))}</span>
       ${state.criticalSet.has(task.id) ? `<span class="metric-pill" style="border-color:#c7d2fe;background:#eef2ff;color:var(--accent);font-weight:700;">关键路径</span>` : ''}
     </div>
     <div class="field-grid">
@@ -1526,7 +1528,7 @@ function renderRiskTaskList(tasks) {
     <div>${esc(getTaskDiagnosis(task))}</div>
     <div class="risk-meta">
       <span>${esc(trackLabel(task._track))}</span>
-      <span>${esc(moduleLabel(task._businessModule))}</span>
+      <span>${esc(domainLabel(task._domain))}</span>
       <span>${esc(task.milestone || '无里程碑')}</span>
       <span>${task._openDeps.length} 个前置阻塞</span>
       ${task.blocked_reason ? `<span>外部阻塞</span>` : ''}
@@ -1644,7 +1646,7 @@ function getAgentHandoff(task) {
 }
 
 function getAgentCommand(task) {
-  const sources = task.source_docs?.length ? task.source_docs.join(', ') : `.ganttmd/modules/*.md`;
+  const sources = task.source_docs?.length ? task.source_docs.join(', ') : `.ganttmd/tasks/*.md`;
   const nextAction = task.next_action || '按任务描述推进下一步工作';
   const acceptance = task.acceptance?.length ? task.acceptance.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. 补充本任务的验收标准\n2. 完成后补充 evidence';
   if (task._missingDeps?.length) {
@@ -1753,11 +1755,11 @@ function groupByMilestone() {
   return groups.filter(g => g.tasks.length).map(sortGroupTasks);
 }
 
-function groupByModule() {
+function groupByDomain() {
   const groups = new Map();
   for (const task of state.tasks) {
-    const id = task._businessModule || 'unknown';
-    if (!groups.has(id)) groups.set(id, { id: moduleLabel(id), name: moduleLabel(id), status: 'in_progress', tasks: [] });
+    const id = task._domain || 'unknown';
+    if (!groups.has(id)) groups.set(id, { id: domainLabel(id), name: domainLabel(id), status: 'in_progress', tasks: [] });
     groups.get(id).tasks.push(task);
   }
   return [...groups.values()]
@@ -1766,7 +1768,7 @@ function groupByModule() {
 }
 
 function groupByTrack() {
-  const order = ['spec', 'backend', 'frontend', 'infra', 'quality_gate'];
+  const order = ['spec', 'backend', 'frontend', 'infra', 'quality', 'docs', 'ops'];
   const groups = new Map();
   for (const task of state.tasks) {
     const id = task._track || 'unknown';
@@ -1856,7 +1858,7 @@ function renderTaskCard(t, focus) {
       <div class="task-name">${esc(t.title || '')}</div>
       <div class="task-meta">
         <span class="mod-tag">${esc(trackLabel(t._track))}</span>
-        <span class="mod-tag">${esc(moduleLabel(t._businessModule))}</span>
+        <span class="mod-tag">${esc(domainLabel(t._domain))}</span>
       </div>
       <div class="rel-row">
         ${onCritical ? `<span class="rel-pill cp">关键路径</span>` : ''}

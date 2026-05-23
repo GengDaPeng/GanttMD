@@ -1,0 +1,21 @@
+project:
+  id: minimal
+  name: GanttMD 最小样例
+
+views:
+  enabled: [execution, milestone, track, module, risk, followup]
+  default: execution
+
+milestones:
+  - id: M1
+    name: 最小闭环
+    status: in_progress
+    description: 从任务登记到证据复核的最小流程
+    objective: 展示可执行、进行中、待复核、阻塞、完成、取消和 follow-up 治理
+
+  - id: M2
+    name: 后续增强
+    status: todo
+    description: 后续功能和体验优化
+    objective: 展示跨里程碑依赖和延期项
+

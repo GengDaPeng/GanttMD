@@ -11,7 +11,7 @@ status: done
 dependencies: []
 milestone: M2
 track: backend
-module: foundation
+domain: foundation
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md, source-docs/00-项目总控看板.md]
 next_action: 复核后端工程骨架专项是否足以支撑业务 API、worker、Prisma、本地启动和 CI 跑道
@@ -31,7 +31,7 @@ status: done
 dependencies: [S-BE-01]
 milestone: M2
 track: backend
-module: foundation
+domain: foundation
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md]
 next_action: 复核 Prisma 和 PostgreSQL 迁移规范是否足以支撑后续业务对象落地
@@ -51,7 +51,7 @@ status: done
 dependencies: [S-BE-01]
 milestone: M2
 track: backend
-module: foundation
+domain: foundation
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md]
 next_action: 保持后端基础结构作为后续业务 API 的工程输入
@@ -71,7 +71,7 @@ status: done
 dependencies: [S-BE-02]
 milestone: M2
 track: backend
-module: foundation
+domain: foundation
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md]
 next_action: 保持 Prisma 跑道作为安全到校和后续业务对象落地输入
@@ -91,7 +91,7 @@ status: done
 dependencies: [S-BE-03]
 milestone: M2
 track: infra
-module: foundation
+domain: foundation
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md]
 next_action: 保持本地依赖健康检查作为后续队列、对象存储和安全到校纵切输入
@@ -111,7 +111,7 @@ status: done
 dependencies: [S-BE-03, S-BE-04, S-BE-05]
 milestone: M2
 track: infra
-module: foundation
+domain: foundation
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md]
 next_action: 保持本地启动、运行时锁和 CI 基础检查作为后续业务实现的固定入口
@@ -130,8 +130,8 @@ title: 测试规范骨架与定稿
 status: review
 dependencies: [S-BE-03, S-BE-04, S-BE-05, S-BE-06]
 milestone: M2
-track: quality_gate
-module: crosscutting
+track: quality
+domain: crosscutting
 priority: P1
 source_docs: [source-docs/00-项目总控执行待办.md]
 next_action: 等待项目主控复核测试分层规则，复核通过后转 done；如复核要求补充前端测试细则则退回 in_progress
@@ -154,8 +154,8 @@ status: in_progress
 owner: project-control
 dependencies: [S-BE-05, S-BE-06]
 milestone: M2
-track: quality_gate
-module: crosscutting
+track: quality
+domain: crosscutting
 priority: P1
 source_docs: [source-docs/00-项目总控执行待办.md]
 next_action: 继续补齐多 worktree 隔离、IDE 细则和安全到校纵切下的本地运行经验
@@ -174,8 +174,8 @@ title: 安全到校纵切实施方案
 status: done
 dependencies: [S-ATT-01, S-BE-06]
 milestone: M5
-track: quality_gate
-module: safety_attendance
+track: quality
+domain: safety_attendance
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md, source-docs/00-项目总控看板.md]
 next_action: 复核安全到校纵切实施方案的完成证据，并确认其足以支撑后端和前端最小闭环
@@ -195,7 +195,7 @@ status: done
 dependencies: [S-QA-03, S-BE-06]
 milestone: M5
 track: backend
-module: safety_attendance
+domain: safety_attendance
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md, source-docs/00-项目总控看板.md]
 next_action: 复核安全到校后端 API 最小闭环是否足以作为前端页面最小闭环输入
@@ -216,7 +216,7 @@ status: todo
 dependencies: [S-BE-09, S-QA-13, S-QA-14]
 milestone: M5
 track: frontend
-module: safety_attendance
+domain: safety_attendance
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md, source-docs/00-项目总控看板.md]
 next_action: 完成安全到校工作台、状态列表、异常详情、关闭表单和模拟设备入口的前端最小闭环

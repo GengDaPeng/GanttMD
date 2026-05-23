@@ -5,12 +5,40 @@ const Rules = require('../tools/ganttmd/rules.js');
 
 test('共享规则模块导出完整接口', () => {
   const required = [
-    'TASK_STATUSES', 'TASK_KINDS', 'FOLLOWUP_STATUSES', 'FOLLOWUP_KINDS', 'ENGINEERING_TRACKS',
+    'TASK_STATUSES', 'TASK_KINDS', 'FOLLOWUP_STATUSES', 'FOLLOWUP_KINDS',
+    'TASK_TRACKS', 'TRACK_ALIASES', 'ENGINEERING_TRACKS',
     'DEFAULT_REVIEW_STALE_DAYS', 'DEFAULT_ARCHIVE_AFTER_DAYS',
-    'parseDate', 'daysBetween',
+    'parseDate', 'daysBetween', 'normalizeTrack',
     'checkTask', 'checkFollowup', 'defaultContext',
   ];
   for (const k of required) assert.ok(k in Rules, `missing export: ${k}`);
+});
+
+test('quality_gate 作为旧 track 别名兼容为 quality', () => {
+  assert.equal(Rules.normalizeTrack('quality_gate'), 'quality');
+  const ctx = Rules.defaultContext({
+    now: new Date('2026-05-23T00:00:00Z'),
+    milestoneIds: new Set(['M1']),
+  });
+  const task = {
+    id: 'LEGACY-TRACK',
+    title: '旧质量门任务',
+    status: 'todo',
+    kind: 'task',
+    track: 'quality_gate',
+    milestone: 'M1',
+    dependencies: [],
+    source_docs: ['docs/spec.md'],
+    next_action: '迁移命名',
+    acceptance: ['完成'],
+    evidence: [],
+    _openDeps: [],
+    _missingDeps: [],
+    _downstreamCount: 0,
+  };
+  const issues = Rules.checkTask(task, ctx);
+  assert.ok(issues.some(i => i.level === 'info' && i.text.includes('旧别名')));
+  assert.equal(issues.filter(i => i.level === 'warn').length, 0);
 });
 
 test('checkTask 对完整合法任务返回 0 issue', () => {

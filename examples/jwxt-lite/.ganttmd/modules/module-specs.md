@@ -11,7 +11,7 @@ status: done
 dependencies: []
 milestone: M1
 track: spec
-module: crosscutting
+domain: crosscutting
 priority: P0
 source_docs: [source-docs/00-模块规格推进清单.md, source-docs/00-跨域依赖收口总账.md]
 next_action: 复核六模块 P0 接口契约关闭结果，并确认稳定结论已反馈系统总调度
@@ -32,7 +32,7 @@ status: done
 dependencies: [S-MOD-03]
 milestone: M1
 track: spec
-module: safety_attendance
+domain: safety_attendance
 priority: P0
 source_docs: [source-docs/00-模块规格推进清单.md, source-docs/00-项目总控看板.md]
 next_action: 复核考勤完整形态主规格是否足以支撑安全到校首条纵切和后续阶段扩展
@@ -54,7 +54,7 @@ owner: project-control
 dependencies: [S-ATT-01]
 milestone: M1
 track: spec
-module: safety_attendance
+domain: safety_attendance
 priority: P0
 source_docs: [source-docs/00-模块规格推进清单.md, source-docs/00-跨域依赖收口总账.md]
 next_action: 对齐考勤字段字典、接口清单和阶段方案，形成可被前后端、安全到校纵切和专项设计承接的收口说明
@@ -76,7 +76,7 @@ owner: project-control
 dependencies: [S-MOD-03, S-ATT-02]
 milestone: M1
 track: spec
-module: crosscutting
+domain: crosscutting
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md, source-docs/00-模块规格推进清单.md, source-docs/00-跨域依赖收口总账.md]
 next_action: 收口审批逐事项字段、回写路径、失败响应和统一错误码，并把设备、通知、统计审计、数据库落点分流到对应专项
@@ -96,7 +96,7 @@ status: todo
 dependencies: [S-ATT-02, S-FE-02]
 milestone: M7
 track: spec
-module: statistics
+domain: statistics
 priority: P1
 source_docs: [source-docs/00-模块规格推进清单.md, source-docs/00-项目总控看板.md]
 next_action: 在考勤字段收口和安全到校前端闭环完成后，启动统计与审计主规格拆解

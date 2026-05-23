@@ -12,7 +12,7 @@ GanttMD 不替代需求文档、技术设计、模块规格、接口清单或测
 
 当前版本是一个轻量 MVP：
 
-- 数据源：`.ganttmd/config.yaml`、`.ganttmd/modules/*.md`、`.ganttmd/followups.md`
+- 数据源：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`
 - 可视化：静态 HTML 页面 + 同目录 `rules.js`
 - 写入方式：人或 Agent 直接编辑 Markdown
 - 页面行为：只读展示，不直接修改任务文件
@@ -47,7 +47,7 @@ your-project/
   .ganttmd/
     config.yaml
     followups.md
-    modules/
+    tasks/
       backend.md
       frontend.md
       quality.md
@@ -60,7 +60,7 @@ your-project/
 然后：
 
 1. 从本仓库复制 `tools/ganttmd/` 整个文件夹到目标项目（包含 `index.html` 和 `rules.js`；二者必须放在同一目录，页面在浏览器加载 `rules.js` 共享规则）。
-2. 按 [新项目初始化指南](docs/新项目初始化指南.md) 创建 `.ganttmd/config.yaml` 和 `.ganttmd/modules/*.md`。
+2. 按 [新项目初始化指南](docs/新项目初始化指南.md) 创建 `.ganttmd/config.yaml` 和 `.ganttmd/tasks/*.md`。
 3. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 合并到目标项目的 `AGENTS.md`。
 4. 用浏览器打开 `tools/ganttmd/index.html`。
 5. 点击“选择目录”，选择目标项目根目录或 `.ganttmd/` 所在目录。
@@ -79,7 +79,7 @@ status: todo
 dependencies: []
 milestone: M1
 track: backend
-module: foundation
+domain: foundation
 priority: P0
 source_docs: [docs/技术方案.md]
 next_action: 明确后端目录、模块边界和启动入口
@@ -96,8 +96,8 @@ evidence: []
 
 - `执行视角`：按 Agent 接手顺序组织任务。
 - `里程碑视角`：按里程碑组织任务。
-- `主线视角`：按 `track` 分组，例如规格、后端、前端、基础设施、质量门。
-- `模块视角`：按 `module` 分组，例如学生、审批、安全考勤等业务模块。
+- `主线视角`：按 `track` 分组，例如规格、后端、前端、基础设施、质量、文档和运维。
+- `领域视角`：按 `domain` 分组，例如学生、审批、安全考勤、通知等业务域或能力域。
 - `风险视角`：聚合阻塞任务、未清理 Follow-up 和严重健康检查。
 - `Follow-up`：查看 Agent 留下的后续事项、用户裁决、延期复查和外部等待。
 
@@ -114,7 +114,7 @@ views:
 Agent 不会天然知道 GanttMD 的存在，必须通过目标项目的 `AGENTS.md` 告诉它：
 
 - 任务数据在 `.ganttmd/`。
-- 执行前要读取 `.ganttmd/config.yaml` 和 `.ganttmd/modules/*.md`。
+- 执行前要读取 `.ganttmd/config.yaml` 和 `.ganttmd/tasks/*.md`。
 - 只能领取 `status: todo` 且依赖已完成的任务。
 - 领取时更新为 `in_progress`，并补 `agent` 或 `owner`。
 - 完成时补 `evidence`，必要时补 `verification` 和 `review_status`。

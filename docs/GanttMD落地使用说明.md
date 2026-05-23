@@ -18,7 +18,7 @@ GanttMD 不替代正式需求、技术设计、模块规格、接口清单、测
 .ganttmd/
   config.yaml
   followups.md
-  modules/
+  tasks/
     backend.md
     frontend.md
     quality.md
@@ -31,7 +31,7 @@ AGENTS.md
 其中：
 
 - `.ganttmd/config.yaml`：项目、里程碑和视图配置。
-- `.ganttmd/modules/*.md`：任务状态真相源。
+- `.ganttmd/tasks/*.md`：任务状态真相源。
 - `.ganttmd/followups.md`：Agent 后续事项、用户裁决、延期复查和外部等待。
 - `tools/ganttmd/`：只读可视化页面（包含 `index.html` 和 `rules.js`，二者放在同一目录）。
 - `AGENTS.md`：告诉 Agent 如何读取和维护 GanttMD。
@@ -42,7 +42,7 @@ AGENTS.md
 
 1. 在目标项目创建 `.ganttmd/`。
 2. 创建 `.ganttmd/config.yaml`。
-3. 创建 `.ganttmd/modules/*.md`。
+3. 创建 `.ganttmd/tasks/*.md`。
 4. 创建 `.ganttmd/followups.md`。
 5. 把本仓库的 `tools/ganttmd/` 整个文件夹复制过去（`index.html` 和 `rules.js` 必须在同一目录）。
 6. 把 [Agent 协作规则模板](Agent协作规则模板.md) 合并到目标项目 `AGENTS.md`。
@@ -85,7 +85,7 @@ status: todo
 dependencies: []
 milestone: M1
 track: backend
-module: foundation
+domain: foundation
 priority: P0
 source_docs: [docs/技术方案.md]
 next_action: 明确后端目录、模块边界和启动入口
@@ -110,7 +110,7 @@ Agent 的工作流：
 
 1. 读取目标项目 `AGENTS.md`。
 2. 读取 `.ganttmd/config.yaml`。
-3. 扫描 `.ganttmd/modules/*.md`。
+3. 扫描 `.ganttmd/tasks/*.md`。
 4. 找到 `status: todo` 且依赖已完成的任务。
 5. 领取前改为 `in_progress`，补 `agent` 或 `owner`。
 6. 执行时读取 `source_docs`。

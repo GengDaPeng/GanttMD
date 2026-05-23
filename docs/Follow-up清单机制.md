@@ -52,7 +52,7 @@ status: wontfix
 
 - `open`：已登记，未清理。
 - `accepted`：主控确认要处理，但尚未转正式任务。
-- `converted`：已转成 `.ganttmd/modules/*.md` 正式任务。
+- `converted`：已转成 `.ganttmd/tasks/*.md` 正式任务。
 - `done`：已处理完成。
 - `wontfix`：明确不做，保留原因。
 
@@ -190,7 +190,7 @@ decision: 主控接受延期，M5 验收前复查
 - `open -> done`
 - `open -> wontfix`
 - 合并重复项。
-- 将重要 follow-up 写入 `.ganttmd/modules/*.md` 正式任务。
+- 将重要 follow-up 写入 `.ganttmd/tasks/*.md` 正式任务。
 
 如果转正式任务，必须填写：
 

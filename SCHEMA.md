@@ -7,31 +7,34 @@
 | 类型 | 路径 | 用途 | 数量 |
 |------|------|------|------|
 | 项目配置 | `config.yaml` | 项目元信息、里程碑、质量门、Agent 配置 | 1 |
-| 模块任务文件 | `modules/*.md` | 某个模块的所有任务 | 等于模块数 |
+| 任务文件 | `tasks/*.md` | 任务状态真相源，文件只表达维护便利 | 1 个或多个 |
+| 旧任务文件 | `modules/*.md` | 兼容旧项目；新项目不推荐 | 0 个或多个 |
 | Follow-up 清单 | `followups.md` | Agent 留下的后续事项、PR 审查尾项和主控清理结论 | 1 |
 | 里程碑总览 | `milestones/overview.md` | 里程碑路线图和状态 | 1 |
 | 时间线数据 | `views/timeline.json` | 解析产物（自动生成） | 1 |
 
-## 1. 模块任务文件格式
+## 1. 任务文件格式
 
 ### 文件路径
 
 ```
-.ganttmd/modules/{module-id}.md
+.ganttmd/tasks/{task-file-id}.md
 ```
 
-`module-id` 使用小写英文和连字符，例如：`user-management`、`attendance-system`、`backend-infrastructure`
+`task-file-id` 使用小写英文和连字符，例如：`active`、`backend`、`crosscutting`、`workflow`。
+
+`modules/*.md` 仍可读取，但只是兼容旧项目。新项目应使用 `tasks/*.md`。
 
 ### Frontmatter
 
 ```yaml
 ---
-module: attendance-system              # 模块 ID（必填）
-module_name: 考勤系统                   # 模块中文名（必填）
+task_file: backend                     # 任务文件 ID（可选）
+title: 后端任务                         # 文件标题（可选）
 owner: backend-agent                   # 负责的 Agent ID（必填）
 created: 2026-05-20                    # 创建日期（必填）
 updated: 2026-05-22                    # 最后更新日期（必填）
-description: 考勤系统核心功能模块       # 模块描述（可选）
+description: 后端主线相关任务           # 文件描述（可选）
 ---
 ```
 
@@ -39,14 +42,14 @@ description: 考勤系统核心功能模块       # 模块描述（可选）
 
 ```markdown
 ---
-module: {module-id}
-module_name: {模块中文名}
+task_file: {task-file-id}
+title: {文件标题}
 owner: {agent-id}
 created: {YYYY-MM-DD}
 updated: {YYYY-MM-DD}
 ---
 
-# {模块中文名}
+# {文件标题}
 
 ## {里程碑 ID} 阶段任务
 
@@ -77,10 +80,10 @@ updated: {YYYY-MM-DD}
 | `kind` | enum | 任务类型：task / bugfix / ad_hoc / review / harness；未填写时按 task 理解 |
 | `status` | enum | 任务源状态：todo / in_progress / review / done / cancelled |
 | `priority` | enum | 优先级：P0 / P1 / P2 / P3 |
-| `dependencies` | array | 前置任务 ID 列表（可以是同模块或跨模块） |
+| `dependencies` | array | 前置任务 ID 列表 |
 | `milestone` | string | 所属里程碑 ID |
-| `track` | string | 工程主线：spec / backend / frontend / infra / quality_gate |
-| `module` | string | 业务模块：student / class / teacher / approval / settings / org_permission / safety_attendance 等 |
+| `track` | string | 工作主线：spec / backend / frontend / infra / quality / docs / ops |
+| `domain` | string | 业务域或能力域：student / approval / safety_attendance / notification / auth 等 |
 
 #### 可选字段
 
@@ -149,12 +152,14 @@ updated: {YYYY-MM-DD}
 - `agent` 表示当前实际执行代理。
 - 如果两者同时存在且不一致，validator 会提示潜在协作冲突。
 
-### track 与 module
+### track 与 domain
 
-`track` 和 `module` 必须拆开：
+`track` 和 `domain` 必须拆开：
 
-- `track` 表达工程主线，建议先使用 `spec / backend / frontend / infra / quality_gate`。
-- `module` 表达业务模块，例如 `student / class / teacher / approval / settings / org_permission / safety_attendance`。
+- `track` 表达工作主线，建议先使用 `spec / backend / frontend / infra / quality / docs / ops`。
+- `domain` 表达业务域或能力域，例如 `student / class / teacher / approval / settings / org_permission / safety_attendance / notification / auth`。
+- 旧字段 `module` 作为 `domain` 的兼容别名。新任务应写 `domain`。
+- 旧主线值 `quality_gate` 作为 `quality` 的兼容别名。新任务应写 `quality`。
 
 示例：
 
@@ -162,7 +167,7 @@ updated: {YYYY-MM-DD}
 id: S-BE-09
 title: 安全到校后端 API 最小闭环
 track: backend
-module: safety_attendance
+domain: safety_attendance
 ```
 
 这样可以同时回答“后端工程主线进展如何”和“安全考勤模块进展如何”。
@@ -197,18 +202,18 @@ health check 至少应提示：
 
 未来如提供 `ganttmd archive` 命令，必须采用显式执行方式，不应在 `validate` 中产生写文件副作用。
 
-### 示例：考勤系统模块
+### 示例：考勤任务文件
 
 ```markdown
 ---
-module: attendance-system
-module_name: 考勤系统
+task_file: attendance
+title: 考勤任务
 owner: backend-agent
 created: 2026-05-20
 updated: 2026-05-22
 ---
 
-# 考勤系统模块
+# 考勤任务
 
 ## M2 阶段任务
 
@@ -363,7 +368,7 @@ decision: 主控接受延期，M5 验收前复查
 |------|------|--------------|----------|
 | `open` | 已登记，等待主控清理 | 无 | 所有 Agent 可新增 |
 | `accepted` | 主控确认要处理，但尚未转正式任务 | `accepted_by` / `accepted_at` / `next_review_at` / `decision` | 仅项目主控 |
-| `converted` | 已转为 `.ganttmd/modules/*.md` 正式任务 | `converted_task` / `resolution` | 仅项目主控 |
+| `converted` | 已转为 `.ganttmd/tasks/*.md` 正式任务 | `converted_task` / `resolution` | 仅项目主控 |
 | `done` | 已处理完成，不需要转正式任务 | `resolution` | 仅项目主控 |
 | `wontfix` | 明确不做，保留原因 | `resolution` | 仅项目主控 |
 
@@ -378,7 +383,7 @@ decision: 主控接受延期，M5 验收前复查
 
 ### 转正式任务规则
 
-转正式任务时必须同时更新 follow-up 和模块任务文件：
+转正式任务时必须同时更新 follow-up 和任务文件：
 
 ```yaml
 status: converted
@@ -574,7 +579,7 @@ parse:
 # 可视化配置
 visualization:
   theme: light                     # 主题：light / dark
-  default_view: modules            # 默认视图：modules / milestones / timeline
+  default_view: execution          # 默认视图：execution / milestone / track / module / risk / followup
   show_done_tasks: false           # 是否显示已完成任务
   color_scheme:
     backlog: "#9CA3AF"             # 灰色
@@ -591,7 +596,7 @@ V4 只开放视图开关，不开放完整 `filter / group_by / sort_by` DSL。
 
 ```yaml
 views:
-  enabled: [execution, milestone, module, risk, followup]
+  enabled: [execution, milestone, track, module, risk, followup]
   default: execution
 ```
 
@@ -608,7 +613,8 @@ views:
 |---------|------|
 | `execution` | 执行视角，按可执行、进行中、阻塞、已完成组织任务 |
 | `milestone` | 里程碑视角，按里程碑组织任务 |
-| `module` | 模块视角，按模块组织任务 |
+| `track` | 主线视角，按 `track` 组织任务 |
+| `module` | 领域视角，按 `domain` 组织任务；视图 ID 暂保留为 `module` 以兼容旧配置 |
 | `risk` | 风险视角，聚合阻塞任务、未清理 Follow-up、非法 Follow-up 和严重健康检查 |
 | `followup` | Follow-up 视角，按 Follow-up 状态组织后续事项 |
 
@@ -629,12 +635,12 @@ views:
 dependencies: [S-ATT-01, S-PRM-02]
 ```
 
-- `S-ATT-01`：同模块任务
-- `S-PRM-02`：跨模块任务（权限系统模块）
+- `S-ATT-01`：同领域任务
+- `S-PRM-02`：跨领域任务（权限能力域）
 
 ### 解析规则
 
-1. 解析器扫描所有 `modules/*.md` 文件
+1. 解析器扫描所有 `tasks/*.md` 文件，并兼容扫描旧的 `modules/*.md`
 2. 构建全局任务 ID 索引
 3. 解析依赖关系时，通过 ID 查找目标任务
 4. 如果找不到目标任务，报告错误
@@ -656,11 +662,11 @@ dependencies: [S-ATT-01, S-PRM-02]
 
 ## 6. 文件命名规范
 
-### 模块文件
+### 任务文件
 
-- 路径：`modules/{module-id}.md`
+- 路径：`tasks/{task-file-id}.md`
 - 命名规则：小写英文 + 连字符
-- 示例：`user-management.md`、`attendance-system.md`
+- 示例：`active.md`、`backend.md`、`crosscutting.md`
 
 ### 里程碑文件
 

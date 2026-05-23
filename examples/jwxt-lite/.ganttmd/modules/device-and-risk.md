@@ -11,7 +11,7 @@ status: todo
 dependencies: []
 milestone: M5
 track: infra
-module: foundation
+domain: foundation
 priority: P0
 source_docs: [source-docs/00-项目总控执行待办.md, source-docs/00-项目总控看板.md]
 next_action: 推动海康沟通，优先确认推荐型号与拓扑、内网固定 IP、实时事件订阅和历史事件补拉
@@ -32,7 +32,7 @@ status: todo
 dependencies: [S-DEV-01]
 milestone: M8
 track: infra
-module: foundation
+domain: foundation
 priority: P2
 source_docs: [source-docs/00-项目总控执行待办.md, source-docs/00-项目总控看板.md]
 next_action: 在真实设备型号、拓扑和事件样例明确后，编写设备接入专项技术设计
@@ -48,8 +48,8 @@ title: 跨域任务与事件可靠性升级门复核
 status: todo
 dependencies: [S-QA-03, S-BE-09]
 milestone: M5
-track: quality_gate
-module: crosscutting
+track: quality
+domain: crosscutting
 priority: P1
 source_docs: [source-docs/00-延期能力与升级门总账.md, source-docs/00-跨域依赖收口总账.md]
 next_action: 在安全到校纵切验收和后续业务链路推进时，复核 S-05 是否仍保持 covered 或需要升级为独立专项
@@ -68,7 +68,7 @@ status: cancelled
 dependencies: []
 milestone: M8
 track: infra
-module: foundation
+domain: foundation
 priority: P3
 source_docs: [source-docs/00-延期能力与升级门总账.md]
 next_action: 已取消，不再排期

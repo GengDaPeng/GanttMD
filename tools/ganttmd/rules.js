@@ -16,6 +16,8 @@
   const TASK_KINDS = ['task', 'bugfix', 'ad_hoc', 'review', 'harness'];
   const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
   const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
+  const TASK_TRACKS = ['spec', 'backend', 'frontend', 'infra', 'quality', 'docs', 'ops'];
+  const TRACK_ALIASES = { quality_gate: 'quality' };
   const ENGINEERING_TRACKS = ['backend', 'frontend', 'infra'];
   const DEFAULT_REVIEW_STALE_DAYS = 7;
   const DEFAULT_ARCHIVE_AFTER_DAYS = 30;
@@ -34,6 +36,11 @@
     if (Array.isArray(v)) return v;
     if (v == null || v === '') return [];
     return [String(v)];
+  }
+
+  function normalizeTrack(track) {
+    if (!track) return '';
+    return TRACK_ALIASES[track] || track;
   }
 
   function makeIssueFactory(id, sourceFile, sink) {
@@ -71,7 +78,14 @@
       make.warn('owner 与 agent 不一致：' + task.owner + ' / ' + task.agent, 'agent');
     }
 
-    if (!task.track) make.warn('任务缺少 track，无法挂载到主线视图', 'track');
+    const normalizedTrack = normalizeTrack(task.track);
+    if (!task.track) {
+      make.warn('任务缺少 track，无法挂载到主线视图', 'track');
+    } else if (TRACK_ALIASES[task.track]) {
+      make.info('track: ' + task.track + ' 是旧别名，建议改为 ' + normalizedTrack, 'track');
+    } else if (TASK_TRACKS.indexOf(normalizedTrack) === -1) {
+      make.warn('任务 track 非法：' + task.track, 'track');
+    }
     if (!task.milestone) {
       make.warn('任务缺少 milestone，无法挂载到里程碑视图', 'milestone');
     } else if (ctx.milestoneIds && ctx.milestoneIds.size > 0 && !ctx.milestoneIds.has(task.milestone)) {
@@ -90,7 +104,7 @@
     if (task.status === 'done' && evArr.length === 0) {
       make.warn('done 任务缺少 evidence，不能只靠口头确认闭环', 'evidence');
     }
-    if (task.status === 'done' && ENGINEERING_TRACKS.indexOf(task.track) !== -1 && !task.verification) {
+    if (task.status === 'done' && ENGINEERING_TRACKS.indexOf(normalizedTrack) !== -1 && !task.verification) {
       make.warn('工程类 done 任务缺少 verification', 'verification');
     }
     if (task.status === 'review' && !task.review_status) {
@@ -223,11 +237,14 @@
     TASK_KINDS: TASK_KINDS,
     FOLLOWUP_STATUSES: FOLLOWUP_STATUSES,
     FOLLOWUP_KINDS: FOLLOWUP_KINDS,
+    TASK_TRACKS: TASK_TRACKS,
+    TRACK_ALIASES: TRACK_ALIASES,
     ENGINEERING_TRACKS: ENGINEERING_TRACKS,
     DEFAULT_REVIEW_STALE_DAYS: DEFAULT_REVIEW_STALE_DAYS,
     DEFAULT_ARCHIVE_AFTER_DAYS: DEFAULT_ARCHIVE_AFTER_DAYS,
     parseDate: parseDate,
     daysBetween: daysBetween,
+    normalizeTrack: normalizeTrack,
     checkTask: checkTask,
     checkFollowup: checkFollowup,
     defaultContext: defaultContext,

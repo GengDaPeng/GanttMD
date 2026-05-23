@@ -6,7 +6,7 @@
 
 ```text
 .ganttmd/config.yaml
-.ganttmd/modules/*.md
+.ganttmd/tasks/*.md
 .ganttmd/followups.md
 tools/ganttmd/index.html
 ```
@@ -15,7 +15,7 @@ tools/ganttmd/index.html
 
 ## 工作前
 
-1. 先读取 `.ganttmd/config.yaml`、`.ganttmd/modules/*.md`、`.ganttmd/followups.md`。
+1. 先读取 `.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`。
 2. 如项目提供校验脚本，先运行 `npm run validate -- .`。
 3. 执行任务前读取该任务的 `source_docs`。
 4. 不领取依赖未完成的任务。
