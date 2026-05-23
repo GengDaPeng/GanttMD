@@ -45,6 +45,7 @@ milestone: M1
 source_docs: [source-docs/00-模块规格推进清单.md, source-docs/00-跨域依赖收口总账.md]
 next_action: 对齐考勤字段字典、接口清单和阶段方案，形成可被前后端、安全到校纵切和专项设计承接的收口说明
 acceptance: [关键考勤字段对象完成命名收口, 接口清单标明阶段归属和承接文档, ATT-CD 剩余项明确进入设备通知统计审计数据库或运行保障专项]
+downstream_constraints: [S-MOD-06 审批对端确认依赖本任务的字段命名结论, S-STAT-01 统计口径依赖本任务的字段字典和接口清单]
 evidence: []
 ```
 

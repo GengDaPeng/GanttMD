@@ -97,6 +97,7 @@ milestone: M2
 source_docs: [source-docs/00-项目总控执行待办.md]
 next_action: 继续补齐前端、契约和业务 API 测试细则，并随安全到校实现回填测试规范
 acceptance: [测试分层规则覆盖后端前端契约和业务 API, AI 生成测试的审查要求明确, 后续随实现补齐项有清单]
+downstream_constraints: [S-FE-02 前端闭环依赖本任务的测试分层规则来编写前端测试]
 evidence: [commit:13e1a14, commit:2cc205a]
 ```
 
@@ -143,6 +144,7 @@ milestone: M5
 source_docs: [source-docs/00-项目总控执行待办.md, source-docs/00-项目总控看板.md]
 next_action: 复核安全到校后端 API 最小闭环是否足以作为前端页面最小闭环输入
 acceptance: [ATT-ARR-01~11 controller service DTO 已落地, ATT 错误码注册到错误码 registry, e2e 覆盖设备事件到异常关闭和审批回写核心链路]
+downstream_constraints: [S-FE-02 前端直接消费本任务的 API 返回格式和错误码, S-STAT-01 统计模块依赖本任务的事实记录结构]
 evidence: [PR#27, commit:e5b5411]
 ```
 
@@ -157,6 +159,7 @@ milestone: M5
 source_docs: [source-docs/00-项目总控执行待办.md, source-docs/00-项目总控看板.md]
 next_action: 完成安全到校工作台、状态列表、异常详情、关闭表单和模拟设备入口的前端最小闭环
 acceptance: [工作台能展示安全到校关键状态, 异常详情和关闭表单可走通, 模拟设备入口能触发最小演示链路]
+downstream_constraints: [S-STAT-01 统计视图将复用本任务的前端组件和页面结构]
 evidence: []
 ```
 

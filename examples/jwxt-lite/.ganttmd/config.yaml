@@ -5,7 +5,7 @@ project:
   source: /Users/gpp/project/gitee/jwxt
 
 views:
-  enabled: [execution, milestone, module, risk, followup]
+  enabled: [execution, milestone, module, panorama, risk, followup]
   default: risk
 
 milestones:
@@ -13,23 +13,28 @@ milestones:
     name: 核心模块规格首轮收敛
     status: in_progress
     description: 核心模块主规格、字段字典、接口清单和跨域依赖首轮关闭
+    objective: 六模块 P0 接口契约全部关闭，考勤字段和跨域依赖有稳定结论，后续实现任务不再因规格歧义返工
 
   - id: M2
     name: 工程跑道建立
     status: in_progress
     description: 后端工程、数据库迁移、本地依赖、一键启动、CI 和工程规范跑道
+    objective: 任何 Agent 或开发者拿到业务任务后，能直接在本地跑通开发-测试-提交流程，不需要再花时间搭环境
 
   - id: M5
     name: 安全到校第一条纵切
     status: in_progress
     description: 登录、主数据、权限、模拟设备、到校事实、异常关闭、审计和工作台展示最小闭环
+    objective: 用模拟设备触发一次完整的到校事件，后端记录事实，前端工作台展示状态，异常可关闭，审计可追溯。这条链路验证整个技术栈端到端可用
 
   - id: M7
     name: 统计与审计成型
     status: backlog
     description: 指标口径、审计查询、导出、监管视图和统计投影
+    objective: 校方管理员能按日/周/月查看到校统计，审计记录可按事件回溯，监管视图可导出合规报表
 
   - id: M8
     name: 真实设备接入与 V1 收敛
     status: backlog
     description: 真实设备事件替换模拟事件，完成设备专项、联调和 V1 收敛
+    objective: 模拟设备全部替换为真实硬件事件源，系统在真实设备环境下完成联调，达到 V1 可交付状态
