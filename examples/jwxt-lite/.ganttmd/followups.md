@@ -9,6 +9,7 @@
 ```ganttmd-followup
 id: FUP-001
 title: 安全到校 queryStatuses 后续优化
+kind: followup
 status: open
 source_type: pr_review
 source_pr: PR#27
@@ -32,6 +33,7 @@ converted_task:
 ```ganttmd-followup
 id: FUP-002
 title: 安全到校 escalation run 真相源
+kind: followup
 status: open
 source_type: pr_review
 source_pr: PR#27
@@ -55,6 +57,7 @@ converted_task:
 ```ganttmd-followup
 id: FUP-003
 title: 设备接入备选方案评估
+kind: external_wait
 status: accepted
 source_type: task
 source_pr:
@@ -82,6 +85,7 @@ converted_task:
 ```ganttmd-followup
 id: FUP-004
 title: 数据生命周期专项排期
+kind: deferred
 status: converted
 source_type: pr_review
 source_pr: PR#24

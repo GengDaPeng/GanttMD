@@ -289,6 +289,35 @@ converted_task:
 
 当 `source_type: pr_review` 时，`source_pr` 和 `source_rr` 必填；否则无法从 PR 审查结论追溯到原始 follow-up。
 
+### kind 字段
+
+`kind` 用于区分 follow-up 的治理类型。未填写时默认为普通 follow-up。
+
+| kind | 含义 | 典型字段 |
+|------|------|----------|
+| `followup` | 普通后续事项 | `reason` / `suggestion` |
+| `decision` | 等待用户或主控裁决 | `decision_owner` / `next_review_at` |
+| `deferred` | 已接受延期，等待复查 | `accepted_by` / `decision` / `next_review_at` |
+| `external_wait` | 等待外部资料或第三方反馈 | `source_comment` / `next_review_at` |
+| `risk` | 高风险事项 | `severity: high` / `target_milestone` |
+
+用户裁决项不单独新增真相源，优先写为：
+
+```yaml
+kind: decision
+decision_owner: user
+status: open
+```
+
+延期接受项不写入任务 `status`，优先写为：
+
+```yaml
+kind: deferred
+status: accepted
+next_review_at: 2026-06-10
+decision: 主控接受延期，M5 验收前复查
+```
+
 ### 状态说明
 
 | 状态 | 含义 | 必填补充字段 | 设置权限 |

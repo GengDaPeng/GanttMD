@@ -5,7 +5,7 @@ project:
   source: /Users/gpp/project/gitee/jwxt
 
 views:
-  enabled: [execution, milestone, module, panorama, risk, followup]
+  enabled: [execution, milestone, track, module, risk, followup]
   default: execution
 
 milestones:
