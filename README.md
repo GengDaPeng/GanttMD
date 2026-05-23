@@ -1,174 +1,172 @@
 # GanttMD
 
-Markdown-native 项目进度管理工具，面向 AI Agent 开发场景。
+GanttMD 是一个 Markdown-native 的项目状态看板，面向 AI Agent 参与开发的项目。
 
-## 什么是 GanttMD
+它的核心定位是：
 
-GanttMD 是一个轻量级的项目进度管理工具，核心理念是：
+> 用 `.ganttmd/` 作为项目任务状态真相源，让人类负责人和 AI Agent 共享同一套可读、可审查、可视化的进度数据。
 
-- **Markdown 是唯一的真相源**：所有项目信息都存储在结构化的 Markdown 文件中
-- **AI Agent 友好**：AI Agent 只需要学会读写 Markdown，不需要学习新工具
-- **可视化只读**：前端可视化层只读取数据，不修改底层 Markdown
-- **完全自主可控**：不依赖外部 SaaS，数据完全在本地
+GanttMD 不替代需求文档、技术设计、模块规格、接口清单或测试规范。它只引用这些正式文档，并维护任务状态、依赖、证据链、阻塞项和 follow-up。
 
-## 解决什么问题
+## 当前形态
 
-AI solo 开发者在复杂项目中的三个核心痛点：
+当前版本是一个轻量 MVP：
 
-1. **看板太重**：现有 markdown 看板需要人驱动更新，AI 不会主动维护
-2. **全局不可见**：人无法一眼看清项目整体进度和依赖关系
-3. **Agent 不知道该做什么**：AI 不会自动检查依赖关系、领取可执行任务
+- 数据源：`.ganttmd/config.yaml`、`.ganttmd/modules/*.md`、`.ganttmd/followups.md`
+- 可视化：单文件 HTML 页面
+- 写入方式：人或 Agent 直接编辑 Markdown
+- 页面行为：只读展示，不直接修改任务文件
 
-## 核心功能
+## 适合解决什么问题
 
-- **模块化任务管理**：按模块组织任务，文件数量可控
-- **依赖关系追踪**：自动检测依赖循环，支持跨模块依赖
-- **状态自动计算**：依赖未满足时自动标记 blocked
-- **里程碑视图**：可视化展示项目关键节点
-- **AI Agent 操作规范**：定义标准的任务领取、更新、完成流程
-- **可视化甘特图**：Web 界面展示项目全局进度
+- AI Agent 不知道下一步该做哪个任务。
+- 人类负责人看不清任务依赖、阻塞和里程碑状态。
+- Agent 经常把“后续再做”停留在口头总结里，没有进入项目跟踪。
+- 完成任务缺少 PR、commit、verification、review_status 等证据链。
 
 ## 快速开始
 
-当前 MVP 推荐复制式使用，不需要安装服务端或数据库：
+在目标项目中创建：
 
-1. 在目标项目创建 `.ganttmd/config.yaml`。
-2. 在 `.ganttmd/modules/*.md` 中维护任务。
-3. 将 `examples/jwxt-lite/index-v4.html` 复制到目标项目，例如 `tools/ganttmd/index.html`。
-4. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 复制到项目根目录 `AGENTS.md`。
-5. 用浏览器打开 `tools/ganttmd/index.html`，选择项目根目录查看看板。
-
-详细步骤见 [GanttMD 落地使用说明](docs/GanttMD落地使用说明.md) 和 [新项目初始化指南](docs/新项目初始化指南.md)。
-
-## 文件结构
-
-```
-.ganttmd/
-├── config.yaml              # 项目配置
-├── modules/                 # 模块任务文件
-│   ├── user-management.md
-│   ├── permission-system.md
-│   └── ...
-├── followups.md             # Agent 后续事项清单
-tools/
-└── ganttmd/
-    └── index.html           # 可视化页面
-AGENTS.md                    # Agent 操作规则
+```text
+your-project/
+  .ganttmd/
+    config.yaml
+    followups.md
+    modules/
+      backend.md
+      frontend.md
+      quality.md
+  AGENTS.md
+  tools/
+    ganttmd/
+      index.html
 ```
 
-## 文档
+然后：
 
-- [设计方案](DESIGN.md)：完整的设计文档，包括架构、流程、阶段切分
-- [Markdown Schema](SCHEMA.md)：Markdown 文件格式规范
-- [GanttMD 落地使用说明](docs/GanttMD落地使用说明.md)：如何把当前 MVP 放进真实项目
-- [新项目初始化指南](docs/新项目初始化指南.md)：一个新项目从 0 创建 `.ganttmd/` 的步骤
-- [Agent 协作规则模板](docs/Agent协作规则模板.md)：可复制到项目 `AGENTS.md` 的规则模板
-- [任务字段说明](docs/任务字段说明.md)：任务字段怎么写、写到什么粒度
-- [AI 生成进度文档指南](docs/AI生成进度文档指南.md)：告诉 Agent 如何从项目文档生成 `.ganttmd/`
-- [Follow-up 清单机制](docs/Follow-up清单机制.md)：防止 Agent 口头 follow-up 不落入项目跟踪
+1. 从本仓库复制当前可视化页面到目标项目，例如 `tools/ganttmd/index.html`。
+2. 按 [新项目初始化指南](docs/新项目初始化指南.md) 创建 `.ganttmd/config.yaml` 和 `.ganttmd/modules/*.md`。
+3. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 合并到目标项目的 `AGENTS.md`。
+4. 用浏览器打开 `tools/ganttmd/index.html`。
+5. 点击“选择目录”，选择目标项目根目录或 `.ganttmd/` 所在目录。
 
-## V4 视图
+也可以直接打开样例：
 
-V4 页面使用内置视图配置驱动，并在 `config.yaml` 中开放极简视图开关：
+```text
+examples/jwxt-lite/index-v6.html
+```
+
+## 任务文件示例
+
+````markdown
+### S-BE-01 后端工程骨架专项设计
+
+```ganttmd-task
+id: S-BE-01
+title: 后端工程骨架专项设计
+status: todo
+dependencies: []
+milestone: M1
+track: backend
+module: foundation
+priority: P0
+source_docs: [docs/技术方案.md]
+next_action: 明确后端目录、模块边界和启动入口
+acceptance: [目录结构确定, 本地启动路径明确, 后续实现任务可承接]
+evidence: []
+```
+
+补充说明可以写在任务块外面。
+````
+
+## 内置视图
+
+当前页面支持这些内置视图：
+
+- `执行视角`：按 Agent 接手顺序组织任务。
+- `里程碑视角`：按里程碑组织任务。
+- `主线视角`：按 `track` 分组，例如规格、后端、前端、基础设施、质量门。
+- `模块视角`：按 `module` 分组，例如学生、审批、安全考勤等业务模块。
+- `风险视角`：聚合阻塞任务、未清理 Follow-up 和严重健康检查。
+- `Follow-up`：查看 Agent 留下的后续事项、用户裁决、延期复查和外部等待。
+
+视图开关写在 `.ganttmd/config.yaml`：
 
 ```yaml
 views:
-  enabled: [execution, milestone, module, risk, followup]
-  default: risk
+  enabled: [execution, milestone, track, module, risk, followup]
+  default: execution
 ```
 
-V4 只允许启用/关闭内置视图和选择默认视图，不暴露完整 `filter / group_by / sort_by` DSL。当前新增的 `risk` 视图用于聚合阻塞任务、未清理 Follow-up、非法 Follow-up 和严重健康检查提示。
+## Agent 如何使用
 
-## 核心理念
+Agent 不会天然知道 GanttMD 的存在，必须通过目标项目的 `AGENTS.md` 告诉它：
 
-### Markdown 是唯一的真相源
+- 任务数据在 `.ganttmd/`。
+- 执行前要读取 `.ganttmd/config.yaml` 和 `.ganttmd/modules/*.md`。
+- 只能领取 `status: todo` 且依赖已完成的任务。
+- 领取时更新为 `in_progress`，并补 `agent` 或 `owner`。
+- 完成时补 `evidence`，必要时补 `verification` 和 `review_status`。
+- 遗留事项必须登记到 `.ganttmd/followups.md`，不能只写在聊天总结里。
 
-所有项目信息都存储在 Markdown 文件中：
-- 任务状态、依赖关系、优先级
-- 里程碑定义
-- Agent 配置
+可直接使用 [Agent 协作规则模板](docs/Agent协作规则模板.md)。
 
-AI Agent 只需要读写 Markdown，不需要学习新工具。
+## Follow-up 治理
 
-### AI Agent 友好
+`.ganttmd/followups.md` 用来解决“口头 follow-up 没有落地”的问题。
 
-GanttMD 定义了标准的 AI Agent 操作规范：
+普通 Agent 可以追加 `status: open` 的 follow-up，但不能关闭、删除、转正式任务。只有项目主控可以清理、关闭、合并或转任务。
 
-1. **查找可执行任务**：扫描模块文件，找到 status=todo 且 dependencies 已满足的任务
-2. **领取任务**：status → in_progress，写入 start_date
-3. **完成任务**：status → done，写入 completed_date
-4. **阻塞任务**：status → blocked，写入 blocked_reason
+来自 PR 审查的 follow-up 必须带来源：
 
-### 可视化只读
+```yaml
+source_type: pr_review
+source_pr: PR#27
+source_rr: RR-003
+```
 
-前端可视化层只读取 `.ganttmd/` 下的 Markdown 和 YAML 文件，不修改底层 Markdown。这保证了：
-- 数据一致性
-- 版本控制友好
-- 多 Agent 并发安全
+详见 [Follow-up 清单机制](docs/Follow-up清单机制.md)。
 
-## 使用场景
+## 文档索引
 
-### AI solo 开发者
+- [Schema](SCHEMA.md)：`.ganttmd/` 文件格式规范。
+- [使用说明](docs/GanttMD落地使用说明.md)：如何在真实项目中使用 GanttMD。
+- [新项目初始化指南](docs/新项目初始化指南.md)：从 0 创建 `.ganttmd/`。
+- [Agent 协作规则模板](docs/Agent协作规则模板.md)：复制到目标项目 `AGENTS.md` 的规则。
+- [AI 生成进度文档指南](docs/AI生成进度文档指南.md)：让 Agent 从现有项目文档生成 `.ganttmd/`。
+- [任务字段说明](docs/任务字段说明.md)：任务字段怎么写。
+- [Follow-up 清单机制](docs/Follow-up清单机制.md)：follow-up 权限、来源和状态规则。
 
-一个人 + 多个 AI Agent 开发复杂项目：
-- 人定义项目结构和里程碑
-- AI Agent 按模块领取任务
-- 人通过可视化界面监控全局进度
+## 校验脚本的方向
 
-### 小团队
+当前页面已经包含一部分健康检查。后续可以把这些检查抽成命令行脚本，例如：
 
-2-5 人团队使用 AI 辅助开发：
-- 每人负责不同模块
-- AI Agent 辅助编码和测试
-- 通过 GanttMD 协调进度和依赖
+```bash
+npm run validate -- /path/to/project
+```
 
-### 开源项目
+脚本的职责不是运行项目，也不是替代页面，而是读取 `.ganttmd/` 并检查：
 
-开源项目的任务管理：
-- 贡献者通过 Markdown 提交任务
-- 维护者通过可视化界面审核
-- 依赖关系清晰可见
+- 任务 ID 是否重复。
+- `dependencies` 是否指向不存在的任务。
+- `status`、`kind`、`review_status` 是否非法。
+- `done` 任务是否缺少 `evidence`。
+- 工程任务完成后是否缺少 `verification`。
+- PR follow-up 是否缺少 `source_pr` 或 `source_rr`。
+- `accepted` follow-up 是否缺少复核时间和主控决策。
 
-## 技术栈
+这样 Agent 在提交前、CI 在合并前都能发现结构问题。
 
-- **数据源**：Markdown fenced block + YAML 风格字段
-- **前端**：单文件 HTML + JavaScript + CSS
-- **运行方式**：浏览器本地打开，选择项目目录
-- **版本控制**：Git
+## 示例
 
-## 贡献
+`examples/jwxt-lite/` 是一个从教务系统项目进度文档抽取出来的真实感样例，用来展示：
 
-欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解如何参与。
+- 里程碑路线图。
+- 执行、主线、模块、风险和 Follow-up 视图。
+- 证据链、复核状态、取消任务和外部阻塞。
+- PR/RR 来源的 follow-up。
 
 ## 许可证
 
-MIT License
-
-## 路线图
-
-### Phase 1：核心框架（1 周）
-
-- [ ] 项目初始化
-- [ ] Markdown schema 定义
-- [ ] 单文件可视化页面
-- [ ] 依赖图构建和循环检测
-
-### Phase 2：可视化（1 周）
-
-- [ ] JSON 输出格式
-- [ ] 前端页面骨架
-- [ ] 模块视图渲染
-- [ ] 依赖关系可视化
-
-### Phase 3：完善（1 周）
-
-- [ ] 文件监听和自动解析
-- [ ] AI Agent 操作规范
-- [ ] 测试用例
-- [ ] 文档完善
-
-### Phase 4：验证（1 周）
-
-- [ ] 从真实项目迁移数据
-- [ ] 实际使用验证
-- [ ] 反馈收集和优化
+当前仓库尚未补充正式许可证文件。开源发布前应新增 `LICENSE` 并在本节声明许可证类型。

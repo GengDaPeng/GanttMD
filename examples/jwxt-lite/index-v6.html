@@ -27,13 +27,18 @@
 body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 
 .header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.header h1 { font-size: 20px; font-weight: 700; }
-.header .sub { color: var(--muted); font-size: 13px; }
-.pick-btn { background: #1f2937; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; }
-.pick-btn:hover { background: #374151; }
-.header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.top-btn { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 8px 14px; border-radius: 6px; font-weight: 650; cursor: pointer; font-size: 13px; }
-.top-btn:hover { background: #dbeafe; border-color: #93c5fd; }
+.brand { min-width: 0; }
+.brand-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.brand-mark { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 99px; background: #eef2ff; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .2px; }
+.header h1 { font-size: 21px; font-weight: 760; letter-spacing: 0; line-height: 1.2; }
+.header .sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.header .sub:empty { display: none; }
+.header-actions { display: inline-flex; gap: 0; align-items: center; border: 1px solid var(--border); background: #f8fafc; border-radius: 9px; padding: 3px; flex-wrap: nowrap; }
+.top-btn, .pick-btn { border: 0; background: transparent; color: var(--muted); padding: 7px 11px; border-radius: 7px; font-weight: 700; cursor: pointer; font-size: 13px; }
+.top-btn:hover, .pick-btn:hover { background: #eef2ff; color: var(--accent); }
+.pick-btn { background: #1f2937; color: #fff; padding-inline: 13px; box-shadow: 0 1px 2px rgba(15,23,42,.12); }
+.pick-btn:hover { background: #111827; color: #fff; }
+.top-btn:disabled { opacity: .6; cursor: wait; }
 
 .summary { display: flex; gap: 1px; background: var(--border); }
 .summary .cell { flex: 1; background: var(--panel); padding: 14px 20px; text-align: center; }
@@ -42,8 +47,11 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 
 .ms-section { padding: 24px 28px 0; }
 .ms-section h2 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
-.ms-track { display: flex; align-items: stretch; gap: 0; position: relative; }
-.ms-node { flex: 1; position: relative; padding: 0 8px; }
+.ms-track { display: flex; align-items: stretch; gap: 0; position: relative; overflow-x: auto; overflow-y: visible; padding-bottom: 10px; overscroll-behavior-x: contain; }
+.ms-track::-webkit-scrollbar { height: 8px; }
+.ms-track::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+.ms-track::-webkit-scrollbar-track { background: #eef2f7; border-radius: 99px; }
+.ms-node { flex: 1 0 176px; max-width: 260px; position: relative; padding: 0 8px; }
 .ms-card { background: var(--panel); border: 2px solid var(--border); border-radius: 10px; padding: 14px 16px; position: relative; z-index: 1; transition: border-color .2s; }
 .ms-node.active .ms-card { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
 .ms-node.completed .ms-card { border-color: var(--done); }
@@ -54,6 +62,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .ms-node.completed .ms-bar span { background: var(--done); }
 .ms-node.active .ms-bar span { background: var(--accent); }
 .ms-node.backlog .ms-bar span { background: #d1d5db; }
+.ms-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; color: var(--muted); font-size: 11px; }
 .ms-pct { font-size: 12px; font-weight: 600; margin-top: 4px; text-align: right; }
 .ms-node:not(:last-child)::after { content: ''; position: absolute; top: 28px; right: -1px; width: calc(100% - 16px); height: 3px; background: var(--border); z-index: 0; transform: translateX(50%); }
 .ms-node.completed:not(:last-child)::after { background: var(--done); }
@@ -106,12 +115,23 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .followup-card.status-done { border-left-color: var(--done); }
 .followup-card.status-wontfix { border-left-color: #9ca3af; opacity: .82; }
 .followup-card.status-invalid { border-left-color: var(--blocked); background: #fff1f2; }
-.followup-title { font-size: 13px; font-weight: 750; line-height: 1.35; margin-top: 3px; }
+.followup-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.followup-severity { border-radius: 99px; padding: 1px 7px; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.followup-severity.high { border: 1px solid #fecaca; background: #fef2f2; color: var(--blocked); }
+.followup-severity.medium { border: 1px solid #fde68a; background: #fffbeb; color: #b45309; }
+.followup-severity.low { border: 1px solid #d1fae5; background: #f0fdf4; color: #047857; }
+.followup-title { font-size: 13px; font-weight: 750; line-height: 1.35; margin-top: 5px; }
+.followup-kind { display: inline-block; border: 1px solid #dbeafe; background: #eff6ff; color: #1d4ed8; border-radius: 99px; padding: 1px 7px; font-size: 11px; font-weight: 650; margin-top: 7px; }
 .followup-reason { color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.4; }
+.followup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; align-items: flex-start; }
+.followup-grid .followup-card { width: auto; min-width: 0; }
 .followup-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .followup-pill { border: 1px solid var(--border); background: var(--soft); border-radius: 99px; padding: 1px 7px; font-size: 11px; color: var(--muted); }
 .followup-pill.high { border-color: #fecaca; background: #fef2f2; color: var(--blocked); font-weight: 650; }
-.followup-pill.medium { border-color: #fde68a; background: #fffbeb; color: #b45309; font-weight: 650; }
+.followup-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
+.followup-filter { border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 99px; padding: 4px 10px; font-size: 12px; font-weight: 650; cursor: pointer; }
+.followup-filter:hover { border-color: #c7d2fe; color: var(--accent); }
+.followup-filter.active { border-color: var(--accent); background: #eef2ff; color: var(--accent); }
 .tabs { display: inline-flex; gap: 4px; padding: 4px; background: #e9edf4; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 18px; }
 .view-nav { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .view-group { display: inline-flex; gap: 4px; padding: 4px; background: #e9edf4; border: 1px solid var(--border); border-radius: 8px; }
@@ -155,6 +175,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .task-card.status-blocked { border-left-color: var(--blocked); background: #fff7f7; }
 .task-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .task-id { font-size: 12px; font-weight: 700; color: var(--muted); }
+.task-id-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .task-name { font-size: 13px; font-weight: 650; margin-top: 3px; line-height: 1.35; }
 .task-meta { display: flex; align-items: center; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
 .badge { font-size: 10px; font-weight: 650; padding: 1px 7px; border-radius: 99px; color: #fff; white-space: nowrap; }
@@ -305,14 +326,30 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 
 .rel-pill.cp { border-color: #c7d2fe; background: #eef2ff; color: var(--accent); font-weight: 650; }
 
+.evidence-block { margin-top: 10px; border: 1px solid var(--border); border-radius: 7px; background: #fafbfc; padding: 9px 10px; }
+.evidence-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.evidence-head strong { font-size: 12px; color: var(--text); }
+.evidence-meta { color: var(--muted); font-size: 11px; margin-left: auto; }
+.evidence-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.prio-pill { font-size: 10px; font-weight: 750; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--border); }
+.prio-pill.prio-P0 { background: #fef2f2; border-color: #fecaca; color: var(--blocked); }
+.prio-pill.prio-P1 { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+.prio-pill.prio-P2 { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.prio-pill.prio-P3 { background: #f3f4f6; border-color: #d1d5db; color: var(--muted); }
+.rev-badge { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; display: inline-block; }
+.rev-badge.rev-pending { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.rev-badge.rev-passed { background: #dcfce7; color: #047857; border: 1px solid #bbf7d0; }
+.rev-badge.rev-must_fix { background: #fee2e2; color: var(--blocked); border: 1px solid #fecaca; }
+.rev-badge.rev-deferred { background: #f3f4f6; color: var(--muted); border: 1px solid #d1d5db; }
+
 @media (max-width: 700px) {
   .header { align-items: flex-start; flex-direction: column; }
+  .header-actions { width: 100%; justify-content: space-between; }
   .agent-panel { grid-template-columns: 1fr; }
   .field-grid { grid-template-columns: 1fr; }
+  .evidence-grid { grid-template-columns: 1fr; }
   .summary { flex-wrap: wrap; }
   .summary .cell { min-width: 33%; }
-  .ms-track { flex-direction: column; gap: 8px; }
-  .ms-node:not(:last-child)::after { display: none; }
   .task-row { flex-direction: column; }
   .task-card-wrap, .task-card { width: 100%; flex-basis: 100%; display: block; }
   .dep-drawer::before { left: 24px; }
@@ -326,12 +363,16 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 <body>
 
 <div class="header">
-  <div>
-    <h1 id="title">GanttMD V6</h1>
-    <div class="sub" id="subtitle">选择项目的 <code>.ganttmd</code> 目录（或包含它的父目录）查看进度。</div>
+  <div class="brand">
+    <div class="brand-row">
+      <h1 id="title">GanttMD V6</h1>
+      <span class="brand-mark">AI 项目主控</span>
+    </div>
+    <div class="sub" id="subtitle">选择包含 <code>.ganttmd/</code> 的项目目录。</div>
   </div>
   <div class="header-actions">
     <button class="top-btn" id="mapBtn">全景图</button>
+    <button class="top-btn" id="refreshBtn" style="display:none;" title="重新读取当前目录的最新数据">刷新</button>
     <button class="pick-btn" id="pickBtn">选择目录</button>
   </div>
 </div>
@@ -356,8 +397,10 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 <script>
 const pickBtn = document.getElementById('pickBtn');
 const mapBtn = document.getElementById('mapBtn');
+const refreshBtn = document.getElementById('refreshBtn');
 const filePicker = document.getElementById('filePicker');
-const state = { page: 'board', view: 'execution', focusId: null, modules: [], config: null, tasks: [], followups: [], byId: new Map(), children: new Map(), orderIdx: new Map(), criticalPaths: new Map(), criticalSet: new Set() };
+const HAS_FS_ACCESS = typeof window.showDirectoryPicker === 'function';
+const state = { page: 'board', view: 'execution', focusId: null, followupKind: 'all', modules: [], config: null, tasks: [], followups: [], byId: new Map(), children: new Map(), orderIdx: new Map(), criticalPaths: new Map(), criticalSet: new Set(), dirHandle: null, lastFiles: null, lastSource: '' };
 const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
 const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
 const TASK_STATUSES = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'blocked'];
@@ -373,7 +416,9 @@ const BUILTIN_VIEWS = {
 };
 const DEFAULT_ENABLED_VIEWS = ['execution', 'milestone', 'track', 'module', 'risk', 'followup'];
 
-pickBtn.addEventListener('click', () => filePicker.click());
+pickBtn.addEventListener('click', () => {
+  filePicker.click();
+});
 mapBtn.addEventListener('click', () => {
   if (!state.tasks.length) {
     showLoadMessage('请先选择项目目录，然后再打开全景图。');
@@ -383,15 +428,74 @@ mapBtn.addEventListener('click', () => {
   state.focusId = null;
   renderProjectMapPage();
 });
+refreshBtn.addEventListener('click', async () => {
+  const originalText = refreshBtn.textContent;
+  refreshBtn.disabled = true;
+  refreshBtn.textContent = '⟳ 刷新中…';
+  try {
+    if (state.dirHandle) {
+      await reloadFromDirHandle(state.dirHandle);
+    } else if (state.lastFiles) {
+      await reloadFromFileList(state.lastFiles);
+    } else {
+      showLoadMessage('没有可刷新的目录，请先选择目录。');
+      return;
+    }
+    refreshBtn.textContent = '✓ 已刷新';
+    setTimeout(() => { refreshBtn.textContent = originalText; }, 1200);
+  } catch (err) {
+    console.error(err);
+    refreshBtn.textContent = '✗ 刷新失败';
+    setTimeout(() => { refreshBtn.textContent = originalText; }, 1800);
+  } finally {
+    refreshBtn.disabled = false;
+  }
+});
 filePicker.addEventListener('change', async (e) => {
   const files = Array.from(e.target.files || []);
+  state.lastFiles = files;
+  state.dirHandle = null;
+  state.lastSource = files[0]?.webkitRelativePath?.split('/')[0] || '手动选择目录';
+  await reloadFromFileList(files);
+});
+
+async function reloadFromFileList(files) {
   const entries = await Promise.all(files.map(async file => ({
     path: file.webkitRelativePath || file.name,
     name: file.name,
     text: await file.text(),
   })));
-  loadFromTextEntries(entries, { sourceName: '手动选择目录' });
-});
+  const ok = loadFromTextEntries(entries, { sourceName: state.lastSource || '手动选择目录' });
+  if (ok) refreshBtn.style.display = '';
+}
+
+async function reloadFromDirHandle(dirHandle) {
+  const entries = [];
+  await collectDirEntries(dirHandle, dirHandle.name, entries);
+  const ok = loadFromTextEntries(entries, { sourceName: dirHandle.name });
+  if (ok) refreshBtn.style.display = '';
+}
+
+async function collectDirEntries(dirHandle, basePath, entries) {
+  for await (const [name, handle] of dirHandle.entries()) {
+    const path = `${basePath}/${name}`;
+    if (handle.kind === 'directory') {
+      // Skip noisy dirs to avoid hangs
+      if (['node_modules', '.git', 'dist', 'build', '.next'].includes(name)) continue;
+      await collectDirEntries(handle, path, entries);
+    } else if (handle.kind === 'file') {
+      // Only read text-likely files we care about
+      if (!/\.(md|ya?ml)$/i.test(name)) continue;
+      try {
+        const file = await handle.getFile();
+        const text = await file.text();
+        entries.push({ path, name, text });
+      } catch (err) {
+        console.warn('skip unreadable file', path, err);
+      }
+    }
+  }
+}
 
 document.addEventListener('click', (event) => {
   const mapBack = event.target.closest('.map-back');
@@ -425,8 +529,10 @@ document.addEventListener('click', (event) => {
   if (quickFocus) {
     event.stopPropagation();
     const id = quickFocus.dataset.taskId;
+    if (['risk', 'followup'].includes(state.view)) state.view = getPreferredFocusView();
     state.focusId = id;
     renderContent();
+    scrollFocusedTaskIntoView(id);
     return;
   }
   if (state.focusId) {
@@ -601,7 +707,7 @@ function loadData(modules, config, followups) {
 
   const projectName = config?.project?.name || 'GanttMD V6';
   document.getElementById('title').textContent = projectName;
-  document.getElementById('subtitle').textContent = `共 ${tasks.length} 个任务 · ${modules.length} 个模块`;
+  document.getElementById('subtitle').textContent = '';
 
   renderSummary();
   renderMilestones();
@@ -688,17 +794,23 @@ function renderMilestones() {
   msTrack.innerHTML = state.config.milestones.map(ms => {
     const msTasks = state.tasks.filter(t => t.milestone === ms.id);
     const doneCnt = msTasks.filter(t => t.status === 'done').length;
-    const pct = msTasks.length ? Math.round(doneCnt / msTasks.length * 100) : 0;
+    const pct = msTasks.length ? Math.round(doneCnt / msTasks.length * 100) : (['done', 'completed'].includes(ms.status) ? 100 : 0);
     let cls = 'backlog';
-    if (pct === 100 && msTasks.length > 0) cls = 'completed';
+    if (['done', 'completed'].includes(ms.status) || (pct === 100 && msTasks.length > 0)) cls = 'completed';
     else if (ms.status === 'in_progress' || msTasks.some(t => t.status === 'in_progress')) cls = 'active';
     const objHtml = ms.objective ? `<div class="ms-objective"><strong>阶段目标</strong>${esc(ms.objective)}</div>` : '';
+    const taskText = msTasks.length
+      ? `${msTasks.length} 任务 · ${doneCnt} 完成`
+      : (['done', 'completed'].includes(ms.status) ? '已完成 · 无任务明细' : '0 任务 · 未拆解');
     return `<div class="ms-node ${cls}">
       <div class="ms-card">
         <div class="ms-id">${esc(ms.id)}</div>
         <div class="ms-name">${esc(ms.name)}</div>
         <div class="ms-bar"><span style="width:${pct}%"></span></div>
-        <div class="ms-pct" style="color:var(--${cls==='completed'?'done':cls==='active'?'accent':'muted'})">${pct}%</div>
+        <div class="ms-meta">
+          <span>${esc(taskText)}</span>
+          <strong style="color:var(--${cls==='completed'?'done':cls==='active'?'accent':'muted'})">${pct}%</strong>
+        </div>
         ${objHtml}
       </div>
     </div>`;
@@ -715,6 +827,23 @@ function getEnabledViews(config = state.config) {
   const ids = config?.views?.enabled?.length ? config.views.enabled : DEFAULT_ENABLED_VIEWS;
   const known = ids.filter(id => BUILTIN_VIEWS[id]);
   return (known.length ? known : DEFAULT_ENABLED_VIEWS).map(id => BUILTIN_VIEWS[id]);
+}
+
+function getPreferredFocusView() {
+  const enabled = new Set(getEnabledViews().map(view => view.id));
+  return ['track', 'module', 'milestone', 'execution'].find(id => enabled.has(id)) || getInitialView(state.config);
+}
+
+function scrollFocusedTaskIntoView(id) {
+  requestAnimationFrame(() => {
+    const card = document.querySelector(`.task-card[data-task-id="${cssIdent(id)}"]`);
+    card?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+  });
+}
+
+function cssIdent(value) {
+  if (window.CSS?.escape) return CSS.escape(String(value));
+  return String(value).replace(/["\\]/g, '\\$&');
 }
 
 function renderContent() {
@@ -745,6 +874,11 @@ function renderContent() {
     button.textContent = ok ? '已复制' : '复制失败';
     setTimeout(() => { button.textContent = '复制'; }, 1200);
   }));
+  content.querySelectorAll('.followup-filter').forEach(button => button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    state.followupKind = button.dataset.kind || 'all';
+    renderContent();
+  }));
 }
 
 function getTaskGroupsForView(view) {
@@ -760,6 +894,7 @@ function renderCurrentViewBody(view, groups) {
   const viewConfig = BUILTIN_VIEWS[view];
   if (viewConfig?.source === 'followups') return renderFollowupView();
   if (viewConfig?.source === 'mixed') return renderRiskView();
+  if (viewConfig?.source === 'panorama') return renderPanorama();
   return groups.map(renderGroup).join('');
 }
 
@@ -1134,6 +1269,7 @@ function renderSelectedTaskContent(task) {
       <strong>⚠ 下游约束 — 实现本任务时必须考虑</strong>
       <ul>${task.downstream_constraints.map(c => `<li>${esc(c)}</li>`).join('')}</ul>
     </div>` : ''}
+    ${renderEvidenceBlock(task)}
     <div class="agent-command">
       <div class="agent-command-title">
         <span>Agent 指令草案</span>
@@ -1148,13 +1284,8 @@ function renderDrawerTaskContent(task) {
   return `
     <div class="agent-kicker">当前任务诊断</div>
     <div class="agent-reason">${esc(getTaskDiagnosis(task))}</div>
-    <div class="agent-command">
-      <div class="agent-command-title">
-        <span>Agent 指令草案</span>
-        <button class="copy-command" type="button" data-task-id="${esc(task.id)}">复制</button>
-      </div>
-      <pre>${esc(getAgentCommand(task))}</pre>
-    </div>
+    ${renderCollapsedAgentCommand(task)}
+    ${renderCollapsedEvidenceBlock(task)}
     <details class="drawer-details">
       <summary>详细信息</summary>
       <div class="drawer-details-body">
@@ -1181,10 +1312,82 @@ function renderDrawerTaskContent(task) {
   `;
 }
 
+function renderCollapsedAgentCommand(task) {
+  const open = shouldOpenAgentCommand(task) ? ' open' : '';
+  return `<details class="drawer-details"${open}>
+    <summary>Agent 指令草案</summary>
+    <div class="drawer-details-body">
+      <div class="agent-command" style="margin-top:0;">
+        <div class="agent-command-title">
+          <span>Agent 指令草案</span>
+          <button class="copy-command" type="button" data-task-id="${esc(task.id)}">复制</button>
+        </div>
+        <pre>${esc(getAgentCommand(task))}</pre>
+      </div>
+    </div>
+  </details>`;
+}
+
+function renderCollapsedEvidenceBlock(task) {
+  const html = renderEvidenceBlock(task);
+  if (!html) return '';
+  const open = shouldOpenEvidenceBlock(task) ? ' open' : '';
+  return `<details class="drawer-details"${open}>
+    <summary>证据与治理</summary>
+    <div class="drawer-details-body">${html}</div>
+  </details>`;
+}
+
+function shouldOpenAgentCommand(task) {
+  const status = task._effective || task.status;
+  return status === 'todo' || task.status === 'in_progress';
+}
+
+function shouldOpenEvidenceBlock(task) {
+  return ['done', 'review', 'cancelled'].includes(task.status);
+}
+
 function renderSmallList(items, emptyText) {
   if (!items?.length) return `<span>${esc(emptyText)}</span>`;
   return `<ul>${items.map(item => `<li>${esc(item)}</li>`).join('')}</ul>`;
 }
+
+function renderEvidenceBlock(task) {
+  const hasEvidence = task.evidence?.length;
+  const showVerification = task.verification || ['done', 'review'].includes(task.status);
+  const showReview = task.review_status || task.status === 'review';
+  const showCancel = task.status === 'cancelled';
+  const showPriority = task.priority;
+  const showUpdated = task.updated_at;
+  if (!hasEvidence && !showVerification && !showReview && !showCancel && !showPriority && !showUpdated) return '';
+  const reviewBadge = task.review_status ? `<span class="rev-badge rev-${esc(task.review_status)}">${reviewStatusLabel(task.review_status)}</span>` : '<span style="color:var(--muted);">未填写</span>';
+  return `<div class="evidence-block">
+    <div class="evidence-head"><strong>证据与治理</strong>
+      ${showPriority ? `<span class="prio-pill prio-${esc(task.priority)}">${esc(task.priority)}</span>` : ''}
+      ${showUpdated ? `<span class="evidence-meta">更新于 ${esc(task.updated_at)}</span>` : ''}
+    </div>
+    <div class="evidence-grid">
+      <div class="field-box">
+        <strong>完成证据</strong>
+        ${renderSmallList(task.evidence, '未登记 evidence')}
+      </div>
+      ${showVerification ? `<div class="field-box">
+        <strong>验证方式</strong>
+        <span>${esc(task.verification || '未填写 verification')}</span>
+      </div>` : ''}
+      ${showReview ? `<div class="field-box">
+        <strong>复核状态</strong>
+        <span>${reviewBadge}</span>
+      </div>` : ''}
+      ${showCancel ? `<div class="field-box">
+        <strong>取消原因</strong>
+        <span>${esc(task.cancel_reason || task.resolution || '未填写 cancel_reason / resolution')}</span>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+function reviewStatusLabel(s) { return {pending:'待复核', passed:'已通过', must_fix:'必须修', deferred:'延期复核'}[s] || s; }
 
 function renderIssue(issue) {
   return `<div class="issue ${issue.level}">
@@ -1196,8 +1399,10 @@ function renderIssue(issue) {
 
 function renderFollowupView() {
   const stats = getFollowupStats();
+  const selectedKind = FOLLOWUP_KINDS.includes(state.followupKind) ? state.followupKind : 'all';
+  const visibleFollowups = selectedKind === 'all' ? state.followups : state.followups.filter(f => getFollowupKind(f) === selectedKind);
   const groups = [...FOLLOWUP_STATUSES, 'invalid']
-    .map(status => ({ status, items: state.followups.filter(f => getFollowupStatus(f) === status) }))
+    .map(status => ({ status, items: visibleFollowups.filter(f => getFollowupStatus(f) === status) }))
     .filter(g => g.items.length);
   if (!state.followups.length) {
     return `<div class="empty"><strong>暂无 Follow-up</strong><p style="margin-top:8px;">Agent 发现后续事项后，应追加到 .ganttmd/followups.md。</p></div>`;
@@ -1212,27 +1417,40 @@ function renderFollowupView() {
       <span class="metric-pill">${stats.wontfix} wontfix</span>
       ${stats.invalid ? `<span class="metric-pill">${stats.invalid} invalid</span>` : ''}
     </div>
+    ${renderFollowupKindFilters(selectedKind, stats)}
   </div>
-  ${groups.map(g => `<div class="group">
+  ${groups.length ? groups.map(g => `<div class="group">
     <div class="group-header ${g.status === 'open' ? 'blocked' : g.status === 'done' ? 'completed' : 'active'}">
       <span class="group-tag">${esc(g.status)}</span>
       <h3>${followupStatusLabel(g.status)}</h3>
       <span class="group-summary">${g.items.length} 项</span>
     </div>
-    <div class="task-cards">${g.items.map(renderFollowupCard).join('')}</div>
-  </div>`).join('')}`;
+    <div class="followup-grid">${g.items.map(renderFollowupCard).join('')}</div>
+  </div>`).join('') : `<div class="empty"><strong>当前类型暂无事项</strong><p style="margin-top:8px;">可以切换其他 Follow-up 类型查看。</p></div>`}`;
+}
+
+function renderFollowupKindFilters(selectedKind, stats) {
+  const items = [
+    { id: 'all', label: '全部', count: state.followups.length },
+    ...FOLLOWUP_KINDS.map(kind => ({ id: kind, label: followupKindLabel(kind), count: stats[kind] || 0 })),
+  ];
+  return `<div class="followup-filters">${items.map(item => `<button class="followup-filter ${selectedKind === item.id ? 'active' : ''}" type="button" data-kind="${esc(item.id)}">
+    ${esc(item.label)} · ${item.count}
+  </button>`).join('')}</div>`;
 }
 
 function renderFollowupCard(item) {
   const severity = item.severity || 'medium';
   const status = getFollowupStatus(item);
   return `<div class="followup-card status-${esc(status)}">
-    <div class="task-id">${esc(item.id || '')}</div>
+    <div class="followup-top">
+      <div class="task-id">${esc(item.id || '')}</div>
+      <span class="followup-severity ${esc(severity)}">${esc(severityLabel(severity))}</span>
+    </div>
     <div class="followup-title">${esc(item.title || '')}</div>
+    <div class="followup-kind">${esc(followupKindLabel(getFollowupKind(item)))}</div>
     <div class="followup-reason">${esc(item.reason || '')}</div>
     <div class="followup-meta">
-      <span class="followup-pill ${esc(severity)}">${esc(severity)}</span>
-      <span class="followup-pill">${esc(followupKindLabel(getFollowupKind(item)))}</span>
       ${status === 'invalid' ? `<span class="followup-pill high">非法状态</span>` : ''}
       ${item.source_pr ? `<span class="followup-pill">${esc(item.source_pr)}</span>` : ''}
       ${item.source_rr ? `<span class="followup-pill">${esc(item.source_rr)}</span>` : ''}
@@ -1366,6 +1584,10 @@ function followupKindLabel(kind) {
   return {followup:'普通 Follow-up', decision:'等待用户裁决', deferred:'延期复查', external_wait:'等待外部资料', risk:'高风险事项'}[kind] || kind;
 }
 
+function severityLabel(severity) {
+  return {high:'高', medium:'中', low:'低'}[severity] || severity;
+}
+
 function getRecommendedTask() {
   const ready = state.tasks.filter(t => t._effective === 'todo');
   ready.sort((a, b) => getExecutionScore(b) - getExecutionScore(a) || (state.orderIdx.get(a.id) ?? 999) - (state.orderIdx.get(b.id) ?? 999));
@@ -1459,9 +1681,6 @@ function getHealthIssues() {
     if (t.status === 'blocked' && t._openDeps.length === 0 && !t.blocked_reason) {
       issues.push({ level: 'warn', id: t.id, text: '标记为 blocked，但没有未完成前置依赖，也没有 blocked_reason。' });
     }
-    if (t.status === 'todo' && t._openDeps.length > 0) {
-      issues.push({ level: 'warn', id: t.id, text: `状态是 todo，但仍有 ${t._openDeps.length} 个未完成依赖。` });
-    }
     if (t.status === 'in_progress' && !t.owner && !t.agent) {
       issues.push({ level: '', id: t.id, text: '进行中任务缺少 owner/agent 字段，后续多 Agent 协作容易撞车。' });
     }
@@ -1509,7 +1728,8 @@ function getFollowupIssues() {
     if (getFollowupKind(f) === 'decision' && !f.decision_owner) {
       issues.push({ level: 'warn', id, text: '用户裁决类 Follow-up 缺少 decision_owner。' });
     }
-    if ((getFollowupKind(f) === 'deferred' || f.status === 'accepted') && !f.next_review_at) {
+    const fStatus = getFollowupStatus(f);
+    if (((getFollowupKind(f) === 'deferred' && ['open', 'accepted'].includes(fStatus)) || f.status === 'accepted') && !f.next_review_at) {
       issues.push({ level: 'warn', id, text: '延期或 accepted Follow-up 缺少 next_review_at。' });
     }
     if (f.source_type === 'pr_review' && (!f.source_pr || !f.source_rr)) {
@@ -1669,12 +1889,16 @@ function renderTaskCard(t, focus) {
   return `<div class="task-card-wrap ${expanded ? 'expanded' : ''}">
     <div class="task-card status-${status} ${relationClass}" data-task-id="${esc(t.id)}">
       <div class="task-head">
-        <div class="task-id">${esc(t.id)}</div>
+        <div class="task-id-row">
+          <div class="task-id">${esc(t.id)}</div>
+          ${t.priority ? `<span class="prio-pill prio-${esc(t.priority)}">${esc(t.priority)}</span>` : ''}
+        </div>
         <span class="badge ${status}">${statusLabel(status)}</span>
       </div>
       <div class="task-name">${esc(t.title || '')}</div>
       <div class="task-meta">
         <span class="mod-tag">${esc(trackLabel(t._track))}</span>
+        <span class="mod-tag">${esc(moduleLabel(t._businessModule))}</span>
       </div>
       <div class="rel-row">
         ${onCritical ? `<span class="rel-pill cp">关键路径</span>` : ''}
