@@ -13,7 +13,7 @@ GanttMD 不替代需求文档、技术设计、模块规格、接口清单或测
 当前版本是一个轻量 MVP：
 
 - 数据源：`.ganttmd/config.yaml`、`.ganttmd/modules/*.md`、`.ganttmd/followups.md`
-- 可视化：单文件 HTML 页面
+- 可视化：静态 HTML 页面 + 同目录 `rules.js`
 - 写入方式：人或 Agent 直接编辑 Markdown
 - 页面行为：只读展示，不直接修改任务文件
 
