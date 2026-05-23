@@ -2,9 +2,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const TASK_STATUSES = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'blocked'];
+const TASK_KINDS = ['task', 'bugfix', 'ad_hoc', 'review', 'harness'];
 const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
 const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
 const ENGINEERING_TRACKS = ['backend', 'frontend', 'infra'];
+const DEFAULT_REVIEW_STALE_DAYS = 7;
+const DEFAULT_ARCHIVE_AFTER_DAYS = 30;
 
 function resolveGanttRoot(projectRoot) {
   const absoluteRoot = path.resolve(projectRoot || process.cwd());
@@ -157,10 +160,15 @@ function issue(level, id, message, sourceFile, field) {
   return { level, id, message, sourceFile, field };
 }
 
-function validateProject(project) {
+function validateProject(project, options = {}) {
   const issues = [];
   const taskById = new Map();
   const milestoneIds = new Set(project.config.milestones.map((milestone) => milestone.id).filter(Boolean));
+  const context = {
+    now: options.now || new Date(),
+    reviewStaleDays: options.reviewStaleDays || DEFAULT_REVIEW_STALE_DAYS,
+    archiveAfterDays: options.archiveAfterDays || DEFAULT_ARCHIVE_AFTER_DAYS,
+  };
 
   for (const task of project.tasks) {
     if (!task.id) {
@@ -174,23 +182,45 @@ function validateProject(project) {
   }
 
   for (const task of project.tasks) {
-    validateTask(task, taskById, milestoneIds, project.root, issues);
+    validateTask(task, taskById, milestoneIds, project.root, context, issues);
   }
 
   for (const followup of project.followups) {
-    validateFollowup(followup, issues);
+    validateFollowup(followup, context, issues);
   }
 
   return issues;
 }
 
-function validateTask(task, taskById, milestoneIds, projectRoot, issues) {
+function parseDate(value) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function daysBetween(from, to) {
+  return Math.floor((to.getTime() - from.getTime()) / 86400000);
+}
+
+function validateTask(task, taskById, milestoneIds, projectRoot, context, issues) {
   const id = task.id || '(missing id)';
 
   if (!task.title) issues.push(issue('warn', id, '任务缺少 title', task.source_file, 'title'));
   if (!task.status) issues.push(issue('warn', id, '任务缺少 status', task.source_file, 'status'));
   if (task.status && !TASK_STATUSES.includes(task.status)) {
     issues.push(issue('warn', id, `任务 status 非法：${task.status}`, task.source_file, 'status'));
+  }
+
+  if (task.kind && !TASK_KINDS.includes(task.kind)) {
+    issues.push(issue('warn', id, `任务 kind 非法：${task.kind}`, task.source_file, 'kind'));
+  }
+
+  if (task.status === 'in_progress' && !task.owner && !task.agent) {
+    issues.push(issue('warn', id, 'in_progress 任务缺少 owner/agent，容易造成多 Agent 撞车', task.source_file, 'owner'));
+  }
+
+  if (task.owner && task.agent && task.owner !== task.agent) {
+    issues.push(issue('warn', id, `owner 与 agent 不一致：${task.owner} / ${task.agent}`, task.source_file, 'agent'));
   }
 
   if (!task.track) {
@@ -225,8 +255,28 @@ function validateTask(task, taskById, milestoneIds, projectRoot, issues) {
     issues.push(issue('warn', id, 'review 任务缺少 review_status', task.source_file, 'review_status'));
   }
 
+  if (task.status === 'review') {
+    const updatedAt = parseDate(task.updated_at);
+    if (updatedAt) {
+      const age = daysBetween(updatedAt, context.now);
+      if (age > context.reviewStaleDays) {
+        issues.push(issue('warn', id, `review 状态超过 ${context.reviewStaleDays} 天未更新，请复核或退回`, task.source_file, 'updated_at'));
+      }
+    }
+  }
+
   if (task.status === 'cancelled' && !task.cancel_reason && !task.resolution) {
     issues.push(issue('warn', id, 'cancelled 任务缺少 cancel_reason 或 resolution', task.source_file, 'cancel_reason'));
+  }
+
+  const archiveDate = task.status === 'done'
+    ? parseDate(task.completed_date || task.closed_at)
+    : parseDate(task.closed_at || task.cancelled_at || task.completed_date);
+  if ((task.status === 'done' || task.status === 'cancelled') && archiveDate) {
+    const age = daysBetween(archiveDate, context.now);
+    if (age > context.archiveAfterDays) {
+      issues.push(issue('info', id, `${task.status} 任务已关闭 ${age} 天，可归档到历史任务文件`, task.source_file, task.status === 'done' ? 'completed_date' : 'closed_at'));
+    }
   }
 
   for (const sourceDoc of task.source_docs) {
@@ -235,6 +285,10 @@ function validateTask(task, taskById, milestoneIds, projectRoot, issues) {
     if (!fs.existsSync(path.resolve(projectRoot, sourcePath))) {
       issues.push(issue('warn', id, `来源文档不存在：${sourcePath}`, task.source_file, 'source_docs'));
     }
+  }
+
+  if (task.source_docs.length === 0 && !['done', 'cancelled'].includes(task.status)) {
+    issues.push(issue('warn', id, '任务缺少 source_docs，Agent 接手时无法追溯正式依据', task.source_file, 'source_docs'));
   }
 
   if (!task.next_action && !['done', 'cancelled'].includes(task.status)) {
@@ -246,7 +300,7 @@ function validateTask(task, taskById, milestoneIds, projectRoot, issues) {
   }
 }
 
-function validateFollowup(followup, issues) {
+function validateFollowup(followup, context, issues) {
   const id = followup.id || '(missing followup id)';
   const requiredFields = ['id', 'title', 'kind', 'status', 'source_type', 'created_by', 'created_at', 'reason', 'suggestion', 'severity'];
 
@@ -278,6 +332,13 @@ function validateFollowup(followup, issues) {
     issues.push(issue('warn', id, '延期或外部等待 follow-up 必须填写 next_review_at', followup.source_file, 'next_review_at'));
   }
 
+  if (['open', 'accepted'].includes(followup.status) && followup.next_review_at) {
+    const nextReviewAt = parseDate(followup.next_review_at);
+    if (nextReviewAt && nextReviewAt.getTime() < context.now.getTime()) {
+      issues.push(issue('warn', id, `follow-up 已超过 next_review_at：${followup.next_review_at}`, followup.source_file, 'next_review_at'));
+    }
+  }
+
   if (followup.status === 'accepted') {
     for (const field of ['accepted_by', 'accepted_at', 'decision']) {
       if (!followup[field]) {
@@ -297,6 +358,7 @@ function validateFollowup(followup, issues) {
 
 module.exports = {
   TASK_STATUSES,
+  TASK_KINDS,
   FOLLOWUP_STATUSES,
   FOLLOWUP_KINDS,
   extractBlocks,

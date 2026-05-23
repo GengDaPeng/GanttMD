@@ -151,6 +151,7 @@ updated_at: 2026-05-22
 id: S-QA-14
 title: 本地开发环境规范骨架与定稿
 status: in_progress
+owner: project-control
 dependencies: [S-BE-05, S-BE-06]
 milestone: M2
 track: quality_gate

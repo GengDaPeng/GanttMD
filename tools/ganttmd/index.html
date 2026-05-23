@@ -408,6 +408,7 @@ const state = { page: 'board', view: 'execution', focusId: null, followupKind: '
 const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
 const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
 const TASK_STATUSES = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'blocked'];
+const TASK_KINDS = ['task', 'bugfix', 'ad_hoc', 'review', 'harness'];
 const TRACK_LABELS = { spec: '规格主线', backend: '后端工程', frontend: '前端工程', infra: '基础设施', quality_gate: '质量门' };
 const MODULE_LABELS = { safety_attendance: '安全考勤', student: '学生管理', class: '班级管理', teacher: '教师管理', approval: '审批中心', settings: '系统设置', org_permission: '组织权限', statistics: '统计审计', foundation: '工程基础', crosscutting: '横切事项' };
 const BUILTIN_VIEWS = {
@@ -1675,9 +1676,13 @@ function getAgentCommand(task) {
 
 function getHealthIssues() {
   const issues = [...getFollowupIssues()];
+  const now = new Date();
   for (const t of state.tasks) {
     if (!TASK_STATUSES.includes(t.status)) {
       issues.push({ level: 'warn', id: t.id, text: `任务 status 非法：${t.status || '(空)'}` });
+    }
+    if (t.kind && !TASK_KINDS.includes(t.kind)) {
+      issues.push({ level: 'warn', id: t.id, text: `任务 kind 非法：${t.kind}` });
     }
     if (t._missingDeps?.length) {
       issues.push({ level: 'warn', id: t.id, text: `依赖指向不存在任务：${t._missingDeps.join(', ')}` });
@@ -1688,8 +1693,18 @@ function getHealthIssues() {
     if (t.status === 'in_progress' && !t.owner && !t.agent) {
       issues.push({ level: '', id: t.id, text: '进行中任务缺少 owner/agent 字段，后续多 Agent 协作容易撞车。' });
     }
+    if (t.owner && t.agent && t.owner !== t.agent) {
+      issues.push({ level: 'warn', id: t.id, text: `owner 与 agent 不一致：${t.owner} / ${t.agent}` });
+    }
     if (t.status === 'review' && !t.review_status) {
       issues.push({ level: 'warn', id: t.id, text: 'review 任务缺少 review_status，无法判断复核结论。' });
+    }
+    if (t.status === 'review' && t.updated_at) {
+      const updatedAt = parseDateValue(t.updated_at);
+      if (updatedAt) {
+        const age = daysBetween(updatedAt, now);
+        if (age > 7) issues.push({ level: 'warn', id: t.id, text: `review 状态超过 7 天未更新，请复核或退回。` });
+      }
     }
     if (t.status === 'done' && !t.evidence?.length) {
       issues.push({ level: 'warn', id: t.id, text: 'done 任务缺少 evidence，可能形成虚假闭环。' });
@@ -1699,6 +1714,16 @@ function getHealthIssues() {
     }
     if (t.status === 'cancelled' && !t.cancel_reason && !t.resolution) {
       issues.push({ level: 'warn', id: t.id, text: 'cancelled 任务缺少 cancel_reason 或 resolution。' });
+    }
+    const archiveDate = t.status === 'done'
+      ? parseDateValue(t.completed_date || t.closed_at)
+      : parseDateValue(t.closed_at || t.cancelled_at || t.completed_date);
+    if ((t.status === 'done' || t.status === 'cancelled') && archiveDate) {
+      const age = daysBetween(archiveDate, now);
+      if (age > 30) issues.push({ level: '', id: t.id, text: `${t.status} 任务已关闭 ${age} 天，可归档到历史任务文件。` });
+    }
+    if (!t.source_docs?.length && !['done', 'cancelled'].includes(t.status)) {
+      issues.push({ level: 'warn', id: t.id, text: '任务缺少 source_docs，Agent 接手时无法追溯正式依据。' });
     }
     if (!t.next_action) {
       issues.push({ level: '', id: t.id, text: '缺少 next_action，Agent 接手时只能依赖通用模板。' });
@@ -1714,8 +1739,19 @@ function getHealthIssues() {
   return issues;
 }
 
+function parseDateValue(value) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function daysBetween(from, to) {
+  return Math.floor((to.getTime() - from.getTime()) / 86400000);
+}
+
 function getFollowupIssues() {
   const issues = [];
+  const now = new Date();
   const commonRequired = ['id', 'title', 'status', 'source_type', 'created_by', 'created_at', 'reason', 'suggestion', 'severity'];
   for (const f of state.followups) {
     const id = f.id || 'FUP-UNKNOWN';
@@ -1735,6 +1771,12 @@ function getFollowupIssues() {
     const fStatus = getFollowupStatus(f);
     if (((getFollowupKind(f) === 'deferred' && ['open', 'accepted'].includes(fStatus)) || f.status === 'accepted') && !f.next_review_at) {
       issues.push({ level: 'warn', id, text: '延期或 accepted Follow-up 缺少 next_review_at。' });
+    }
+    if (['open', 'accepted'].includes(fStatus) && f.next_review_at) {
+      const nextReviewAt = parseDateValue(f.next_review_at);
+      if (nextReviewAt && nextReviewAt.getTime() < now.getTime()) {
+        issues.push({ level: 'warn', id, text: `Follow-up 已超过 next_review_at：${f.next_review_at}` });
+      }
     }
     if (f.source_type === 'pr_review' && (!f.source_pr || !f.source_rr)) {
       issues.push({ level: 'warn', id, text: 'PR 审查来源必须填写 source_pr 和 source_rr。' });

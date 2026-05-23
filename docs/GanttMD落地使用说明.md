@@ -159,12 +159,15 @@ npm run validate -- /path/to/project
 - 任务或 follow-up 状态值非法。
 - 任务缺少 `milestone` 或 `track`。
 - 任务引用配置中不存在的里程碑。
-- `source_docs` 指向不存在的正式文档。
+- `source_docs` 缺失或指向不存在的正式文档。
+- `in_progress` 任务缺少 `owner/agent`，或二者明显冲突。
+- `review` 任务长期未更新。
+- `done` / `cancelled` 任务关闭超过阈值后可归档。
 - `done` 任务缺少 `evidence`。
 - 工程类 `done` 任务缺少 `verification`。
 - `review` 任务缺少 `review_status`。
 - PR 审查来源 follow-up 缺少 `source_pr` 或 `source_rr`。
-- `accepted` follow-up 缺少主控、决策或复核时间。
+- `accepted` follow-up 缺少主控、决策或复核时间，或已经超过复核时间。
 
 Agent 在改动 `.ganttmd/` 后，建议先运行：
 
@@ -173,3 +176,15 @@ npm run validate -- .
 ```
 
 如果页面和命令行结果不一致，应以命令行输出为结构性校验依据，再回到页面确认视觉展示是否符合预期。
+
+## 历史归档
+
+已完成和已取消任务不要直接删除。推荐流程是：
+
+1. 任务进入 `done` 时填写 `completed_date`。
+2. 任务进入 `cancelled` 时填写 `closed_at` 或 `cancelled_at`。
+3. `npm run validate -- .` 每次运行时检查是否超过归档阈值。
+4. 超过阈值后，validate 只提示“可归档”，不自动写文件。
+5. 未来如提供 `ganttmd archive --apply`，再由显式命令移动到历史文件。
+
+不建议做后台定时自动清理。GanttMD 是文件真相源，自动写文件应尽量可见、可审查、可回滚。

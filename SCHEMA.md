@@ -74,6 +74,7 @@ updated: {YYYY-MM-DD}
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `title` | string | 任务标题，简洁明了 |
+| `kind` | enum | 任务类型：task / bugfix / ad_hoc / review / harness；未填写时按 task 理解 |
 | `status` | enum | 任务源状态：todo / in_progress / review / done / cancelled |
 | `priority` | enum | 优先级：P0 / P1 / P2 / P3 |
 | `dependencies` | array | 前置任务 ID 列表（可以是同模块或跨模块） |
@@ -88,6 +89,8 @@ updated: {YYYY-MM-DD}
 | `start_date` | date | 开始日期（status=in_progress 时填写） |
 | `due_date` | date | 截止日期 |
 | `completed_date` | date | 完成日期（status=done 时填写） |
+| `closed_at` | date | 终态关闭日期，适用于 done / cancelled 的统一归档判断 |
+| `cancelled_at` | date | 取消日期；如果已填写 closed_at，可不填 |
 | `estimate` | string | 预估时间（如 3d、1w、2w） |
 | `tags` | array | 标签列表，用于分类和筛选 |
 | `blocked_reason` | string | 阻塞原因（仅 status=blocked 时填写） |
@@ -98,6 +101,8 @@ updated: {YYYY-MM-DD}
 | `verification` | string | 测试命令、CI、手工验证或未验证原因 |
 | `review_status` | enum | pending / passed / must_fix / deferred |
 | `updated_at` | date | 最后更新日期 |
+| `owner` | string | 当前责任人或主控角色 |
+| `agent` | string | 当前实际执行 Agent |
 
 ### 任务 ID 规范
 
@@ -121,6 +126,28 @@ updated: {YYYY-MM-DD}
 `blocked` 默认是派生状态：当任务仍有未完成前置依赖，或存在 `blocked_reason` 时，看板可显示为被阻塞。若团队显式写 `status: blocked`，必须填写 `blocked_reason`，否则 health check 应提示异常。
 
 `accepted_deferred` 不属于任务执行状态。延期接受、等待复查、用户裁决等治理决策应写入 `.ganttmd/followups.md`，例如 `kind: deferred` 或 `kind: decision`，并通过 `next_review_at` 复查。
+
+### kind
+
+`kind` 用于表达任务来源或执行形态，不替代 `status`。
+
+| kind | 说明 |
+|------|------|
+| task | 常规计划内任务；未填写时按 task 理解 |
+| bugfix | 缺陷修复 |
+| ad_hoc | 计划外临时任务，需要补来源和原因 |
+| review | 复核、审查或确认任务 |
+| harness | 工具、脚手架、AI 工作流或测试夹具任务 |
+
+非法 `kind` 应由 validator 提示。计划外工作不要只留在聊天里，应登记为 `kind: ad_hoc` 或 `kind: bugfix` 的正式任务，或先进入 follow-up 等待主控转换。
+
+### owner 与 agent
+
+`status: in_progress` 的任务应填写 `owner` 或 `agent`，避免多 Agent 同时接手。
+
+- `owner` 表示责任角色或任务主控。
+- `agent` 表示当前实际执行代理。
+- 如果两者同时存在且不一致，validator 会提示潜在协作冲突。
 
 ### track 与 module
 
@@ -157,6 +184,18 @@ health check 至少应提示：
 - `track: backend / frontend / infra` 的 `done` 任务无 `verification`。
 - `review` 无 `review_status`。
 - `cancelled` 无取消原因。
+
+### 归档
+
+`done` 和 `cancelled` 不应直接删除。长期关闭任务应归档到历史文件，便于回查和恢复。
+
+当前 validator 只提示可归档，不自动移动文件：
+
+- `done` 优先使用 `completed_date` 判断关闭时间。
+- `cancelled` 优先使用 `closed_at` 或 `cancelled_at` 判断关闭时间。
+- 默认超过 30 天会提示“可归档”。
+
+未来如提供 `ganttmd archive` 命令，必须采用显式执行方式，不应在 `validate` 中产生写文件副作用。
 
 ### 示例：考勤系统模块
 

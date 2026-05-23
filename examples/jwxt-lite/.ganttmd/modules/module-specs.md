@@ -50,6 +50,7 @@ updated_at: 2026-05-18
 id: S-ATT-02
 title: 考勤字段、接口和阶段方案收口
 status: in_progress
+owner: project-control
 dependencies: [S-ATT-01]
 milestone: M1
 track: spec
@@ -71,6 +72,7 @@ updated_at: 2026-05-22
 id: S-MOD-06
 title: 考勤跨域对端确认和专项分流反馈
 status: in_progress
+owner: project-control
 dependencies: [S-MOD-03, S-ATT-02]
 milestone: M1
 track: spec

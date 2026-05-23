@@ -142,6 +142,7 @@ source_rr: RR-003
 
 - [Schema](SCHEMA.md)：`.ganttmd/` 文件格式规范。
 - [使用说明](docs/GanttMD落地使用说明.md)：如何在真实项目中使用 GanttMD。
+- [人机协作使用路径与边界](docs/人机协作使用路径与边界.md)：人类负责人、Agent、主控清理和 PR follow-up 的协作边界。
 - [新项目初始化指南](docs/新项目初始化指南.md)：从 0 创建 `.ganttmd/`。
 - [Agent 协作规则模板](docs/Agent协作规则模板.md)：复制到目标项目 `AGENTS.md` 的规则。
 - [AI 生成进度文档指南](docs/AI生成进度文档指南.md)：让 Agent 从现有项目文档生成 `.ganttmd/`。
@@ -170,11 +171,14 @@ npm run validate -- examples/jwxt-lite
 - `status`、`kind`、`review_status` 是否非法。
 - 任务是否缺少 `milestone` 或 `track`。
 - `milestone` 是否指向配置中不存在的里程碑。
-- `source_docs` 是否指向不存在的正式文档。
+- `source_docs` 是否缺失或指向不存在的正式文档。
+- `in_progress` 任务是否缺少 `owner/agent`，或二者明显冲突。
+- `review` 任务是否长期未更新。
+- `done` / `cancelled` 任务关闭超过阈值后是否可归档。
 - `done` 任务是否缺少 `evidence`。
 - 工程任务完成后是否缺少 `verification`。
 - PR follow-up 是否缺少 `source_pr` 或 `source_rr`。
-- `accepted` follow-up 是否缺少复核时间和主控决策。
+- `accepted` follow-up 是否缺少复核时间和主控决策，或已经超过复核时间。
 
 这样 Agent 在提交前、CI 在合并前都能发现结构问题。
 
