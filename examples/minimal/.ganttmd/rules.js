@@ -1,9 +1,12 @@
-// GanttMD 共享规则模块
-// 同一份规则给浏览器健康检查（tools/ganttmd/index.html）和 CLI 校验器（src/validator.js）使用。
+// GanttMD 共享规则模块（canonical 副本住在 examples/minimal/.ganttmd/）
+// 同一份规则给浏览器健康检查（.ganttmd/index.html）和 CLI 校验器（bin/validator.js）使用。
 //
 // 设计原则：纯函数 + 显式上下文。规则函数本身不做 IO，不计算派生字段。
 // 调用方需要先把任务派生字段（_openDeps / _missingDeps / _downstreamCount）算好再传入。
 // 来源文档存在性检查通过 ctx.sourceDocExists 回调注入；浏览器端可以传 null 跳过该检查。
+//
+// 修改本文件后请同步 examples/jwxt-lite/.ganttmd/rules.js，否则 npm test 会失败：
+//   cp examples/minimal/.ganttmd/rules.js examples/jwxt-lite/.ganttmd/rules.js
 
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {

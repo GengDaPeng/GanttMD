@@ -30,9 +30,9 @@ GanttMD 当前处于早期阶段，`jwxt` 是第一个真实接入的项目，�
 1. **登记**：jwxt 侧任意代理或负责人发现问题，追加一条 `open` 反馈。
 2. **归类**：主控定期审阅（建议每周一次），归类为：
    - schema 问题 → 改 SCHEMA.md，开新 commit
-   - 页面问题 → 改源副本 `tools/ganttmd/index.html`（测试守卫会自动检查样例 `.ganttmd/` 是否同步）
+   - 页面问题 → 改 canonical 副本 `examples/minimal/.ganttmd/index.html`（测试守卫会自动检查 jwxt-lite 是否同步）
    - 文档问题 → 改 `docs/` 下相应文档
-   - 校验器问题 → 改 `src/validator.js`
+   - 校验器问题 → 改 `bin/validator.js`
    - 暂不处理 → 标记 `rejected`，写明理由
    - 需要长期跟进 → 标记 `converted`，转入 GitHub Issue 或独立 follow-up
 3. **关闭**：处理后将状态改为 `accepted`（已落地）、`rejected`（不做）或 `converted`（转走）。
@@ -58,4 +58,16 @@ GanttMD 当前处于早期阶段，`jwxt` 是第一个真实接入的项目，�
 - 严重度：medium
 - 建议方向：把 `index.html` 和 `rules.js` 合并进 `.ganttmd/`，让"所有 GanttMD 相关的事情都从 .ganttmd/ 一个入口进"
 - 状态：accepted（已落地）
-- 落地说明：仓库源副本仍在 `tools/ganttmd/`（src/validator.js 依赖此路径），但所有使用方文档和样例都改为「直接放进 `.ganttmd/`」；`examples/jwxt-lite/.ganttmd/` 和 `examples/minimal/.ganttmd/` 各自包含 `index.html` + `rules.js`，由 `test/template-sync.test.js` 保证三处字节一致
+- 落地说明：所有使用方文档和样例都改为「直接放进 `.ganttmd/`」；`examples/jwxt-lite/.ganttmd/` 和 `examples/minimal/.ganttmd/` 各自包含 `index.html` + `rules.js`，由 `test/template-sync.test.js` 保证字节一致
+- 后续清理（FB-002）：彻底删除中间层 `tools/ganttmd/` 和 `src/`，让 `examples/minimal/.ganttmd/` 成为唯一的 canonical 开发位置
+
+### FB-002 tools/ 和 src/ 中间层冗余
+
+- 提出者：jwxt 负责人
+- 日期：2026-05-23
+- 场景：FB-001 落地后发现：仓库里仍然维护 `tools/ganttmd/` 作为"源副本"，开发时改这里再同步到样例——这是 git 没有分支/worktree 时代的旧习惯
+- 现象：同一份 index.html / rules.js 维护在 3 个地方（tools + 2 个 examples），开发时多一步同步，认知冗余
+- 严重度：medium
+- 建议方向：直接以 `examples/minimal/.ganttmd/` 为唯一开发位置；删除 `tools/`；`bin/validator.js` 直接 require minimal 副本；jwxt-lite 由 sync 测试保证一致
+- 状态：accepted（已落地）
+- 落地说明：删除 `tools/ganttmd/` 和 `src/` 目录；`src/validator.js` → `bin/validator.js`；template-sync 测试改为「jwxt-lite 必须与 canonical（minimal）字节一致」；文档全面更新为「从 `examples/minimal/.ganttmd/` 复制」

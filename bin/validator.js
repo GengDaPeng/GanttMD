@@ -1,7 +1,10 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const Rules = require('../tools/ganttmd/rules.js');
+// 共享规则的 canonical 副本住在 examples/minimal/.ganttmd/rules.js。
+// 这是仓库唯一的开发位置；其他样例（jwxt-lite）和使用方项目都从这里复制。
+// test/template-sync.test.js 守卫 jwxt-lite 与 minimal 字节一致。
+const Rules = require('../examples/minimal/.ganttmd/rules.js');
 
 const TASK_STATUSES = Rules.TASK_STATUSES;
 const TASK_KINDS = Rules.TASK_KINDS;

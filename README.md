@@ -60,7 +60,7 @@ your-project/
 
 然后：
 
-1. 从本仓库的 `tools/ganttmd/` 复制 `index.html` 和 `rules.js` 到目标项目的 `.ganttmd/` 目录。
+1. 从本仓库的 `examples/minimal/.ganttmd/` 复制 `index.html` 和 `rules.js` 到目标项目的 `.ganttmd/` 目录。
 2. 按 [新项目初始化指南](docs/新项目初始化指南.md) 创建 `.ganttmd/config.yaml` 和 `.ganttmd/tasks/*.md`。
 3. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 合并到目标项目的 `AGENTS.md`。
 4. 用浏览器打开 `.ganttmd/index.html`。

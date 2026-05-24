@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { loadProject, validateProject } = require('../src/validator');
+const { loadProject, validateProject } = require('./validator');
 
 function parseArgs(argv) {
   const args = argv.slice(2);
