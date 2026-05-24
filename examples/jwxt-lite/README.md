@@ -8,7 +8,7 @@
 
 - `.ganttmd/index.html` + `.ganttmd/rules.js`：看板页面与共享规则（与仓库 `tools/ganttmd/` 同步，由测试守卫保证不漂移）。
 - `.ganttmd/config.yaml`：样例项目、M0-M8 里程碑和视图配置。
-- `.ganttmd/modules/*.md`：任务数据，使用 `ganttmd-task` fenced block。该样例仍保留旧目录以验证兼容性；新项目推荐 `.ganttmd/tasks/*.md`。
+- `.ganttmd/tasks/*.md`：任务数据，使用 `ganttmd-task` fenced block。
 - `.ganttmd/followups.md`：Follow-up、用户裁决、延期复查、外部等待和风险事项。
 - `source-docs/`：从 `jwxt` 复制来的历史材料快照，只作离线样例的来源证据；真实项目不应长期维护另一套动态进度文档。
 - `AGENTS.md`：Agent 操作协议样例。
