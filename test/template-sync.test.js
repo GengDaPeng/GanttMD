@@ -22,7 +22,7 @@ const CANONICAL_DIR = path.join(__dirname, '..', 'examples', 'minimal', '.ganttm
 const SYNCED_DIRS = [
   path.join(__dirname, '..', 'examples', 'jwxt-lite', '.ganttmd'),
 ];
-const FILES = ['index.html', 'rules.js'];
+const FILES = ['index.html', 'rules.js', 'validate.js'];
 
 function sha(filePath) {
   const buf = fs.readFileSync(filePath);

@@ -22,7 +22,8 @@ GanttMD 也不要求项目再维护一套“项目进度文档”。动态进度
 AGENTS.md
 .ganttmd/
   index.html              # 看板页面（从仓库 examples/minimal/.ganttmd/ 复制）
-  rules.js                # 共享规则模块（从仓库 examples/minimal/.ganttmd/ 复制；必须与 index.html 同目录）
+  rules.js                # 共享规则（页面和 validate.js 都用；必须与它们同目录）
+  validate.js             # CLI 校验器（node .ganttmd/validate.js）
   config.yaml             # 项目、里程碑和视图配置
   followups.md            # Agent 后续事项、用户裁决、延期复查和外部等待
   tasks/                  # 任务状态真相源
@@ -38,7 +39,7 @@ AGENTS.md
 - `.ganttmd/config.yaml`：项目、里程碑和视图配置。
 - `.ganttmd/tasks/*.md`：任务状态真相源。
 - `.ganttmd/followups.md`：Agent 后续事项、用户裁决、延期复查和外部等待。
-- `.ganttmd/index.html` + `.ganttmd/rules.js`：只读可视化页面与共享规则模块。
+- `.ganttmd/index.html` + `.ganttmd/rules.js` + `.ganttmd/validate.js`：只读可视化页面、共享规则、CLI 校验器。
 - `AGENTS.md`：告诉 Agent 如何读取和维护 GanttMD。
 
 ## 安装方式
@@ -46,7 +47,7 @@ AGENTS.md
 当前 MVP 推荐复制式使用：
 
 1. 在目标项目创建 `.ganttmd/` 目录。
-2. 从本仓库的 `examples/minimal/.ganttmd/` 复制 `index.html` 和 `rules.js` 到目标项目的 `.ganttmd/` 目录。
+2. 从本仓库的 `examples/minimal/.ganttmd/` 复制 `index.html`、`rules.js`、`validate.js` 三个文件到目标项目的 `.ganttmd/` 目录。
 3. 创建 `.ganttmd/config.yaml`。
 4. 创建 `.ganttmd/tasks/*.md`。
 5. 创建 `.ganttmd/followups.md`。

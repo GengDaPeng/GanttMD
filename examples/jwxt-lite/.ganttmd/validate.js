@@ -1,10 +1,28 @@
+#!/usr/bin/env node
+// GanttMD CLI 校验器（canonical 副本住在 examples/minimal/.ganttmd/）
+//
+// 既是可执行 CLI，也是 Node 模块。三种用法：
+//
+//   1. 直接跑（jwxt 这类使用方项目最常用）：
+//        node .ganttmd/validate.js              # 校验当前目录的 .ganttmd/
+//        node .ganttmd/validate.js /path/to/proj
+//        node .ganttmd/validate.js --json       # 机器可读输出
+//
+//   2. 通过 package.json scripts：
+//        "validate": "node .ganttmd/validate.js"
+//
+//   3. 在 Node 代码里 require：
+//        const { loadProject, validateProject } = require('./.ganttmd/validate');
+//
+// 规则定义在同目录的 rules.js（浏览器健康检查和这里共享同一份）。
+//
+// 修改本文件后请同步 examples/jwxt-lite/.ganttmd/validate.js，否则 npm test 会失败：
+//   cp examples/minimal/.ganttmd/validate.js examples/jwxt-lite/.ganttmd/validate.js
+
 const fs = require('node:fs');
 const path = require('node:path');
 
-// 共享规则的 canonical 副本住在 examples/minimal/.ganttmd/rules.js。
-// 这是仓库唯一的开发位置；其他样例（jwxt-lite）和使用方项目都从这里复制。
-// test/template-sync.test.js 守卫 jwxt-lite 与 minimal 字节一致。
-const Rules = require('../examples/minimal/.ganttmd/rules.js');
+const Rules = require('./rules.js');
 
 const TASK_STATUSES = Rules.TASK_STATUSES;
 const TASK_KINDS = Rules.TASK_KINDS;
@@ -250,6 +268,62 @@ function validateProject(project, options = {}) {
   }
 
   return issues;
+}
+
+// ============================================================
+// CLI 入口（仅当作为命令直接运行时执行）
+// ============================================================
+
+function parseArgs(argv) {
+  const args = argv.slice(2);
+  return {
+    json: args.includes('--json'),
+    root: args.find((arg) => !arg.startsWith('--')) || process.cwd(),
+  };
+}
+
+function levelLabel(level) {
+  if (level === 'warn') return '警告';
+  if (level === 'info') return '提示';
+  return level;
+}
+
+function runCli() {
+  const options = parseArgs(process.argv);
+  const project = loadProject(options.root);
+  const issues = validateProject(project);
+  const warnings = issues.filter((item) => item.level === 'warn');
+
+  if (options.json) {
+    console.log(JSON.stringify({
+      root: project.root,
+      ganttRoot: project.ganttRoot,
+      taskCount: project.tasks.length,
+      followupCount: project.followups.length,
+      issueCount: issues.length,
+      warningCount: warnings.length,
+      issues,
+    }, null, 2));
+  } else {
+    console.log(`GanttMD 校验：${project.ganttRoot}`);
+    console.log(`任务 ${project.tasks.length} 个，follow-up ${project.followups.length} 个，警告 ${warnings.length} 个，提示 ${issues.length - warnings.length} 个。`);
+
+    if (issues.length === 0) {
+      console.log('未发现结构问题。');
+    } else {
+      for (const item of issues) {
+        const location = item.sourceFile ? ` ${item.sourceFile}` : '';
+        const field = item.field ? ` [${item.field}]` : '';
+        console.log(`- ${levelLabel(item.level)} ${item.id}${field}${location}：${item.message}`);
+      }
+    }
+  }
+
+  process.exitCode = warnings.length > 0 ? 1 : 0;
+}
+
+if (require.main === module) {
+  runCli();
 }
 
 module.exports = {

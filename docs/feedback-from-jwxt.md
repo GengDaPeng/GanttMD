@@ -32,7 +32,7 @@ GanttMD 当前处于早期阶段，`jwxt` 是第一个真实接入的项目，�
    - schema 问题 → 改 SCHEMA.md，开新 commit
    - 页面问题 → 改 canonical 副本 `examples/minimal/.ganttmd/index.html`（测试守卫会自动检查 jwxt-lite 是否同步）
    - 文档问题 → 改 `docs/` 下相应文档
-   - 校验器问题 → 改 `bin/validator.js`
+   - 校验器问题 → 改 canonical 副本 `examples/minimal/.ganttmd/validate.js`（同 rules.js 一样由测试守卫同步到 jwxt-lite）
    - 暂不处理 → 标记 `rejected`，写明理由
    - 需要长期跟进 → 标记 `converted`，转入 GitHub Issue 或独立 follow-up
 3. **关闭**：处理后将状态改为 `accepted`（已落地）、`rejected`（不做）或 `converted`（转走）。
@@ -70,4 +70,4 @@ GanttMD 当前处于早期阶段，`jwxt` 是第一个真实接入的项目，�
 - 严重度：medium
 - 建议方向：直接以 `examples/minimal/.ganttmd/` 为唯一开发位置；删除 `tools/`；`bin/validator.js` 直接 require minimal 副本；jwxt-lite 由 sync 测试保证一致
 - 状态：accepted（已落地）
-- 落地说明：删除 `tools/ganttmd/` 和 `src/` 目录；`src/validator.js` → `bin/validator.js`；template-sync 测试改为「jwxt-lite 必须与 canonical（minimal）字节一致」；文档全面更新为「从 `examples/minimal/.ganttmd/` 复制」
+- 落地说明：删除 `tools/ganttmd/`、`src/`、`bin/` 三个中间层目录；CLI 校验器合并为单文件 `examples/minimal/.ganttmd/validate.js`（既可 `node` 直接跑也可 `require`）；template-sync 测试改为「jwxt-lite 必须与 canonical（minimal）3 个文件（index.html / rules.js / validate.js）字节一致」；使用方部署形态：复制 3 个文件到 `.ganttmd/`，`node .ganttmd/validate.js` 即可校验

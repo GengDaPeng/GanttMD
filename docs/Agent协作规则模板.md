@@ -8,7 +8,7 @@
 
 - 任务状态唯一真相源：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`
 - 人类查看入口：`.ganttmd/index.html`
-- 字段、状态和规则以 `SCHEMA.md`、`docs/任务字段说明.md` 和 `npm run validate -- .` 为准
+- 字段、状态和规则以 `SCHEMA.md`、`docs/任务字段说明.md` 和 `node .ganttmd/validate.js` 为准
 
 ### 工作边界
 
@@ -23,4 +23,4 @@
 
 ### 提交前
 
-- 运行 `npm run validate -- .`，按提示修复；确需保留异常时，说明原因并交给项目主控裁决
+- 运行 `node .ganttmd/validate.js`（项目根目录下），按提示修复；确需保留异常时，说明原因并交给项目主控裁决
