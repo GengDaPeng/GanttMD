@@ -1781,7 +1781,7 @@ function getAgentCommand(task) {
   return `读取 ${sources}，补充任务 ${task.id} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
 }
 
-// 规则统一来自 tools/ganttmd/rules.js（与 CLI 校验器共享）。
+// 规则统一来自同目录 rules.js（与 CLI 校验器共享）。
 // 页面层只负责构造 ctx 和把派生字段补齐，规则本身不在这里维护。
 function getHealthIssues() {
   const ctx = Rules.defaultContext({

@@ -20,12 +20,12 @@
 3. 选择 `examples/minimal/` 或 `examples/minimal/.ganttmd/`。
 4. 查看执行、里程碑、主线、模块、风险和 Follow-up 视图。
 
-> 所有 GanttMD 相关文件都在 `.ganttmd/` 这一个目录里（页面、规则、配置、任务、follow-up），这就是推荐的最终部署形态。
+> 所有 GanttMD 相关文件都在 `.ganttmd/` 这一个目录里（页面、规则、校验器、配置、任务、follow-up），这是当前 MVP 的复制式部署形态。
 
 真实项目接入 GanttMD 后，在该项目根目录校验：
 
 ```bash
-npm run validate -- .
+node .ganttmd/validate.js
 ```
 
 如果从 GanttMD 仓库根目录校验这个内置样例，使用：

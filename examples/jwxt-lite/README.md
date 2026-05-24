@@ -6,7 +6,7 @@
 
 ## 目录说明
 
-- `.ganttmd/index.html` + `.ganttmd/rules.js`：看板页面与共享规则（与仓库 `examples/minimal/.ganttmd/` 同步，由测试守卫保证不漂移）。
+- `.ganttmd/index.html` + `.ganttmd/rules.js` + `.ganttmd/validate.js`：看板页面、共享规则和 CLI 校验器；这一组文件可随 `.ganttmd/` 一起复制到真实项目。
 - `.ganttmd/config.yaml`：样例项目、M0-M8 里程碑和视图配置。
 - `.ganttmd/tasks/*.md`：任务数据，使用 `ganttmd-task` fenced block。
 - `.ganttmd/followups.md`：Follow-up、用户裁决、延期复查、外部等待和风险事项。

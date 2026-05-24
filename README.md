@@ -153,27 +153,29 @@ source_rr: RR-003
 - [AI 生成初始任务文件指南](docs/AI生成进度文档指南.md)：让 Agent 从现有项目材料初始化或迁移 `.ganttmd/`。
 - [任务字段说明](docs/任务字段说明.md)：任务字段怎么写。
 - [Follow-up 清单机制](docs/Follow-up清单机制.md)：follow-up 权限、来源和状态规则。
-- [校验脚本检查流程图](docs/校验脚本检查流程图.md)：`npm run validate` 的流程、检查项和输出结果。
+- [校验脚本检查流程图](docs/校验脚本检查流程图.md)：`.ganttmd/validate.js` 的流程、检查项和输出结果。
 - [jwxt 项目反馈](docs/feedback-from-jwxt.md)：第一个真实接入项目的 dogfooding 反馈集中地。
 
 ## 命令行校验
 
-页面已经包含一部分健康检查。仓库也提供命令行校验脚本，适合 Agent 提交前或 CI 合并前运行：
+页面已经包含一部分健康检查。`.ganttmd/validate.js` 提供命令行校验能力，适合 Agent 提交前或 CI 合并前运行。
+
+当前 GanttMD 还没有安装式部署，MVP 先采用复制式接入：把 `index.html`、`rules.js`、`validate.js` 一起复制进使用方项目的 `.ganttmd/`。因此使用方不需要安装 GanttMD 包，也不需要配置 npm script。
 
 在使用方项目根目录运行：
 
 ```bash
-npm run validate -- .
+node .ganttmd/validate.js
 ```
 
 如果不在项目根目录，也可以显式指定项目路径或 `.ganttmd/` 目录：
 
 ```bash
-npm run validate -- /path/to/project
-npm run validate -- /path/to/project/.ganttmd
+node /path/to/project/.ganttmd/validate.js /path/to/project
+node /path/to/project/.ganttmd/validate.js /path/to/project/.ganttmd
 ```
 
-本仓库开发者可以直接校验内置样例：
+本仓库开发者可以用 npm script 校验内置样例：
 
 ```bash
 npm run validate -- examples/jwxt-lite
@@ -201,7 +203,14 @@ npm run validate -- examples/minimal
 如需给其他工具消费结果，可以使用 JSON 输出：
 
 ```bash
-npm run validate -- . --json
+node .ganttmd/validate.js --json
+```
+
+如需接入 CI，可以直接运行同一条命令：
+
+```yaml
+- name: Validate GanttMD
+  run: node .ganttmd/validate.js
 ```
 
 ## 示例

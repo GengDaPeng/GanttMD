@@ -44,7 +44,7 @@ AGENTS.md
 
 ## 安装方式
 
-当前 MVP 推荐复制式使用：
+当前 GanttMD 还没有安装式部署，MVP 先采用复制式接入。复制式不是长期唯一形态，但当前必须一次性复制完整能力：看板页面、共享规则和 CLI 校验器都放进 `.ganttmd/`。
 
 1. 在目标项目创建 `.ganttmd/` 目录。
 2. 从本仓库的 `examples/minimal/.ganttmd/` 复制 `index.html`、`rules.js`、`validate.js` 三个文件到目标项目的 `.ganttmd/` 目录。
@@ -152,19 +152,19 @@ Agent 的工作流：
 
 ## 命令行校验
 
-GanttMD 提供命令行校验脚本，用来在 Agent 提交前或 CI 合并前检查 `.ganttmd/` 的结构问题：
+GanttMD 提供命令行校验脚本，用来在 Agent 提交前或 CI 合并前检查 `.ganttmd/` 的结构问题。使用方项目复制 `.ganttmd/validate.js` 后，不需要安装 npm 包，也不需要配置 npm script。
 
 在使用方项目根目录运行：
 
 ```bash
-npm run validate -- .
+node .ganttmd/validate.js
 ```
 
 如果从其他目录执行，也可以显式传项目路径或 `.ganttmd/` 路径：
 
 ```bash
-npm run validate -- /path/to/project
-npm run validate -- /path/to/project/.ganttmd
+node /path/to/project/.ganttmd/validate.js /path/to/project
+node /path/to/project/.ganttmd/validate.js /path/to/project/.ganttmd
 ```
 
 如果命令返回警告，退出码为 `1`；只有提示或没有问题时，退出码为 `0`。当前校验重点包括：
@@ -187,10 +187,17 @@ npm run validate -- /path/to/project/.ganttmd
 Agent 在改动 `.ganttmd/` 后，建议先运行：
 
 ```bash
-npm run validate -- .
+node .ganttmd/validate.js
 ```
 
 如果页面和命令行结果不一致，应以命令行输出为结构性校验依据，再回到页面确认视觉展示是否符合预期。
+
+CI 里也直接运行同一条命令：
+
+```yaml
+- name: Validate GanttMD
+  run: node .ganttmd/validate.js
+```
 
 ## 历史归档
 
@@ -198,7 +205,7 @@ npm run validate -- .
 
 1. 任务进入 `done` 时填写 `completed_date`；缺失时 validator 会回退使用 `closed_at` 或 `updated_at`。
 2. 任务进入 `cancelled` 时填写 `closed_at` 或 `cancelled_at`；缺失时 validator 会回退使用 `updated_at`。
-3. `npm run validate -- .` 每次运行时检查是否超过 7 天归档阈值。
+3. `node .ganttmd/validate.js` 每次运行时检查是否超过 7 天归档阈值。
 4. 超过阈值后，validate 只提示“可归档”，不自动写文件。
 5. 项目主控可补 `archived_at` 和 `archived_reason` 手动归档；恢复时删除这两个字段。
 6. 未来如提供 `ganttmd archive --apply`，再由显式命令移动到历史文件。

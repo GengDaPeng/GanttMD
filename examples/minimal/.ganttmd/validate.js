@@ -1,23 +1,23 @@
 #!/usr/bin/env node
-// GanttMD CLI 校验器（canonical 副本住在 examples/minimal/.ganttmd/）
+// GanttMD CLI 校验器。
 //
-// 既是可执行 CLI，也是 Node 模块。三种用法：
+// 本文件应与 index.html、rules.js 一起放在使用方项目的 .ganttmd/ 目录。
+// 它只依赖同目录的 rules.js，不依赖 GanttMD 仓库路径。
 //
-//   1. 直接跑（jwxt 这类使用方项目最常用）：
-//        node .ganttmd/validate.js              # 校验当前目录的 .ganttmd/
-//        node .ganttmd/validate.js /path/to/proj
+// 三种用法：
+//
+//   1. 在项目根目录直接跑：
+//        node .ganttmd/validate.js              # 校验当前项目的 .ganttmd/
 //        node .ganttmd/validate.js --json       # 机器可读输出
 //
-//   2. 通过 package.json scripts：
-//        "validate": "node .ganttmd/validate.js"
+//   2. 从其他目录显式传项目路径：
+//        node /path/to/project/.ganttmd/validate.js /path/to/project
+//        node /path/to/project/.ganttmd/validate.js /path/to/project/.ganttmd
 //
 //   3. 在 Node 代码里 require：
 //        const { loadProject, validateProject } = require('./.ganttmd/validate');
 //
 // 规则定义在同目录的 rules.js（浏览器健康检查和这里共享同一份）。
-//
-// 修改本文件后请同步 examples/jwxt-lite/.ganttmd/validate.js，否则 npm test 会失败：
-//   cp examples/minimal/.ganttmd/validate.js examples/jwxt-lite/.ganttmd/validate.js
 
 const fs = require('node:fs');
 const path = require('node:path');
