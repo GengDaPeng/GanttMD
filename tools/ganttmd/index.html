@@ -135,6 +135,12 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .followup-filter { border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 99px; padding: 4px 10px; font-size: 12px; font-weight: 650; cursor: pointer; }
 .followup-filter:hover { border-color: #c7d2fe; color: var(--accent); }
 .followup-filter.active { border-color: var(--accent); background: #eef2ff; color: var(--accent); }
+.status-filters { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.status-filter-label { color: var(--muted); font-size: 12px; font-weight: 700; margin-right: 2px; }
+.status-filter { border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 99px; padding: 4px 10px; font-size: 12px; font-weight: 650; cursor: pointer; }
+.status-filter:hover { border-color: #c7d2fe; color: var(--accent); }
+.status-filter.active { border-color: var(--accent); background: #eef2ff; color: var(--accent); }
+.status-filter.archived.active { border-color: #9ca3af; background: #f3f4f6; color: #4b5563; }
 .tabs { display: inline-flex; gap: 4px; padding: 4px; background: #e9edf4; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 18px; }
 .view-nav { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .view-group { display: inline-flex; gap: 4px; padding: 4px; background: #e9edf4; border: 1px solid var(--border); border-radius: 8px; }
@@ -406,7 +412,7 @@ const mapBtn = document.getElementById('mapBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const filePicker = document.getElementById('filePicker');
 const HAS_FS_ACCESS = typeof window.showDirectoryPicker === 'function';
-const state = { page: 'board', view: 'execution', focusId: null, followupKind: 'all', modules: [], config: null, tasks: [], followups: [], byId: new Map(), children: new Map(), orderIdx: new Map(), criticalPaths: new Map(), criticalSet: new Set(), dirHandle: null, lastFiles: null, lastSource: '' };
+const state = { page: 'board', view: 'execution', focusId: null, followupKind: 'all', taskStatusFilter: 'active', modules: [], config: null, tasks: [], followups: [], byId: new Map(), children: new Map(), orderIdx: new Map(), criticalPaths: new Map(), criticalSet: new Set(), dirHandle: null, lastFiles: null, lastSource: '' };
 // 规则常量统一从 rules.js 引用，避免页面和 CLI 之间漂移
 const TASK_STATUSES = Rules.TASK_STATUSES;
 const TASK_KINDS = Rules.TASK_KINDS;
@@ -423,6 +429,17 @@ const BUILTIN_VIEWS = {
   followup: { id: 'followup', name: 'Follow-up', group: 'governance', source: 'followups', groupBy: 'status', sortBy: 'created_at', hint: '所有 Agent 可追加 open follow-up；只有项目主控可以清理、关闭或转正式任务' },
 };
 const DEFAULT_ENABLED_VIEWS = ['execution', 'milestone', 'track', 'module', 'risk', 'followup'];
+const TASK_STATUS_FILTERS = [
+  { id: 'active', label: '活跃' },
+  { id: 'all', label: '全部' },
+  { id: 'todo', label: '可执行' },
+  { id: 'in_progress', label: '进行中' },
+  { id: 'review', label: '待复核' },
+  { id: 'blocked', label: '阻塞' },
+  { id: 'done', label: '已完成' },
+  { id: 'cancelled', label: '已取消' },
+  { id: 'archived', label: '已归档' },
+];
 
 pickBtn.addEventListener('click', () => {
   filePicker.click();
@@ -538,6 +555,7 @@ document.addEventListener('click', (event) => {
     event.stopPropagation();
     const id = quickFocus.dataset.taskId;
     if (['risk', 'followup'].includes(state.view)) state.view = getPreferredFocusView();
+    applyStatusFilterForTask(id);
     state.focusId = id;
     renderContent();
     scrollFocusedTaskIntoView(id);
@@ -871,6 +889,7 @@ function renderContent() {
     ${renderViewNav()}
     <span class="hint">${getViewHint()}</span>
     ${state.focusId ? `<span class="legend"><span class="up">上游</span><span class="down">下游</span></span>` : ''}
+    ${renderTaskStatusFilters(view)}
     <div style="margin-top:18px;">${renderCurrentViewBody(view, groups)}</div>
   `;
   content.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
@@ -891,6 +910,12 @@ function renderContent() {
     state.followupKind = button.dataset.kind || 'all';
     renderContent();
   }));
+  content.querySelectorAll('.status-filter').forEach(button => button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    state.taskStatusFilter = button.dataset.statusFilter || 'active';
+    state.focusId = null;
+    renderContent();
+  }));
 }
 
 function getTaskGroupsForView(view) {
@@ -902,12 +927,87 @@ function getTaskGroupsForView(view) {
   return groupByMilestone();
 }
 
+function isArchivedTask(task) {
+  return Boolean(task.archived_at);
+}
+
+function matchesTaskStatusFilter(task, view) {
+  const filter = TASK_STATUS_FILTERS.some(item => item.id === state.taskStatusFilter) ? state.taskStatusFilter : 'active';
+  const archived = isArchivedTask(task);
+  const effective = task._effective || task.status;
+  if (filter === 'archived') return view !== 'execution' && archived;
+  if (archived) return false;
+  if (filter === 'all') return true;
+  if (filter === 'active') return ['todo', 'in_progress', 'review', 'blocked'].includes(effective);
+  if (filter === 'todo') return effective === 'todo';
+  if (filter === 'blocked') return effective === 'blocked';
+  return task.status === filter;
+}
+
+function getVisibleTasksForView(view) {
+  return state.tasks.filter(task => matchesTaskStatusFilter(task, view));
+}
+
+function getTaskStatusFilterStats() {
+  const stats = Object.fromEntries(TASK_STATUS_FILTERS.map(item => [item.id, 0]));
+  for (const task of state.tasks) {
+    const archived = isArchivedTask(task);
+    const effective = task._effective || task.status;
+    if (archived) {
+      stats.archived++;
+      continue;
+    }
+    stats.all++;
+    if (['todo', 'in_progress', 'review', 'blocked'].includes(effective)) stats.active++;
+    if (effective === 'todo') stats.todo++;
+    if (effective === 'blocked') stats.blocked++;
+    if (task.status === 'in_progress') stats.in_progress++;
+    if (task.status === 'review') stats.review++;
+    if (task.status === 'done') stats.done++;
+    if (task.status === 'cancelled') stats.cancelled++;
+  }
+  return stats;
+}
+
+function applyStatusFilterForTask(id) {
+  const task = state.byId.get(id);
+  if (!task) return;
+  if (isArchivedTask(task)) {
+    state.taskStatusFilter = state.view === 'execution' ? 'all' : 'archived';
+  } else if (task.status === 'done' || task.status === 'cancelled') {
+    state.taskStatusFilter = task.status;
+  } else if ((task._effective || task.status) === 'blocked') {
+    state.taskStatusFilter = 'blocked';
+  } else {
+    state.taskStatusFilter = 'active';
+  }
+}
+
 function renderCurrentViewBody(view, groups) {
   const viewConfig = BUILTIN_VIEWS[view];
   if (viewConfig?.source === 'followups') return renderFollowupView();
   if (viewConfig?.source === 'mixed') return renderRiskView();
   if (viewConfig?.source === 'panorama') return renderPanorama();
+  if (!groups.length) {
+    const message = state.taskStatusFilter === 'archived' && view === 'execution'
+      ? '执行视角不展示已归档任务。请切换到里程碑、主线或领域视角查看归档任务的原始上下文。'
+      : '当前状态筛选下暂无任务。';
+    return `<div class="empty"><strong>${esc(message)}</strong></div>`;
+  }
   return groups.map(renderGroup).join('');
+}
+
+function renderTaskStatusFilters(view) {
+  const viewConfig = BUILTIN_VIEWS[view];
+  if (viewConfig?.source !== 'tasks') return '';
+  const selected = TASK_STATUS_FILTERS.some(item => item.id === state.taskStatusFilter) ? state.taskStatusFilter : 'active';
+  const stats = getTaskStatusFilterStats();
+  return `<div class="status-filters">
+    <span class="status-filter-label">状态</span>
+    ${TASK_STATUS_FILTERS.map(item => `<button class="status-filter ${item.id === selected ? 'active' : ''} ${item.id === 'archived' ? 'archived' : ''}" type="button" data-status-filter="${esc(item.id)}">
+      ${esc(item.label)} · ${stats[item.id] || 0}
+    </button>`).join('')}
+  </div>`;
 }
 
 function renderViewNav() {
@@ -1729,11 +1829,12 @@ async function copyText(text) {
 }
 
 function groupByExecution() {
-  const ready = state.tasks.filter(t => t._effective === 'todo').sort((a, b) => getExecutionScore(b) - getExecutionScore(a));
-  const progress = state.tasks.filter(t => t.status === 'in_progress');
-  const review = state.tasks.filter(t => t.status === 'review');
-  const blocked = state.tasks.filter(t => t._effective === 'blocked');
-  const done = state.tasks.filter(t => t.status === 'done');
+  const visibleTasks = getVisibleTasksForView('execution');
+  const ready = visibleTasks.filter(t => t._effective === 'todo').sort((a, b) => getExecutionScore(b) - getExecutionScore(a));
+  const progress = visibleTasks.filter(t => t.status === 'in_progress');
+  const review = visibleTasks.filter(t => t.status === 'review');
+  const blocked = visibleTasks.filter(t => t._effective === 'blocked');
+  const done = visibleTasks.filter(t => t.status === 'done');
   return [
     { id: 'NEXT', name: '可立即执行', status: ready.length ? 'in_progress' : 'backlog', tasks: ready },
     { id: 'DOING', name: '进行中', status: progress.length ? 'in_progress' : 'backlog', tasks: progress },
@@ -1747,7 +1848,7 @@ function groupByMilestone() {
   const milestones = state.config?.milestones || [];
   const groups = milestones.map(ms => ({ id: ms.id, name: ms.name, status: ms.status, tasks: [] }));
   const fallback = { id: '_other', name: '其他任务', status: 'backlog', tasks: [] };
-  for (const t of state.tasks) {
+  for (const t of getVisibleTasksForView('milestone')) {
     const group = groups.find(g => g.id === t.milestone) || fallback;
     group.tasks.push(t);
   }
@@ -1757,7 +1858,7 @@ function groupByMilestone() {
 
 function groupByDomain() {
   const groups = new Map();
-  for (const task of state.tasks) {
+  for (const task of getVisibleTasksForView('module')) {
     const id = task._domain || 'unknown';
     if (!groups.has(id)) groups.set(id, { id: domainLabel(id), name: domainLabel(id), status: 'in_progress', tasks: [] });
     groups.get(id).tasks.push(task);
@@ -1770,7 +1871,7 @@ function groupByDomain() {
 function groupByTrack() {
   const order = ['spec', 'backend', 'frontend', 'infra', 'quality', 'docs', 'ops'];
   const groups = new Map();
-  for (const task of state.tasks) {
+  for (const task of getVisibleTasksForView('track')) {
     const id = task._track || 'unknown';
     if (!groups.has(id)) groups.set(id, { id, name: trackLabel(id), status: 'in_progress', tasks: [] });
     groups.get(id).tasks.push(task);
@@ -1861,6 +1962,7 @@ function renderTaskCard(t, focus) {
         <span class="mod-tag">${esc(domainLabel(t._domain))}</span>
       </div>
       <div class="rel-row">
+        ${t.archived_at ? `<span class="rel-pill">已归档</span>` : ''}
         ${onCritical ? `<span class="rel-pill cp">关键路径</span>` : ''}
         ${t._openDeps.length ? `<span class="rel-pill warn">↑${t._openDeps.length} 阻塞</span>` : ''}
         ${downstreamCount ? `<span class="rel-pill">↓${downstreamCount} 后续</span>` : ''}

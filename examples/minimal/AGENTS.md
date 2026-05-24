@@ -6,8 +6,8 @@
 
 ```text
 .ganttmd/config.yaml
-.ganttmd/tasks/*.md
-.ganttmd/followups.md
+与本次任务相关的 .ganttmd/tasks/*.md
+相关的 .ganttmd/followups.md 条目
 当前任务的 source_docs
 ```
 

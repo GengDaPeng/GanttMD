@@ -94,6 +94,57 @@ test('checkTask 命中 review 超期与 owner/agent 冲突等关键规则', () =
   assert.ok(issues.some(i => i.text.includes('review 状态超过')));
 });
 
+test('checkTask 默认 7 天后提示终态任务可归档', () => {
+  assert.equal(Rules.DEFAULT_ARCHIVE_AFTER_DAYS, 7);
+  const ctx = Rules.defaultContext({
+    now: new Date('2026-05-23T00:00:00Z'),
+    milestoneIds: new Set(['M1']),
+  });
+  const task = {
+    id: 'ARCHIVE-DONE',
+    title: '已完成任务',
+    status: 'done',
+    track: 'backend',
+    milestone: 'M1',
+    dependencies: [],
+    source_docs: ['docs/spec.md'],
+    evidence: ['PR#1'],
+    verification: 'npm test',
+    completed_date: '2026-05-15',
+    _openDeps: [],
+    _missingDeps: [],
+    _downstreamCount: 0,
+  };
+  const issues = Rules.checkTask(task, ctx);
+  assert.ok(issues.some(i => i.level === 'info' && i.text.includes('可归档')));
+});
+
+test('checkTask 对已归档任务不再提示可归档', () => {
+  const ctx = Rules.defaultContext({
+    now: new Date('2026-05-23T00:00:00Z'),
+    milestoneIds: new Set(['M1']),
+  });
+  const task = {
+    id: 'ARCHIVED-DONE',
+    title: '已归档任务',
+    status: 'done',
+    track: 'backend',
+    milestone: 'M1',
+    dependencies: [],
+    source_docs: ['docs/spec.md'],
+    evidence: ['PR#1'],
+    verification: 'npm test',
+    completed_date: '2026-05-01',
+    archived_at: '2026-05-10',
+    archived_reason: 'done_over_7_days',
+    _openDeps: [],
+    _missingDeps: [],
+    _downstreamCount: 0,
+  };
+  const issues = Rules.checkTask(task, ctx);
+  assert.equal(issues.filter(i => i.text.includes('可归档')).length, 0);
+});
+
 test('checkFollowup 对合法 follow-up 返回 0 issue', () => {
   const ctx = Rules.defaultContext({ now: new Date('2026-05-23T00:00:00Z') });
   const f = {

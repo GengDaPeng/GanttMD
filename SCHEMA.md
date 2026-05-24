@@ -62,6 +62,8 @@ updated: {YYYY-MM-DD}
 - start_date: {YYYY-MM-DD 或 null}
 - due_date: {YYYY-MM-DD 或 null}
 - completed_date: {YYYY-MM-DD 或 null}
+- archived_at: {YYYY-MM-DD 或 null}
+- archived_reason: {归档原因或 null}
 - estimate: {预估时间，如 3d、1w}
 - tags: [{标签列表}]
 - blocked_reason: {阻塞原因，仅 status=blocked 时填写}
@@ -94,6 +96,8 @@ updated: {YYYY-MM-DD}
 | `completed_date` | date | 完成日期（status=done 时填写） |
 | `closed_at` | date | 终态关闭日期，适用于 done / cancelled 的统一归档判断 |
 | `cancelled_at` | date | 取消日期；如果已填写 closed_at，可不填 |
+| `archived_at` | date | 归档日期；归档后默认不在看板活跃筛选中展示 |
+| `archived_reason` | string | 归档原因，如 `done_over_7_days`、`cancelled_over_7_days` |
 | `estimate` | string | 预估时间（如 3d、1w、2w） |
 | `tags` | array | 标签列表，用于分类和筛选 |
 | `blocked_reason` | string | 阻塞原因（仅 status=blocked 时填写） |
@@ -196,9 +200,18 @@ health check 至少应提示：
 
 当前 validator 只提示可归档，不自动移动文件：
 
-- `done` 优先使用 `completed_date` 判断关闭时间。
-- `cancelled` 优先使用 `closed_at` 或 `cancelled_at` 判断关闭时间。
-- 默认超过 30 天会提示“可归档”。
+- `done` 优先使用 `completed_date` 判断关闭时间；缺失时回退到 `closed_at` 或 `updated_at`。
+- `cancelled` 优先使用 `closed_at` 或 `cancelled_at` 判断关闭时间；缺失时回退到 `completed_date` 或 `updated_at`。
+- 默认超过 7 天会提示“可归档”。
+
+归档不是源状态，不要把 `status` 改成 `archived`。项目主控归档时保留原 `status`，只补：
+
+```yaml
+archived_at: 2026-05-24
+archived_reason: done_over_7_days
+```
+
+恢复任务时删除 `archived_at` 和 `archived_reason` 即可。普通 Agent 不应归档或恢复任务。
 
 未来如提供 `ganttmd archive` 命令，必须采用显式执行方式，不应在 `validate` 中产生写文件副作用。
 
@@ -581,6 +594,7 @@ visualization:
   theme: light                     # 主题：light / dark
   default_view: execution          # 默认视图：execution / milestone / track / module / risk / followup
   show_done_tasks: false           # 是否显示已完成任务
+  show_archived_tasks: false       # 是否默认显示已归档任务
   color_scheme:
     backlog: "#9CA3AF"             # 灰色
     todo: "#3B82F6"                # 蓝色

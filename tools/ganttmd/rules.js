@@ -20,7 +20,7 @@
   const TRACK_ALIASES = { quality_gate: 'quality' };
   const ENGINEERING_TRACKS = ['backend', 'frontend', 'infra'];
   const DEFAULT_REVIEW_STALE_DAYS = 7;
-  const DEFAULT_ARCHIVE_AFTER_DAYS = 30;
+  const DEFAULT_ARCHIVE_AFTER_DAYS = 7;
 
   function parseDate(value) {
     if (!value) return null;
@@ -123,15 +123,25 @@
       make.warn('cancelled 任务缺少 cancel_reason 或 resolution', 'cancel_reason');
     }
 
-    const archiveDate = task.status === 'done'
-      ? parseDate(task.completed_date || task.closed_at)
-      : parseDate(task.closed_at || task.cancelled_at || task.completed_date);
-    if ((task.status === 'done' || task.status === 'cancelled') && archiveDate) {
+    const archiveCandidates = task.status === 'done'
+      ? [['completed_date', task.completed_date], ['closed_at', task.closed_at], ['updated_at', task.updated_at]]
+      : [['closed_at', task.closed_at], ['cancelled_at', task.cancelled_at], ['completed_date', task.completed_date], ['updated_at', task.updated_at]];
+    let archiveDate = null;
+    let archiveField = task.status === 'done' ? 'completed_date' : 'closed_at';
+    for (let i = 0; i < archiveCandidates.length; i++) {
+      const parsed = parseDate(archiveCandidates[i][1]);
+      if (parsed) {
+        archiveField = archiveCandidates[i][0];
+        archiveDate = parsed;
+        break;
+      }
+    }
+    if ((task.status === 'done' || task.status === 'cancelled') && archiveDate && !task.archived_at) {
       const age = daysBetween(archiveDate, ctx.now);
       if (age > archiveAfterDays) {
         make.info(
           task.status + ' 任务已关闭 ' + age + ' 天，可归档到历史任务文件',
-          task.status === 'done' ? 'completed_date' : 'closed_at'
+          archiveField
         );
       }
     }

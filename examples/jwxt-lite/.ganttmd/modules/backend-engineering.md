@@ -20,6 +20,8 @@ evidence: [PR#3, commit:c27a508]
 verification: 文档评审通过 + 后续 S-BE-03 实现验证
 review_status: passed
 updated_at: 2026-05-10
+archived_at: 2026-05-23
+archived_reason: done_over_7_days
 ```
 
 ### S-BE-02 数据库迁移与发布规范专项

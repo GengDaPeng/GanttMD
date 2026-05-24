@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: validator tests + jwxt-lite 样例校验
+    name: validator tests + 样例校验
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,3 +26,6 @@ jobs:
 
       - name: 校验 jwxt-lite 样例数据
         run: npm run validate -- examples/jwxt-lite
+
+      - name: 校验 minimal 样例数据
+        run: npm run validate -- examples/minimal

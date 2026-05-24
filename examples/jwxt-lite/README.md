@@ -9,7 +9,7 @@
 - `.ganttmd/config.yaml`：样例项目、M0-M8 里程碑和视图配置。
 - `.ganttmd/modules/*.md`：任务数据，使用 `ganttmd-task` fenced block。该样例仍保留旧目录以验证兼容性；新项目推荐 `.ganttmd/tasks/*.md`。
 - `.ganttmd/followups.md`：Follow-up、用户裁决、延期复查、外部等待和风险事项。
-- `source-docs/`：从 `jwxt` 复制来的进度文档快照，只作来源证据。
+- `source-docs/`：从 `jwxt` 复制来的历史材料快照，只作离线样例的来源证据；真实项目不应长期维护另一套动态进度文档。
 - `AGENTS.md`：Agent 操作协议样例。
 
 可视化页面位于仓库根目录的 `tools/ganttmd/index.html`（仓库唯一正典）。历史讨论稿和旧截图已移入 `archive/examples-jwxt-lite/`。

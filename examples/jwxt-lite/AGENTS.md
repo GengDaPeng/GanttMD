@@ -5,11 +5,11 @@
 ## 任务读取规则
 
 1. 读取 `.ganttmd/config.yaml`，确认项目和里程碑。
-2. 扫描 `.ganttmd/tasks/*.md`；当前样例仍兼容读取旧的 `.ganttmd/modules/*.md`。
+2. 按本次任务读取相关 `.ganttmd/tasks/*.md`；当前样例仍兼容读取旧的 `.ganttmd/modules/*.md`。
 3. 每个任务由一个 `ganttmd-task` 代码块定义。
 4. 任务源状态只允许：`todo`、`in_progress`、`review`、`done`、`cancelled`。
 5. `blocked` 不是源状态。若 `todo` 任务的依赖未全部 `done`，视图层显示为 blocked。
-6. 优先读取 `source_docs`、`next_action`、`acceptance`、`evidence` 等协作字段。
+6. 执行任务前读取当前任务的 `source_docs`；它是需求、设计或证据依据，不是第二套进度真相源。
 
 ## 领取任务
 

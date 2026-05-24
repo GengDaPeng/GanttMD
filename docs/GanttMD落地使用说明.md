@@ -10,6 +10,10 @@ GanttMD 是项目的任务状态层。它帮助人和 Agent 共同回答：
 
 GanttMD 不替代正式需求、技术设计、模块规格、接口清单、测试规范或代码审查记录。任务只引用这些文档，不复制正文。
 
+GanttMD 也不要求项目再维护一套“项目进度文档”。动态进度、任务状态、阻塞、证据链和 follow-up 应以 `.ganttmd/` 为唯一真相源；原来的总控待办或模块推进清单应迁入 `.ganttmd/tasks/*.md`，或瘦身成静态说明和 GanttMD 入口。
+
+`source_docs` 不是第二套进度系统。它只指向项目原有的正式需求、设计、接口、数据模型、测试规范或 PR 证据，说明任务的依据从哪里来。
+
 ## 目录结构
 
 推荐放在目标项目根目录：
@@ -110,10 +114,10 @@ Agent 的工作流：
 
 1. 读取目标项目 `AGENTS.md`。
 2. 读取 `.ganttmd/config.yaml`。
-3. 扫描 `.ganttmd/tasks/*.md`。
-4. 找到 `status: todo` 且依赖已完成的任务。
+3. 查看任务文件列表，并只读取与本次任务、推荐任务或相关依赖有关的 `.ganttmd/tasks/*.md`。
+4. 找到 `status: todo` 且依赖已完成的任务；不要求每次全量阅读所有历史任务文件。
 5. 领取前改为 `in_progress`，补 `agent` 或 `owner`。
-6. 执行时读取 `source_docs`。
+6. 执行时读取当前任务的 `source_docs`，确认需求/设计依据。
 7. 完成后补 `evidence`、必要时补 `verification` 和 `review_status`。
 8. 如有后续事项，写入 `.ganttmd/followups.md`。
 
@@ -181,10 +185,11 @@ npm run validate -- .
 
 已完成和已取消任务不要直接删除。推荐流程是：
 
-1. 任务进入 `done` 时填写 `completed_date`。
-2. 任务进入 `cancelled` 时填写 `closed_at` 或 `cancelled_at`。
-3. `npm run validate -- .` 每次运行时检查是否超过归档阈值。
+1. 任务进入 `done` 时填写 `completed_date`；缺失时 validator 会回退使用 `closed_at` 或 `updated_at`。
+2. 任务进入 `cancelled` 时填写 `closed_at` 或 `cancelled_at`；缺失时 validator 会回退使用 `updated_at`。
+3. `npm run validate -- .` 每次运行时检查是否超过 7 天归档阈值。
 4. 超过阈值后，validate 只提示“可归档”，不自动写文件。
-5. 未来如提供 `ganttmd archive --apply`，再由显式命令移动到历史文件。
+5. 项目主控可补 `archived_at` 和 `archived_reason` 手动归档；恢复时删除这两个字段。
+6. 未来如提供 `ganttmd archive --apply`，再由显式命令移动到历史文件。
 
 不建议做后台定时自动清理。GanttMD 是文件真相源，自动写文件应尽量可见、可审查、可回滚。

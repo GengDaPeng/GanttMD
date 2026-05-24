@@ -170,6 +170,54 @@ acceptance: [完成]
   assert(issues.some((issue) => issue.level === 'warn' && issue.id === 'C' && issue.message.includes('来源文档不存在')));
 });
 
+test('校验器能发现未初始化的项目目录', () => {
+  const root = createProject({
+    'README.md': '# empty project',
+  });
+
+  const project = loadProject(root);
+  const issues = validateProject(project);
+
+  assert(issues.some((issue) => issue.level === 'warn' && issue.id === '(project)' && issue.message.includes('未找到 .ganttmd 目录')));
+  assert(issues.some((issue) => issue.level === 'warn' && issue.id === '(project)' && issue.message.includes('缺少 .ganttmd/config.yaml')));
+  assert(issues.some((issue) => issue.level === 'warn' && issue.id === '(project)' && issue.message.includes('未找到 .ganttmd/tasks/*.md')));
+});
+
+test('从 .ganttmd 目录运行时 source_docs 仍按项目根目录解析', () => {
+  const root = createProject({
+    '.ganttmd/config.yaml': `project:
+  name: Gantt Root
+
+milestones:
+  - id: M1
+    name: 第一阶段
+`,
+    '.ganttmd/tasks/main.md': `# 主任务
+
+\`\`\`ganttmd-task
+id: T-2
+title: 从 .ganttmd 目录校验
+status: todo
+dependencies: []
+milestone: M1
+track: backend
+domain: notification
+source_docs: [docs/existing.md]
+next_action: 验证根目录解析
+acceptance: [完成]
+\`\`\`
+`,
+    'docs/existing.md': '# exists',
+  });
+
+  const project = loadProject(path.join(root, '.ganttmd'));
+  const issues = validateProject(project);
+
+  assert.equal(project.root, root);
+  assert(!issues.some((issue) => issue.level === 'warn' && issue.message.includes('来源文档不存在')));
+  assert(!issues.some((issue) => issue.level === 'warn'));
+});
+
 test('校验器能发现可下沉的协作规则问题', () => {
   const root = createProject({
     '.ganttmd/config.yaml': `project:

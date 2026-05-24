@@ -134,6 +134,7 @@ function parseConfig(text) {
 
 function loadProject(projectRoot = process.cwd()) {
   const ganttRoot = resolveGanttRoot(projectRoot);
+  const root = path.dirname(ganttRoot);
   const tasksRoot = path.join(ganttRoot, 'tasks');
   const modulesRoot = path.join(ganttRoot, 'modules');
   const taskFiles = [
@@ -156,8 +157,11 @@ function loadProject(projectRoot = process.cwd()) {
     .map((block) => parseFollowup(block, 'followups.md'));
 
   return {
-    root: path.resolve(projectRoot || process.cwd()),
+    root,
     ganttRoot,
+    hasGanttRoot: fs.existsSync(ganttRoot),
+    hasConfig: fs.existsSync(path.join(ganttRoot, 'config.yaml')),
+    taskFileCount: taskFiles.length,
     config: parseConfig(readTextIfExists(path.join(ganttRoot, 'config.yaml'))),
     tasks,
     followups,
@@ -188,6 +192,19 @@ function validateProject(project, options = {}) {
     milestoneIds: milestoneIds,
     sourceDocExists: (relPath) => fs.existsSync(path.resolve(project.root, relPath)),
   };
+
+  if (!project.hasGanttRoot) {
+    issues.push({ level: 'warn', id: '(project)', message: '未找到 .ganttmd 目录', sourceFile: '', field: 'ganttRoot' });
+  }
+  if (!project.hasConfig) {
+    issues.push({ level: 'warn', id: '(project)', message: '缺少 .ganttmd/config.yaml', sourceFile: '', field: 'config' });
+  }
+  if (project.taskFileCount === 0) {
+    issues.push({ level: 'warn', id: '(project)', message: '未找到 .ganttmd/tasks/*.md；旧项目可继续使用 .ganttmd/modules/*.md', sourceFile: '', field: 'tasks' });
+  }
+  if (project.taskFileCount > 0 && project.tasks.length === 0) {
+    issues.push({ level: 'warn', id: '(project)', message: '任务文件存在，但未解析到 ganttmd-task 代码块', sourceFile: '', field: 'tasks' });
+  }
 
   // 第一遍：建索引、抓 ID 重复
   for (const task of project.tasks) {

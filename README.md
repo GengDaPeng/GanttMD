@@ -101,6 +101,8 @@ evidence: []
 - `风险视角`：聚合阻塞任务、未清理 Follow-up 和严重健康检查。
 - `Follow-up`：查看 Agent 留下的后续事项、用户裁决、延期复查和外部等待。
 
+任务视图顶部提供状态筛选，默认显示 `活跃` 任务。已归档任务需要手动选择 `已归档` 才会显示；执行视角不展示已归档任务，里程碑、主线和领域视角会按任务原本分组展示归档任务。
+
 视图开关写在 `.ganttmd/config.yaml`：
 
 ```yaml
@@ -114,7 +116,8 @@ views:
 Agent 不会天然知道 GanttMD 的存在，必须通过目标项目的 `AGENTS.md` 告诉它：
 
 - 任务数据在 `.ganttmd/`。
-- 执行前要读取 `.ganttmd/config.yaml` 和 `.ganttmd/tasks/*.md`。
+- 工作前先读取 `.ganttmd/config.yaml`，再按本次任务读取相关 `.ganttmd/tasks/*.md` 和 follow-up 条目。
+- 执行任务时读取当前任务的 `source_docs`；它是需求、设计或证据依据，不是第二套进度真相源。
 - 只能领取 `status: todo` 且依赖已完成的任务。
 - 领取时更新为 `in_progress`，并补 `agent` 或 `owner`。
 - 完成时补 `evidence`，必要时补 `verification` 和 `review_status`。
@@ -145,9 +148,10 @@ source_rr: RR-003
 - [人机协作使用路径与边界](docs/人机协作使用路径与边界.md)：人类负责人、Agent、主控清理和 PR follow-up 的协作边界。
 - [新项目初始化指南](docs/新项目初始化指南.md)：从 0 创建 `.ganttmd/`。
 - [Agent 协作规则模板](docs/Agent协作规则模板.md)：复制到目标项目 `AGENTS.md` 的规则。
-- [AI 生成进度文档指南](docs/AI生成进度文档指南.md)：让 Agent 从现有项目文档生成 `.ganttmd/`。
+- [AI 生成初始任务文件指南](docs/AI生成进度文档指南.md)：让 Agent 从现有项目材料初始化或迁移 `.ganttmd/`。
 - [任务字段说明](docs/任务字段说明.md)：任务字段怎么写。
 - [Follow-up 清单机制](docs/Follow-up清单机制.md)：follow-up 权限、来源和状态规则。
+- [校验脚本检查流程图](docs/校验脚本检查流程图.md)：`npm run validate` 的流程、检查项和输出结果。
 - [jwxt 项目反馈](docs/feedback-from-jwxt.md)：第一个真实接入项目的 dogfooding 反馈集中地。
 
 ## 命令行校验
@@ -190,7 +194,7 @@ npm run validate -- /path/to/project --json
 
 ## 示例
 
-`examples/jwxt-lite/` 是一个从教务系统项目进度文档抽取出来的真实感样例，用来展示：
+`examples/jwxt-lite/` 是一个从教务系统项目状态材料抽取出来的真实感样例，用来展示：
 
 - 里程碑路线图。
 - 执行、主线、模块、风险和 Follow-up 视图。
