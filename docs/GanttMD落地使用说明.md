@@ -19,36 +19,37 @@ GanttMD 也不要求项目再维护一套“项目进度文档”。动态进度
 推荐放在目标项目根目录：
 
 ```text
+AGENTS.md
 .ganttmd/
-  config.yaml
-  followups.md
-  tasks/
+  index.html              # 看板页面（从仓库 tools/ganttmd/ 复制）
+  rules.js                # 共享规则模块（从仓库 tools/ganttmd/ 复制；必须与 index.html 同目录）
+  config.yaml             # 项目、里程碑和视图配置
+  followups.md            # Agent 后续事项、用户裁决、延期复查和外部等待
+  tasks/                  # 任务状态真相源
     backend.md
     frontend.md
     quality.md
-tools/
-  ganttmd/
-    index.html
-AGENTS.md
 ```
+
+**所有 GanttMD 相关文件都集中在 `.ganttmd/` 一个目录内**——复制、卸载、升级都只动它一个。
 
 其中：
 
 - `.ganttmd/config.yaml`：项目、里程碑和视图配置。
 - `.ganttmd/tasks/*.md`：任务状态真相源。
 - `.ganttmd/followups.md`：Agent 后续事项、用户裁决、延期复查和外部等待。
-- `tools/ganttmd/`：只读可视化页面（包含 `index.html` 和 `rules.js`，二者放在同一目录）。
+- `.ganttmd/index.html` + `.ganttmd/rules.js`：只读可视化页面与共享规则模块。
 - `AGENTS.md`：告诉 Agent 如何读取和维护 GanttMD。
 
 ## 安装方式
 
 当前 MVP 推荐复制式使用：
 
-1. 在目标项目创建 `.ganttmd/`。
-2. 创建 `.ganttmd/config.yaml`。
-3. 创建 `.ganttmd/tasks/*.md`。
-4. 创建 `.ganttmd/followups.md`。
-5. 把本仓库的 `tools/ganttmd/` 整个文件夹复制过去（`index.html` 和 `rules.js` 必须在同一目录）。
+1. 在目标项目创建 `.ganttmd/` 目录。
+2. 从本仓库的 `tools/ganttmd/` 复制 `index.html` 和 `rules.js` 到目标项目的 `.ganttmd/` 目录。
+3. 创建 `.ganttmd/config.yaml`。
+4. 创建 `.ganttmd/tasks/*.md`。
+5. 创建 `.ganttmd/followups.md`。
 6. 把 [Agent 协作规则模板](Agent协作规则模板.md) 合并到目标项目 `AGENTS.md`。
 
 不需要数据库，也不需要服务端。页面用浏览器打开后选择项目目录即可读取。
@@ -104,7 +105,7 @@ evidence: []
 
 人的工作流：
 
-1. 打开 `tools/ganttmd/index.html`。
+1. 打开 `.ganttmd/index.html`。
 2. 选择项目根目录。
 3. 查看执行视角、风险视角和 Follow-up。
 4. 必要时调整 `.ganttmd/` 文件。

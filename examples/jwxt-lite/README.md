@@ -6,18 +6,19 @@
 
 ## 目录说明
 
+- `.ganttmd/index.html` + `.ganttmd/rules.js`：看板页面与共享规则（与仓库 `tools/ganttmd/` 同步，由测试守卫保证不漂移）。
 - `.ganttmd/config.yaml`：样例项目、M0-M8 里程碑和视图配置。
 - `.ganttmd/modules/*.md`：任务数据，使用 `ganttmd-task` fenced block。该样例仍保留旧目录以验证兼容性；新项目推荐 `.ganttmd/tasks/*.md`。
 - `.ganttmd/followups.md`：Follow-up、用户裁决、延期复查、外部等待和风险事项。
 - `source-docs/`：从 `jwxt` 复制来的历史材料快照，只作离线样例的来源证据；真实项目不应长期维护另一套动态进度文档。
 - `AGENTS.md`：Agent 操作协议样例。
 
-可视化页面位于仓库根目录的 `tools/ganttmd/index.html`（仓库唯一正典）。历史讨论稿和旧截图已移入 `archive/examples-jwxt-lite/`。
+历史讨论稿和旧截图已移入 `archive/examples-jwxt-lite/`。
 
 ## 使用方式
 
-1. 用浏览器打开仓库根目录的 `tools/ganttmd/index.html`。
-2. 点击页面上的“选择目录”。
+1. 用浏览器直接打开 `examples/jwxt-lite/.ganttmd/index.html`。
+2. 点击页面上的"选择目录"。
 3. 选择本目录（`examples/jwxt-lite/`）或本目录下的 `.ganttmd/` 目录。
 4. 查看执行、里程碑、主线、模块、风险和 Follow-up 视图。
 5. 当 `.ganttmd/` 数据被修改后，点页面右上角的「↻ 刷新」按钮即可重新读取，无需再次选择目录。

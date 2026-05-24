@@ -15,10 +15,12 @@
 
 ## 使用方式
 
-1. 打开仓库根目录的 `tools/ganttmd/index.html`。
-2. 点击“选择目录”。
-3. 选择 `examples/minimal/`。
+1. 用浏览器直接打开 `examples/minimal/.ganttmd/index.html`。
+2. 点击"选择目录"。
+3. 选择 `examples/minimal/` 或 `examples/minimal/.ganttmd/`。
 4. 查看执行、里程碑、主线、模块、风险和 Follow-up 视图。
+
+> 所有 GanttMD 相关文件都在 `.ganttmd/` 这一个目录里（页面、规则、配置、任务、follow-up），这就是推荐的最终部署形态。
 
 校验：
 

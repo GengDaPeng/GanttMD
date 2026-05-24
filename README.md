@@ -44,28 +44,29 @@ GanttMD 是 AI Agent 驱动的小型项目的任务状态层，不是通用项�
 
 ```text
 your-project/
+  AGENTS.md
   .ganttmd/
+    index.html              # 看板页面
+    rules.js                # 页面在浏览器加载它共享规则；必须与 index.html 同目录
     config.yaml
     followups.md
     tasks/
       backend.md
       frontend.md
       quality.md
-  AGENTS.md
-  tools/
-    ganttmd/
-      index.html
 ```
+
+**所有 GanttMD 相关文件都在 `.ganttmd/` 一个目录里**——复制和卸载都只动这一个目录。
 
 然后：
 
-1. 从本仓库复制 `tools/ganttmd/` 整个文件夹到目标项目（包含 `index.html` 和 `rules.js`；二者必须放在同一目录，页面在浏览器加载 `rules.js` 共享规则）。
+1. 从本仓库的 `tools/ganttmd/` 复制 `index.html` 和 `rules.js` 到目标项目的 `.ganttmd/` 目录。
 2. 按 [新项目初始化指南](docs/新项目初始化指南.md) 创建 `.ganttmd/config.yaml` 和 `.ganttmd/tasks/*.md`。
 3. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 合并到目标项目的 `AGENTS.md`。
-4. 用浏览器打开 `tools/ganttmd/index.html`。
+4. 用浏览器打开 `.ganttmd/index.html`。
 5. 点击“选择目录”，选择目标项目根目录或 `.ganttmd/` 所在目录。
 
-也可以直接用本仓库的样例：用浏览器打开 `tools/ganttmd/index.html`，然后选择 `examples/jwxt-lite/` 目录。
+也可以直接用本仓库的样例：用浏览器打开 `examples/jwxt-lite/.ganttmd/index.html`，然后选择 `examples/jwxt-lite/.ganttmd/` 目录。
 
 ## 任务文件示例
 

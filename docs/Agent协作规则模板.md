@@ -7,7 +7,7 @@
 ### 入口
 
 - 任务状态唯一真相源：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`
-- 人类查看入口：`tools/ganttmd/index.html`
+- 人类查看入口：`.ganttmd/index.html`
 - 字段、状态和规则以 `SCHEMA.md`、`docs/任务字段说明.md` 和 `npm run validate -- .` 为准
 
 ### 工作边界

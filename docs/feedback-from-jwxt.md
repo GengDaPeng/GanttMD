@@ -30,7 +30,7 @@ GanttMD 当前处于早期阶段，`jwxt` 是第一个真实接入的项目，�
 1. **登记**：jwxt 侧任意代理或负责人发现问题，追加一条 `open` 反馈。
 2. **归类**：主控定期审阅（建议每周一次），归类为：
    - schema 问题 → 改 SCHEMA.md，开新 commit
-   - 页面问题 → 改 `tools/ganttmd/index.html`
+   - 页面问题 → 改源副本 `tools/ganttmd/index.html`（测试守卫会自动检查样例 `.ganttmd/` 是否同步）
    - 文档问题 → 改 `docs/` 下相应文档
    - 校验器问题 → 改 `src/validator.js`
    - 暂不处理 → 标记 `rejected`，写明理由
@@ -49,4 +49,13 @@ GanttMD 当前处于早期阶段，`jwxt` 是第一个真实接入的项目，�
 
 ## 已处理反馈
 
-（暂无）
+### FB-001 tools/ganttmd 子目录对使用方多余
+
+- 提出者：jwxt 负责人（接入前预判）
+- 日期：2026-05-23
+- 场景：准备把 GanttMD 接入 jwxt 时，发现需要复制两个目录（`.ganttmd/` 数据 + `tools/ganttmd/` 工具）
+- 现象：使用方需要在两个位置维护 GanttMD 相关内容，删除时容易漏掉一个，认知成本高
+- 严重度：medium
+- 建议方向：把 `index.html` 和 `rules.js` 合并进 `.ganttmd/`，让"所有 GanttMD 相关的事情都从 .ganttmd/ 一个入口进"
+- 状态：accepted（已落地）
+- 落地说明：仓库源副本仍在 `tools/ganttmd/`（src/validator.js 依赖此路径），但所有使用方文档和样例都改为「直接放进 `.ganttmd/`」；`examples/jwxt-lite/.ganttmd/` 和 `examples/minimal/.ganttmd/` 各自包含 `index.html` + `rules.js`，由 `test/template-sync.test.js` 保证三处字节一致
