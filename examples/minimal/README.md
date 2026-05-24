@@ -22,9 +22,14 @@
 
 > 所有 GanttMD 相关文件都在 `.ganttmd/` 这一个目录里（页面、规则、配置、任务、follow-up），这就是推荐的最终部署形态。
 
-校验：
+真实项目接入 GanttMD 后，在该项目根目录校验：
+
+```bash
+npm run validate -- .
+```
+
+如果从 GanttMD 仓库根目录校验这个内置样例，使用：
 
 ```bash
 npm run validate -- examples/minimal
 ```
-

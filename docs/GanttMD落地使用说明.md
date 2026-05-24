@@ -153,8 +153,17 @@ Agent 的工作流：
 
 GanttMD 提供命令行校验脚本，用来在 Agent 提交前或 CI 合并前检查 `.ganttmd/` 的结构问题：
 
+在使用方项目根目录运行：
+
+```bash
+npm run validate -- .
+```
+
+如果从其他目录执行，也可以显式传项目路径或 `.ganttmd/` 路径：
+
 ```bash
 npm run validate -- /path/to/project
+npm run validate -- /path/to/project/.ganttmd
 ```
 
 如果命令返回警告，退出码为 `1`；只有提示或没有问题时，退出码为 `0`。当前校验重点包括：

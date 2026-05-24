@@ -159,14 +159,24 @@ source_rr: RR-003
 
 页面已经包含一部分健康检查。仓库也提供命令行校验脚本，适合 Agent 提交前或 CI 合并前运行：
 
+在使用方项目根目录运行：
+
 ```bash
-npm run validate -- /path/to/project
+npm run validate -- .
 ```
 
-也可以直接校验样例：
+如果不在项目根目录，也可以显式指定项目路径或 `.ganttmd/` 目录：
+
+```bash
+npm run validate -- /path/to/project
+npm run validate -- /path/to/project/.ganttmd
+```
+
+本仓库开发者可以直接校验内置样例：
 
 ```bash
 npm run validate -- examples/jwxt-lite
+npm run validate -- examples/minimal
 ```
 
 脚本的职责不是运行项目，也不是替代页面，而是读取 `.ganttmd/` 并检查：
@@ -190,7 +200,7 @@ npm run validate -- examples/jwxt-lite
 如需给其他工具消费结果，可以使用 JSON 输出：
 
 ```bash
-npm run validate -- /path/to/project --json
+npm run validate -- . --json
 ```
 
 ## 示例

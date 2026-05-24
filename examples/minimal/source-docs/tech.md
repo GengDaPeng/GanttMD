@@ -4,10 +4,10 @@
 
 ## 验证方式
 
-示例验证命令：
+真实项目接入 GanttMD 后，在该项目根目录运行：
 
 ```bash
-npm test
-npm run validate -- examples/minimal
+npm run validate -- .
 ```
 
+如果从 GanttMD 仓库根目录校验这个内置样例，使用 `npm run validate -- examples/minimal`。
