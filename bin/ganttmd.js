@@ -3,6 +3,10 @@
 const { loadProject, validateProject } = require('../src/validator.js');
 const Registry = require('../src/project-registry.js');
 const { startServer } = require('../src/server.js');
+const { initProject } = require('../src/project-init.js');
+const { doctorProject } = require('../src/doctor.js');
+const { planMigration, applyMigration } = require('../src/migrator.js');
+const { exportStatic } = require('../src/static-export.js');
 
 function parseRootAndFlags(args) {
   return {
@@ -62,7 +66,11 @@ function printHelp() {
   console.log(`GanttMD
 
 用法：
+  ganttmd init [path]
   ganttmd validate [path] [--json]
+  ganttmd doctor [path] [--json]
+  ganttmd migrate [path] [--apply] [--json]
+  ganttmd static [path] [--out .ganttmd-dist]
   ganttmd project add <path> [--id <id>] [--name <name>]
   ganttmd project list [--json]
   ganttmd project remove <id-or-path>
@@ -76,6 +84,94 @@ function readOption(args, name) {
   const index = args.indexOf(name);
   if (index === -1) return '';
   return args[index + 1] || '';
+}
+
+function runInit(args) {
+  const root = args.find((arg) => !arg.startsWith('--')) || process.cwd();
+  const result = initProject(root);
+  console.log(`GanttMD 初始化：${result.ganttRoot}`);
+  if (result.created.length === 0) {
+    console.log('没有新增文件，已有数据未被覆盖。');
+    return 0;
+  }
+  for (const filePath of result.created) {
+    console.log(`- 创建 ${filePath}`);
+  }
+  return 0;
+}
+
+function printDoctorResult(result, options) {
+  const warnings = [
+    ...result.issues.filter((issue) => issue.level === 'warn'),
+    ...result.doctorIssues.filter((issue) => issue.level === 'warn'),
+  ];
+
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return warnings.length > 0 ? 1 : 0;
+  }
+
+  console.log(`GanttMD Doctor：${result.ganttRoot}`);
+  console.log(`schema：项目 ${result.projectSchemaVersion || '未声明'} / 工具 ${result.toolSchemaVersion}`);
+  console.log(`任务 ${result.taskCount} 个，follow-up ${result.followupCount} 个，run ${result.runCount} 个，checklist ${result.checklistCount} 个。`);
+
+  const allIssues = [...result.doctorIssues, ...result.issues];
+  if (allIssues.length === 0) {
+    console.log('未发现环境或结构问题。');
+  } else {
+    for (const item of allIssues) {
+      const location = item.sourceFile ? ` ${item.sourceFile}` : '';
+      const field = item.field ? ` [${item.field}]` : '';
+      console.log(`- ${levelLabel(item.level)}${item.id ? ` ${item.id}` : ''}${field}${location}：${item.message}`);
+    }
+  }
+
+  return warnings.length > 0 ? 1 : 0;
+}
+
+function runDoctor(args) {
+  const options = parseRootAndFlags(args);
+  const result = doctorProject(options.root);
+  return printDoctorResult(result, options);
+}
+
+function printMigrationPlan(plan) {
+  console.log(`GanttMD 迁移计划：${plan.ganttRoot}`);
+  if (plan.changes.length === 0) {
+    console.log('无需迁移。');
+    return;
+  }
+  for (const change of plan.changes) {
+    console.log(`- ${change.type} ${change.file}：${change.description}`);
+  }
+}
+
+function runMigrate(args) {
+  const options = parseRootAndFlags(args);
+  const shouldApply = args.includes('--apply');
+  const result = shouldApply ? applyMigration(options.root) : planMigration(options.root);
+
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return 0;
+  }
+
+  printMigrationPlan(result);
+  if (!shouldApply && result.changes.length > 0) {
+    console.log('这是 dry-run。确认后运行：ganttmd migrate <path> --apply');
+  }
+  if (shouldApply) {
+    console.log(result.applied ? `已应用迁移，备份目录：${result.backupRoot}` : '无需迁移。');
+  }
+  return 0;
+}
+
+function runStatic(args) {
+  const root = args.find((arg, index) => !arg.startsWith('--') && args[index - 1] !== '--out') || process.cwd();
+  const outDir = readOption(args, '--out') || '.ganttmd-dist';
+  const result = exportStatic(root, outDir);
+  console.log(`已导出静态看板：${result.indexPath}`);
+  return 0;
 }
 
 function runProject(args) {
@@ -157,6 +253,22 @@ async function main(argv) {
     return runValidate(args.slice(1));
   }
 
+  if (command === 'init') {
+    return runInit(args.slice(1));
+  }
+
+  if (command === 'doctor') {
+    return runDoctor(args.slice(1));
+  }
+
+  if (command === 'migrate') {
+    return runMigrate(args.slice(1));
+  }
+
+  if (command === 'static') {
+    return runStatic(args.slice(1));
+  }
+
   if (command === 'project') {
     return runProject(args.slice(1));
   }
@@ -183,5 +295,9 @@ module.exports = {
   main,
   parseRootAndFlags,
   printValidateResult,
+  runDoctor,
+  runInit,
+  runMigrate,
+  runStatic,
   runValidate,
 };

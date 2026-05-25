@@ -165,15 +165,14 @@ test('checkFollowup 对合法 follow-up 返回 0 issue', () => {
   assert.equal(Rules.checkFollowup(f, ctx).length, 0);
 });
 
-test('页面和 CLI 通过同一份规则模块（loadProject 应等价于直接 checkTask）', () => {
+test('CLI 和本地服务通过同一份规则模块生成健康检查', () => {
   // 防止有人偷偷在 validator.js 里复制规则逻辑而不调用 rules.js
   const validator = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'src', 'validator.js'), 'utf8');
-  assert.ok(validator.includes("require('./rules.js')"), 'validate.js 必须 require 同目录的 rules.js');
-  assert.ok(validator.includes('Rules.checkTask'), 'validate.js 必须调用 Rules.checkTask');
-  assert.ok(validator.includes('Rules.checkFollowup'), 'validate.js 必须调用 Rules.checkFollowup');
+  assert.ok(validator.includes("require('./rules.js')"), 'validator.js 必须 require src/rules.js');
+  assert.ok(validator.includes('Rules.checkTask'), 'validator.js 必须调用 Rules.checkTask');
+  assert.ok(validator.includes('Rules.checkFollowup'), 'validator.js 必须调用 Rules.checkFollowup');
 
-  const html = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'examples', 'minimal', '.ganttmd', 'index.html'), 'utf8');
-  assert.ok(html.includes('<script src="rules.js"></script>'), 'index.html 必须加载 rules.js');
-  assert.ok(html.includes('Rules.checkTask'), 'index.html 必须调用 Rules.checkTask');
-  assert.ok(html.includes('Rules.checkFollowup'), 'index.html 必须调用 Rules.checkFollowup');
+  const runtimeState = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'src', 'runtime-state.js'), 'utf8');
+  assert.ok(runtimeState.includes("require('./validator.js')"), 'runtime-state.js 必须复用 validator.js');
+  assert.ok(runtimeState.includes('validateProject'), 'runtime-state.js 必须通过 validator.js 生成健康检查');
 });

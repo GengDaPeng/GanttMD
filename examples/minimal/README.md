@@ -15,21 +15,20 @@
 
 ## 使用方式
 
-1. 用浏览器直接打开 `examples/minimal/.ganttmd/index.html`。
-2. 点击"选择目录"。
-3. 选择 `examples/minimal/` 或 `examples/minimal/.ganttmd/`。
-4. 查看执行、里程碑、主线、模块、风险和 Follow-up 视图。
+从仓库根目录运行：
 
-> 所有 GanttMD 相关文件都在 `.ganttmd/` 这一个目录里（页面、规则、校验器、配置、任务、follow-up），这是当前 MVP 的复制式部署形态。
+```bash
+npm run validate -- examples/minimal
+node bin/ganttmd.js project add examples/minimal --id minimal --name 最小样例
+node bin/ganttmd.js serve
+```
+
+然后在本地看板查看执行、里程碑、主线、模块、风险和 Follow-up 视图。
+
+真实项目接入 GanttMD 后，项目内只提交 `.ganttmd/` 数据；页面、校验器和本地服务由安装式 `ganttmd` 工具提供。
 
 真实项目接入 GanttMD 后，在该项目根目录校验：
 
 ```bash
-node .ganttmd/validate.js
-```
-
-如果从 GanttMD 仓库根目录校验这个内置样例，使用：
-
-```bash
-npm run validate -- examples/minimal
+ganttmd validate
 ```

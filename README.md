@@ -10,12 +10,13 @@ GanttMD 不替代需求文档、技术设计、模块规格、接口清单或测
 
 ## 当前形态
 
-当前版本是一个轻量 MVP：
+当前版本采用安装式本地工具：
 
-- 数据源：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`
-- 可视化：静态 HTML 页面 + 同目录 `rules.js`
-- 写入方式：人或 Agent 直接编辑 Markdown
-- 页面行为：只读展示，不直接修改任务文件
+- 项目数据：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`、`.ganttmd/runs.md`
+- 工具入口：`ganttmd` CLI，提供初始化、校验、doctor、迁移、静态导出和本地看板服务
+- 可视化：`ganttmd serve` 启动单端口多项目看板
+- 写入方式：人或 Agent 直接编辑 Markdown；工具写文件必须是显式命令，默认 dry-run 或不覆盖
+- 页面行为：只读聚合，不在浏览器里直接修改任务文件
 
 ## 适合解决什么问题
 
@@ -31,7 +32,7 @@ GanttMD 是 AI Agent 驱动的小型项目的任务状态层，不是通用项�
 - **替代 Jira / Linear / Asana**：没有用户分配、工时、Sprint、Kanban Swimlane、自动通知等团队协作能力，10 人以上团队会很快撑爆。
 - **承载需求文档本身**：任务块只引用正式文档，不复制需求正文。把模块规格写进 `next_action` 或 `acceptance` 会让任务块膨胀失控。
 - **代替 PR / Code Review**：交付证据通过 `evidence` 引用 PR，但代码讨论本身仍在 PR 评论区，不要搬到 follow-up 里。
-- **跨项目组合视图**：当前只看单个项目目录，不支持跨仓库聚合。
+- **跨组织项目组合管理**：本地服务可以登记多个项目，但它不是企业级 portfolio 管理工具。
 - **长生命周期路线图**（一年以上跨度）：里程碑机制偏轻量，更适合 3-6 个月可见的近期路线，长期愿景仍属正式文档。
 - **强实时协同**：页面是只读的，多人同时改 Markdown 仍需 Git 解决冲突，不适合需要秒级同步的场景。
 - **业务报表 / KPI 仪表盘**：GanttMD 关心的是任务结构和证据，不是业务指标。
@@ -40,34 +41,60 @@ GanttMD 是 AI Agent 驱动的小型项目的任务状态层，不是通用项�
 
 ## 快速开始
 
-在目标项目中创建：
+在 GanttMD 仓库或安装后的工具环境中运行：
+
+```bash
+npm install -g .
+```
+
+发布到 npm 后可替换为：
+
+```bash
+npm install -g ganttmd
+```
+
+在目标项目中初始化：
+
+```bash
+cd /path/to/your-project
+ganttmd init
+ganttmd validate
+ganttmd project add .
+ganttmd serve
+```
+
+目标项目只需要提交数据目录：
 
 ```text
 your-project/
   AGENTS.md
   .ganttmd/
-    index.html              # 看板页面
-    rules.js                # 共享规则（页面和 validate.js 都用）；必须与 index.html 同目录
-    validate.js             # CLI 校验器：node .ganttmd/validate.js
     config.yaml
     followups.md
+    runs.md
     tasks/
       backend.md
       frontend.md
       quality.md
 ```
 
-**所有 GanttMD 相关文件都在 `.ganttmd/` 一个目录里**——复制和卸载都只动这一个目录。
+**使用方项目只保存 `.ganttmd/` 数据，不复制工具源码。** 更新、卸载 GanttMD 工具不应覆盖项目数据。
 
 然后：
 
-1. 从本仓库的 `examples/minimal/.ganttmd/` 复制 `index.html`、`rules.js`、`validate.js` 三个文件到目标项目的 `.ganttmd/` 目录。
-2. 按 [新项目初始化指南](docs/新项目初始化指南.md) 创建 `.ganttmd/config.yaml` 和 `.ganttmd/tasks/*.md`。
-3. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 合并到目标项目的 `AGENTS.md`。
-4. 用浏览器打开 `.ganttmd/index.html`。
-5. 点击“选择目录”，选择目标项目根目录或 `.ganttmd/` 所在目录。
+1. 按 [新项目初始化指南](docs/新项目初始化指南.md) 调整 `.ganttmd/config.yaml` 和 `.ganttmd/tasks/*.md`。
+2. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 合并到目标项目的 `AGENTS.md`。
+3. 运行 `ganttmd validate`，确保没有 warning。
+4. 运行 `ganttmd serve`，在 `http://localhost:7777` 查看本地看板。
 
-也可以直接用本仓库的样例：用浏览器打开 `examples/jwxt-lite/.ganttmd/index.html`，然后选择 `examples/jwxt-lite/.ganttmd/` 目录。
+也可以直接用本仓库的样例：
+
+```bash
+ganttmd validate examples/minimal
+ganttmd validate examples/jwxt-lite
+ganttmd project add examples/jwxt-lite --id jwxt-lite --name 教务系统样例
+ganttmd serve
+```
 
 ## 任务文件示例
 
@@ -153,36 +180,29 @@ source_rr: RR-003
 - [AI 生成初始任务文件指南](docs/AI生成进度文档指南.md)：让 Agent 从现有项目材料初始化或迁移 `.ganttmd/`。
 - [任务字段说明](docs/任务字段说明.md)：任务字段怎么写。
 - [Follow-up 清单机制](docs/Follow-up清单机制.md)：follow-up 权限、来源和状态规则。
-- [校验脚本检查流程图](docs/校验脚本检查流程图.md)：`.ganttmd/validate.js` 的流程、检查项和输出结果。
+- [校验脚本检查流程图](docs/校验脚本检查流程图.md)：`ganttmd validate` 的流程、检查项和输出结果。
 - [jwxt 项目反馈](docs/feedback-from-jwxt.md)：第一个真实接入项目的 dogfooding 反馈集中地。
 
-## 命令行校验
+## 命令行
 
-页面已经包含一部分健康检查。`.ganttmd/validate.js` 提供命令行校验能力，适合 Agent 提交前或 CI 合并前运行。
+`ganttmd` 的职责不是运行业务项目，而是读取 `.ganttmd/` 并提供任务状态治理能力。
 
-当前 GanttMD 还没有安装式部署，MVP 先采用复制式接入：把 `index.html`、`rules.js`、`validate.js` 一起复制进使用方项目的 `.ganttmd/`。因此使用方不需要安装 GanttMD 包，也不需要配置 npm script。
-
-在使用方项目根目录运行：
+常用命令：
 
 ```bash
-node .ganttmd/validate.js
+ganttmd init [path]                    # 创建 .ganttmd/ 骨架，不覆盖已有文件
+ganttmd validate [path] [--json]        # 校验任务、follow-up、runs、checklist
+ganttmd doctor [path] [--json]          # 检查 schema 版本和项目健康
+ganttmd migrate [path]                  # dry-run 迁移计划
+ganttmd migrate [path] --apply          # 备份后显式迁移
+ganttmd project add <path>              # 登记到本机项目列表
+ganttmd project list                    # 查看本机已登记项目
+ganttmd project remove <id-or-path>     # 移除本机登记，不删除项目数据
+ganttmd serve [--port 7777]             # 启动单端口多项目本地看板
+ganttmd static [path] [--out dir]       # 导出离线静态 fallback 页面
 ```
 
-如果不在项目根目录，也可以显式指定项目路径或 `.ganttmd/` 目录：
-
-```bash
-node /path/to/project/.ganttmd/validate.js /path/to/project
-node /path/to/project/.ganttmd/validate.js /path/to/project/.ganttmd
-```
-
-本仓库开发者可以用 npm script 校验内置样例：
-
-```bash
-npm run validate -- examples/jwxt-lite
-npm run validate -- examples/minimal
-```
-
-脚本的职责不是运行项目，也不是替代页面，而是读取 `.ganttmd/` 并检查：
+`validate` 会检查：
 
 - 任务 ID 是否重复。
 - `dependencies` 是否指向不存在的任务。
@@ -203,14 +223,14 @@ npm run validate -- examples/minimal
 如需给其他工具消费结果，可以使用 JSON 输出：
 
 ```bash
-node .ganttmd/validate.js --json
+ganttmd validate --json
 ```
 
 如需接入 CI，可以直接运行同一条命令：
 
 ```yaml
 - name: Validate GanttMD
-  run: node .ganttmd/validate.js
+  run: ganttmd validate
 ```
 
 ## 示例

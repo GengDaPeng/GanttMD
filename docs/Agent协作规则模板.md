@@ -7,8 +7,9 @@
 ### 入口
 
 - 任务状态唯一真相源：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`
-- 人类查看入口：`.ganttmd/index.html`
-- 字段、状态和规则以 `SCHEMA.md`、`docs/任务字段说明.md` 和 `node .ganttmd/validate.js` 为准
+- 执行批次与 worktree 承接记录：`.ganttmd/runs.md`
+- 人类查看入口：`ganttmd serve` 本地看板
+- 字段、状态和规则以项目内 `.ganttmd/`、`ganttmd validate` 和 `ganttmd doctor` 为准
 
 ### 工作边界
 
@@ -19,8 +20,9 @@
 - 普通 Agent 不得关闭、删除、转换 follow-up
 - 普通 Agent 不得归档或恢复任务；归档只由项目主控处理
 - “后续再做 / 暂不处理 / 本轮不修”等未闭环事项必须登记到 `followups.md`
+- 连续任务、worktree 分支或批次推进必须登记或更新 `runs.md`
 - 大范围重排任务文件必须先得到用户明确要求
 
 ### 提交前
 
-- 运行 `node .ganttmd/validate.js`（项目根目录下），按提示修复；确需保留异常时，说明原因并交给项目主控裁决
+- 运行 `ganttmd validate` 和 `ganttmd doctor`（项目根目录下），按提示修复；确需保留异常时，说明原因并交给项目主控裁决

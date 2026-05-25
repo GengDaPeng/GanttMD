@@ -6,10 +6,10 @@
 
 ## 目录说明
 
-- `.ganttmd/index.html` + `.ganttmd/rules.js` + `.ganttmd/validate.js`：看板页面、共享规则和 CLI 校验器；这一组文件可随 `.ganttmd/` 一起复制到真实项目。
 - `.ganttmd/config.yaml`：样例项目、M0-M8 里程碑和视图配置。
 - `.ganttmd/tasks/*.md`：任务数据，使用 `ganttmd-task` fenced block。
 - `.ganttmd/followups.md`：Follow-up、用户裁决、延期复查、外部等待和风险事项。
+- `.ganttmd/runs.md`：主控派工批次、worktree/分支承接关系和执行状态。
 - `source-docs/`：从 `jwxt` 复制来的历史材料快照，只作离线样例的来源证据；真实项目不应长期维护另一套动态进度文档。
 - `AGENTS.md`：Agent 操作协议样例。
 
@@ -17,11 +17,15 @@
 
 ## 使用方式
 
-1. 用浏览器直接打开 `examples/jwxt-lite/.ganttmd/index.html`。
-2. 点击页面上的"选择目录"。
-3. 选择本目录（`examples/jwxt-lite/`）或本目录下的 `.ganttmd/` 目录。
-4. 查看执行、里程碑、主线、模块、风险和 Follow-up 视图。
-5. 当 `.ganttmd/` 数据被修改后，点页面右上角的「↻ 刷新」按钮即可重新读取，无需再次选择目录。
+从仓库根目录运行：
+
+```bash
+npm run validate -- examples/jwxt-lite
+node bin/ganttmd.js project add examples/jwxt-lite --id jwxt-lite --name 教务系统样例
+node bin/ganttmd.js serve
+```
+
+然后在本地看板查看执行、里程碑、主线、模块、风险和 Follow-up 视图。
 
 ## 当前展示能力
 

@@ -8,13 +8,15 @@
 .ganttmd/config.yaml
 与本次任务相关的 .ganttmd/tasks/*.md
 相关的 .ganttmd/followups.md 条目
+相关的 .ganttmd/runs.md 条目
 当前任务的 source_docs
 ```
 
 真实项目接入 GanttMD 后，在该项目根目录提交 `.ganttmd/` 改动前运行：
 
 ```bash
-node .ganttmd/validate.js
+ganttmd validate
+ganttmd doctor
 ```
 
 如果从 GanttMD 仓库根目录校验这个内置样例，使用：

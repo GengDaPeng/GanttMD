@@ -139,7 +139,7 @@ function parseChecklist(raw, sourceFile) {
 }
 
 function parseConfig(text) {
-  const config = { project: {}, views: {}, milestones: [] };
+  const config = { ganttmd: {}, project: {}, views: {}, milestones: [] };
   let section = '';
   let currentMilestone = null;
 
@@ -153,7 +153,7 @@ function parseConfig(text) {
       continue;
     }
 
-    if (section === 'project' || section === 'views') {
+    if (section === 'ganttmd' || section === 'project' || section === 'views') {
       const match = trimmed.match(/^([a-zA-Z_]+):\s*(.*)$/);
       if (match) {
         config[section][match[1]] = parseScalar(match[2]);

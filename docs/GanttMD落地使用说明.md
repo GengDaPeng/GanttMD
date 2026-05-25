@@ -21,39 +21,53 @@ GanttMD 也不要求项目再维护一套“项目进度文档”。动态进度
 ```text
 AGENTS.md
 .ganttmd/
-  index.html              # 看板页面（从仓库 examples/minimal/.ganttmd/ 复制）
-  rules.js                # 共享规则（页面和 validate.js 都用；必须与它们同目录）
-  validate.js             # CLI 校验器（node .ganttmd/validate.js）
   config.yaml             # 项目、里程碑和视图配置
   followups.md            # Agent 后续事项、用户裁决、延期复查和外部等待
+  runs.md                 # 主控派工批次、分支和 worktree 承接记录
   tasks/                  # 任务状态真相源
     backend.md
     frontend.md
     quality.md
 ```
 
-**所有 GanttMD 相关文件都集中在 `.ganttmd/` 一个目录内**——复制、卸载、升级都只动它一个。
+**使用方项目只保存 `.ganttmd/` 数据。** 看板页面、校验器、本地服务和迁移逻辑由安装在项目外的 `ganttmd` 工具提供。
 
 其中：
 
 - `.ganttmd/config.yaml`：项目、里程碑和视图配置。
 - `.ganttmd/tasks/*.md`：任务状态真相源。
 - `.ganttmd/followups.md`：Agent 后续事项、用户裁决、延期复查和外部等待。
-- `.ganttmd/index.html` + `.ganttmd/rules.js` + `.ganttmd/validate.js`：只读可视化页面、共享规则、CLI 校验器。
+- `.ganttmd/runs.md`：任务批次、分支、worktree 和执行状态记录。
 - `AGENTS.md`：告诉 Agent 如何读取和维护 GanttMD。
 
 ## 安装方式
 
-当前 GanttMD 还没有安装式部署，MVP 先采用复制式接入。复制式不是长期唯一形态，但当前必须一次性复制完整能力：看板页面、共享规则和 CLI 校验器都放进 `.ganttmd/`。
+当前主线采用安装式部署。GanttMD 工具安装在项目外，项目内只提交 `.ganttmd/` 数据。
 
-1. 在目标项目创建 `.ganttmd/` 目录。
-2. 从本仓库的 `examples/minimal/.ganttmd/` 复制 `index.html`、`rules.js`、`validate.js` 三个文件到目标项目的 `.ganttmd/` 目录。
-3. 创建 `.ganttmd/config.yaml`。
-4. 创建 `.ganttmd/tasks/*.md`。
-5. 创建 `.ganttmd/followups.md`。
-6. 把 [Agent 协作规则模板](Agent协作规则模板.md) 合并到目标项目 `AGENTS.md`。
+本仓库本地开发时：
 
-不需要数据库，也不需要服务端。页面用浏览器打开后选择项目目录即可读取。
+```bash
+npm install -g .
+```
+
+发布后：
+
+```bash
+npm install -g ganttmd
+```
+
+目标项目接入：
+
+```bash
+cd /path/to/your-project
+ganttmd init
+ganttmd validate
+ganttmd doctor
+ganttmd project add .
+ganttmd serve
+```
+
+`ganttmd init` 只创建缺失文件，不覆盖已有 `.ganttmd/` 内容。`ganttmd migrate` 默认只输出 dry-run 计划；只有 `ganttmd migrate --apply` 才会备份后写入。
 
 ## config.yaml
 
@@ -63,6 +77,8 @@ AGENTS.md
 project:
   id: demo
   name: 示例项目
+ganttmd:
+  schema_version: 1
 
 views:
   enabled: [execution, milestone, track, module, risk, followup]
@@ -106,11 +122,12 @@ evidence: []
 
 人的工作流：
 
-1. 打开 `.ganttmd/index.html`。
-2. 选择项目根目录。
+1. 运行 `ganttmd serve`。
+2. 在本地看板选择项目。
 3. 查看执行视角、风险视角和 Follow-up。
 4. 必要时调整 `.ganttmd/` 文件。
-5. 复杂决策写回正式文档。
+5. 运行 `ganttmd validate` 和 `ganttmd doctor`。
+6. 复杂决策写回正式文档。
 
 Agent 的工作流：
 
@@ -122,6 +139,7 @@ Agent 的工作流：
 6. 执行时读取当前任务的 `source_docs`，确认需求/设计依据。
 7. 完成后补 `evidence`、必要时补 `verification` 和 `review_status`。
 8. 如有后续事项，写入 `.ganttmd/followups.md`。
+9. 如任务在 worktree/分支中连续推进，更新 `.ganttmd/runs.md`。
 
 ## 什么时候更新 GanttMD
 
@@ -144,27 +162,32 @@ Agent 的工作流：
 
 这些内容应留在需求、设计、讨论或审查文档中。
 
-## 页面刷新
+## 本地看板
 
-当前页面主要使用浏览器目录选择能力读取本地文件。
+`ganttmd serve` 启动本地只读看板。它会读取本机项目登记表，聚合主项目 `.ganttmd/`、worktree 状态、runs、checklist 和健康检查结果。
 
-不同浏览器对目录句柄支持不同。外部 Chrome 对自动刷新目录支持更好；部分内嵌浏览器只适合手动重新选择目录。为了保证稳定，基础导入应始终保留 `选择目录` 的手动方式。
+```bash
+ganttmd project add /path/to/project --id demo --name 示例项目
+ganttmd serve --port 7777
+```
+
+本地服务只读展示，不自动修改项目文件。需要写文件的动作必须走显式 CLI 命令。
 
 ## 命令行校验
 
-GanttMD 提供命令行校验脚本，用来在 Agent 提交前或 CI 合并前检查 `.ganttmd/` 的结构问题。使用方项目复制 `.ganttmd/validate.js` 后，不需要安装 npm 包，也不需要配置 npm script。
+GanttMD 提供命令行校验，用来在 Agent 提交前或 CI 合并前检查 `.ganttmd/` 的结构问题。
 
 在使用方项目根目录运行：
 
 ```bash
-node .ganttmd/validate.js
+ganttmd validate
 ```
 
 如果从其他目录执行，也可以显式传项目路径或 `.ganttmd/` 路径：
 
 ```bash
-node /path/to/project/.ganttmd/validate.js /path/to/project
-node /path/to/project/.ganttmd/validate.js /path/to/project/.ganttmd
+ganttmd validate /path/to/project
+ganttmd validate /path/to/project/.ganttmd
 ```
 
 如果命令返回警告，退出码为 `1`；只有提示或没有问题时，退出码为 `0`。当前校验重点包括：
@@ -187,7 +210,7 @@ node /path/to/project/.ganttmd/validate.js /path/to/project/.ganttmd
 Agent 在改动 `.ganttmd/` 后，建议先运行：
 
 ```bash
-node .ganttmd/validate.js
+ganttmd validate
 ```
 
 如果页面和命令行结果不一致，应以命令行输出为结构性校验依据，再回到页面确认视觉展示是否符合预期。
@@ -196,7 +219,7 @@ CI 里也直接运行同一条命令：
 
 ```yaml
 - name: Validate GanttMD
-  run: node .ganttmd/validate.js
+  run: ganttmd validate
 ```
 
 ## 历史归档
@@ -205,7 +228,7 @@ CI 里也直接运行同一条命令：
 
 1. 任务进入 `done` 时填写 `completed_date`；缺失时 validator 会回退使用 `closed_at` 或 `updated_at`。
 2. 任务进入 `cancelled` 时填写 `closed_at` 或 `cancelled_at`；缺失时 validator 会回退使用 `updated_at`。
-3. `node .ganttmd/validate.js` 每次运行时检查是否超过 7 天归档阈值。
+3. `ganttmd validate` 每次运行时检查是否超过 7 天归档阈值。
 4. 超过阈值后，validate 只提示“可归档”，不自动写文件。
 5. 项目主控可补 `archived_at` 和 `archived_reason` 手动归档；恢复时删除这两个字段。
 6. 未来如提供 `ganttmd archive --apply`，再由显式命令移动到历史文件。
