@@ -6,11 +6,11 @@ GanttMD 是项目的任务状态层。它帮助人和 Agent 共同回答：
 - 哪些任务已完成、进行中、待复核、可领取或被阻塞。
 - 某个任务依赖哪些前置任务。
 - Agent 下一步应该优先看哪个任务。
-- 哪些 follow-up、用户裁决、延期项和外部等待还没有清理。
+- 哪些 follow-up、决策事项、延期项和外部等待还没有清理。
 
-GanttMD 不替代正式需求、技术设计、模块规格、接口清单、测试规范或代码审查记录。任务只引用这些文档，不复制正文。
+GanttMD 不替代正式需求、技术设计、接口清单、测试规范或代码审查记录。任务只引用这些文档，不复制正文。
 
-GanttMD 也不要求项目再维护一套“项目进度文档”。动态进度、任务状态、阻塞、证据链和 follow-up 应以 `.ganttmd/` 为唯一真相源；原来的总控待办或模块推进清单应迁入 `.ganttmd/tasks/*.md`，或瘦身成静态说明和 GanttMD 入口。
+GanttMD 也不要求项目再维护一套“项目进度文档”。动态进度、任务状态、阻塞、证据链和 follow-up 应以 `.ganttmd/` 为唯一真相源；已有任务清单可以逐步迁入 `.ganttmd/tasks/*.md`，原文档保留静态说明或 GanttMD 入口。
 
 `source_docs` 不是第二套进度系统。它只指向项目原有的正式需求、设计、接口、数据模型、测试规范或 PR 证据，说明任务的依据从哪里来。
 
@@ -23,8 +23,8 @@ AGENTS.md
 .ganttmd/
   README.md               # 当前项目的 .ganttmd 操作边界说明
   config.yaml             # 项目、里程碑和视图配置
-  followups.md            # Agent 后续事项、用户裁决、延期复查和外部等待
-  runs.md                 # 主控派工批次、分支和 worktree 承接记录
+  followups.md            # 后续事项、决策事项、延期复查和外部等待
+  runs.md                 # 任务批次、分支和执行记录
   tasks/                  # 任务状态真相源
     backend.md
     frontend.md
@@ -38,8 +38,8 @@ AGENTS.md
 - `.ganttmd/README.md`：当前项目的 .ganttmd 操作边界说明。
 - `.ganttmd/config.yaml`：项目、里程碑和视图配置。
 - `.ganttmd/tasks/*.md`：任务状态真相源。
-- `.ganttmd/followups.md`：Agent 后续事项、用户裁决、延期复查和外部等待。
-- `.ganttmd/runs.md`：任务批次、分支、worktree 和执行状态记录。
+- `.ganttmd/followups.md`：后续事项、决策事项、延期复查和外部等待。
+- `.ganttmd/runs.md`：任务批次、分支和执行状态记录。
 - `AGENTS.md`：告诉 Agent 如何读取和维护 GanttMD。
 
 ## 安装方式
@@ -71,7 +71,7 @@ ganttmd start
 
 `ganttmd init` 只创建缺失文件，不覆盖已有 `.ganttmd/` 内容。`ganttmd migrate` 默认只输出 dry-run 计划；只有 `ganttmd migrate --apply` 才会备份后写入。
 
-更新、卸载、迁移和真实项目接入前检查见 [安装、更新、卸载与迁移](user/安装更新卸载与迁移.md)。
+更新、卸载、迁移和接入前检查见 [安装、更新、卸载与迁移](user/安装更新卸载与迁移.md)。
 
 ## config.yaml
 
@@ -102,20 +102,20 @@ milestones:
 每个任务用一个 `ganttmd-task` fenced code block：
 
 ````markdown
-### S-BE-01 后端工程骨架专项设计
+### BE-001 笔记 API 基础接口
 
 ```ganttmd-task
-id: S-BE-01
-title: 后端工程骨架专项设计
+id: BE-001
+title: 笔记 API 基础接口
 status: todo
 dependencies: []
 milestone: M1
 track: backend
-domain: foundation
+domain: editor
 priority: P0
 source_docs: [docs/技术方案.md]
-next_action: 明确后端目录、模块边界和启动入口
-acceptance: [目录结构确定, 本地启动路径明确, 后续实现任务可承接]
+next_action: 实现笔记列表、详情和保存接口
+acceptance: [支持列表查询, 支持详情读取, 支持保存草稿]
 evidence: []
 ```
 ````
@@ -143,9 +143,9 @@ Agent 的工作流：
 6. 执行时读取当前任务的 `source_docs`，确认需求/设计依据。
 7. 完成后补 `evidence`、必要时补 `verification` 和 `review_status`。
 8. 如有后续事项，写入 `.ganttmd/followups.md`。
-9. 如任务在 worktree/分支中连续推进，更新 `.ganttmd/runs.md`。
+9. 如任务在分支中连续推进，更新 `.ganttmd/runs.md`。
 
-worktree/分支不是任务真相源。正式任务只能由主控在主分支创建；分支只负责领取主分支任务、维护任务内 checklist、补充执行证据，并可追加 `status: open` 的 follow-up。接受、关闭、转正式任务和归档必须回到主分支由项目主控处理。
+分支不是任务真相源。建议由任务分发 Agent 或看板维护者创建、拆分、关闭任务并清理 follow-up；执行 Agent 只领取已有任务、维护任务内 checklist、补充执行证据，并可追加 `status: open` 的 follow-up。
 
 ## 什么时候更新 GanttMD
 
@@ -157,7 +157,7 @@ worktree/分支不是任务真相源。正式任务只能由主控在主分支�
 - 任务完成。
 - 依赖关系变化。
 - 任务被取消。
-- 发现 follow-up、用户裁决或外部等待。
+- 发现 follow-up、决策事项或外部等待。
 
 不应该更新：
 
@@ -170,7 +170,7 @@ worktree/分支不是任务真相源。正式任务只能由主控在主分支�
 
 ## 本地看板
 
-`ganttmd start` 后台启动本地只读看板。它会读取本机项目登记表，聚合主项目 `.ganttmd/`、worktree 状态、runs、checklist 和健康检查结果。
+`ganttmd start` 后台启动本地只读看板。它会读取本机项目登记表，聚合项目 `.ganttmd/`、runs、checklist 和健康检查结果。
 
 ```bash
 ganttmd project add /path/to/project --id demo --name 示例项目
@@ -213,7 +213,7 @@ ganttmd validate /path/to/project/.ganttmd
 - 工程类 `done` 任务缺少 `verification`。
 - `review` 任务缺少 `review_status`。
 - PR 审查来源 follow-up 缺少 `source_pr` 或 `source_rr`。
-- `accepted` follow-up 缺少主控、决策或复核时间，或已经超过复核时间。
+- `accepted` follow-up 缺少决策说明或复核时间，或已经超过复核时间。
 
 Agent 在改动 `.ganttmd/` 后，建议先运行：
 
@@ -238,7 +238,7 @@ CI 里也直接运行同一条命令：
 2. 任务进入 `cancelled` 时填写 `closed_at` 或 `cancelled_at`；缺失时 validator 会回退使用 `updated_at`。
 3. `ganttmd validate` 每次运行时检查是否超过 7 天归档阈值。
 4. 超过阈值后，validate 只提示“可归档”，不自动写文件。
-5. 项目主控可补 `archived_at` 和 `archived_reason` 手动归档；恢复时删除这两个字段。
+5. 看板维护者可补 `archived_at` 和 `archived_reason` 手动归档；恢复时删除这两个字段。
 6. 未来如提供 `ganttmd archive --apply`，再由显式命令移动到历史文件。
 
 不建议做后台定时自动清理。GanttMD 是文件真相源，自动写文件应尽量可见、可审查、可回滚。

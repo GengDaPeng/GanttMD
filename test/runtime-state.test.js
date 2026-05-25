@@ -77,7 +77,7 @@ function writeBaseProject(root) {
 
 \`\`\`ganttmd-task
 id: T-1
-title: 主分支任务
+title: 默认分支任务
 status: todo
 dependencies: []
 track: backend
@@ -99,7 +99,7 @@ function writeWorktreeConfig(root) {
 `);
 }
 
-test('worktree 只登记主分支任务的 run 和 checklist 时不产生权限告警', () => {
+test('worktree 只登记默认分支任务的 run 和 checklist 时不产生权限告警', () => {
   const mainRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-main-'));
   const wtRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-wt-'));
   writeBaseProject(mainRoot);
@@ -165,7 +165,7 @@ status: accepted
 kind: followup
 source_type: task
 source_task: T-1
-next_action: 主控复核
+next_action: 维护者复核
 \`\`\`
 `);
 
@@ -191,7 +191,7 @@ test('runtime-state 不把主项目 worktree 重复计入健康检查', () => {
 
 \`\`\`ganttmd-task
 id: T-1
-title: 主分支任务
+title: 默认分支任务
 status: done
 dependencies: []
 track: backend

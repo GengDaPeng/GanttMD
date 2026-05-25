@@ -1,6 +1,6 @@
 project:
-  id: minimal
-  name: GanttMD 最小样例
+  id: acme-notes
+  name: Acme Notes 样例
 
 views:
   enabled: [execution, milestone, track, module, risk, followup]
@@ -8,14 +8,25 @@ views:
 
 milestones:
   - id: M1
-    name: 最小闭环
-    status: in_progress
-    description: 从任务登记到证据复核的最小流程
-    objective: 展示可执行、进行中、待复核、阻塞、完成、取消和 follow-up 治理
+    name: 产品骨架
+    status: done
+    description: 明确产品目标、基础页面、API 骨架和校验入口
+    objective: 展示已完成任务、证据链和工程验证
 
   - id: M2
+    name: 协作编辑
+    status: in_progress
+    description: 完成编辑器、同步 API、协作状态和用户文档
+    objective: 展示进行中任务、review 任务、checklist、run 和依赖阻塞
+
+  - id: M3
+    name: 发布准备
+    status: todo
+    description: 补齐端到端测试、发布检查和审计能力
+    objective: 展示跨主线依赖、风险 follow-up 和延期事项
+
+  - id: M4
     name: 后续增强
     status: todo
-    description: 后续功能和体验优化
-    objective: 展示跨里程碑依赖和延期项
-
+    description: 评估低优先级增强和已取消方案
+    objective: 展示取消任务、wontfix follow-up 和未来能力边界

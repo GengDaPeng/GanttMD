@@ -23,8 +23,8 @@
 | `README.md` | 建议 | 当前项目的 .ganttmd 操作边界说明 |
 | `config.yaml` | 是 | 项目元信息、里程碑、视图配置和校验参数 |
 | `tasks/*.md` | 是 | 任务状态真相源，一个文件可放多个任务 |
-| `followups.md` | 建议 | follow-up、用户裁决、延期项和外部等待项 |
-| `runs.md` | 建议 | 主控派给 worktree/branch 的执行批次和 checklist |
+| `followups.md` | 建议 | follow-up、决策事项、延期项和外部等待项 |
+| `runs.md` | 建议 | 分支或执行批次记录 |
 | `modules/*.md` | 兼容 | 旧版任务目录，新项目不推荐 |
 
 GanttMD 不再要求 `milestones/overview.md` 或 `views/timeline.json`。里程碑定义放在 `config.yaml`，页面和 CLI 运行时按 Markdown 数据实时聚合。
@@ -78,28 +78,28 @@ validation:
 任务写在 `.ganttmd/tasks/*.md` 的 fenced YAML 代码块中。代码块外可以写人类补充说明，但工具只解析 `ganttmd-task` 块。
 
 ````markdown
-# 后端任务
+# 同步任务
 
-### S-BE-01 后端工程骨架专项设计
+### BE-002 离线同步 API
 
 ```ganttmd-task
-id: S-BE-01
-title: 后端工程骨架专项设计
+id: BE-002
+title: 离线同步 API
 kind: task
 status: todo
-dependencies: []
-milestone: M1
+dependencies: [BE-001]
+milestone: M2
 track: backend
-domain: foundation
+domain: sync
 priority: P0
 owner:
 agent:
-source_docs: [docs/技术方案.md §2]
-next_action: 明确后端目录、模块边界和启动入口
+source_docs: [docs/architecture.md §同步模型]
+next_action: 实现变更游标、批量上传和冲突返回结构
 acceptance:
-  - 目录结构确定
-  - 本地启动路径明确
-  - 后续实现任务可承接
+  - 支持客户端按游标拉取增量变更
+  - 支持离线编辑批量上传
+  - 冲突响应包含本地版本、远端版本和建议处理动作
 evidence: []
 verification:
 review_status:
@@ -120,7 +120,7 @@ updated_at: 2026-05-25
 | `dependencies` | 是 | 前置任务 ID 数组；无依赖写 `[]` |
 | `milestone` | 建议 | 对应 `config.yaml` 中的里程碑 ID |
 | `track` | 建议 | 主线，见 track 约定 |
-| `domain` | 建议 | 业务域或能力域，例如 `student`、`notification`、`workflow` |
+| `domain` | 建议 | 业务域或能力域，例如 `editor`、`sync`、`sharing` |
 | `priority` | 建议 | `P0`、`P1`、`P2`、`P3` |
 | `owner` / `agent` | 进行中必填 | 当前承接者。二者都写时必须一致 |
 | `source_docs` | 活跃任务建议 | 需求、设计、接口、测试或证据依据路径，可带章节 |
@@ -174,8 +174,8 @@ domain: notification
 
 ```yaml
 source_docs:
-  - docs/03-技术总基线.md §16
-  - docs/modules/安全考勤.md §接口契约
+  - docs/product.md §共享协作
+  - docs/architecture.md §同步模型
 ```
 
 任务状态、阻塞、完成证据和 follow-up 只写 `.ganttmd/`。正式需求、技术细节、接口字段和测试规范留在被引用文档中。
@@ -187,21 +187,21 @@ source_docs:
 ````markdown
 ```ganttmd-followup
 id: FUP-001
-title: 安全到校 queryStatuses 后续优化
+title: 移动端冲突提示文案需要产品确认
 kind: followup
 status: open
 severity: medium
-source_type: pr_review
-source_task: S-BE-09
-source_pr: PR#27
+source_type: discussion
+source_task: FE-003
+source_pr:
 source_rr: RR-001
 source_comment:
 source_commit:
-created_by: review-agent
-created_at: 2026-05-22
-reason: 当前后端实现使用内存分页，后续应评估 SQL UNION 或状态投影表替换
-suggestion: 在 M6 前确认是否转为正式性能优化任务
-next_review_at: 2026-05-29
+created_by: ux-review-agent
+created_at: 2026-05-25
+reason: 冲突解决弹窗的提示文案还没有统一，可能影响用户理解
+suggestion: 由产品确认三类冲突提示，再决定是否转为正式 UX 任务
+next_review_at: 2026-06-01
 ```
 ````
 
@@ -223,7 +223,7 @@ next_review_at: 2026-05-29
 | `reason` | 是 | 为什么需要登记 |
 | `suggestion` | 是 | 建议处理方式 |
 | `next_review_at` | 延期/外部等待必填 | 下次复核日期 |
-| `accepted_by` / `accepted_at` / `decision` | accepted 必填 | 主控接受延期时的决策链 |
+| `accepted_by` / `accepted_at` / `decision` | accepted 必填 | 接受延期时的决策链 |
 | `converted_task` / `resolution` | converted 必填 | 转成正式任务后的任务 ID 和结论 |
 | `resolution` | done/wontfix 必填 | 关闭结论 |
 
@@ -236,7 +236,7 @@ followup, decision, deferred, external_wait, risk
 | 类型 | 含义 |
 |---|---|
 | `followup` | 普通后续事项 |
-| `decision` | 等待用户或主控裁决 |
+| `decision` | 等待明确决策 |
 | `deferred` | 已接受延期但需要复查 |
 | `external_wait` | 等外部资料、设备、账号或环境 |
 | `risk` | 风险项，不一定立即转任务 |
@@ -247,11 +247,11 @@ followup, decision, deferred, external_wait, risk
 open, accepted, converted, done, wontfix
 ```
 
-普通 Agent 只能追加 `open` 条目，或在既有条目下追加证据/评论；不能关闭、删除、改为 `converted/done/wontfix`。主控负责清理、关闭、合并或转正式任务。
+多 Agent 协作时，建议执行 Agent 只追加 `open` 条目，或在既有条目下追加证据/评论；关闭、删除、改为 `converted/done/wontfix` 由任务分发 Agent 或看板维护者统一处理。
 
 ## 5. runs.md 与 checklist
 
-`runs.md` 用来表达主控派给 worktree/branch 的执行批次。它不替代 Git 事实；本地服务会同时扫描实际 worktree，用于对照“计划”和“现场”。
+`runs.md` 用来表达分支或执行批次。它不替代 Git 事实；本地服务会同时读取任务数据，用于对照计划和执行状态。
 
 ### Run 示例
 
@@ -276,7 +276,7 @@ intent: 完成本地服务、项目登记和多项目看板入口
 | `id` | 是 | run ID |
 | `title` | 是 | run 标题 |
 | `status` | 是 | `planned`、`active`、`review`、`merged`、`abandoned` |
-| `branch` | active 必填 | 对应分支 |
+| `branch` | active 必填 | 对应分支或批次名称 |
 | `owner` | active 必填 | 承接者 |
 | `tasks` | active 必填 | 本批次任务 ID 数组 |
 | `current_task` | 否 | 当前主要任务，必须属于 `tasks` |
@@ -309,7 +309,7 @@ items:
 
 页面会把 checklist 展示到任务抽屉和运行态面板中，帮助人类负责人看清“大任务做到了哪一步”。
 
-checklist 是执行过程记录，不是长期任务事实。父任务进入 `done` 或 `cancelled` 后，项目主控应把 checklist 结果收口到 `evidence`、`verification`、follow-up 或新任务，然后删除 checklist；`ganttmd validate` 会输出 info 级收口提醒。
+checklist 是执行过程记录，不是长期任务事实。父任务进入 `done` 或 `cancelled` 后，看板维护者应把 checklist 结果收口到 `evidence`、`verification`、follow-up 或新任务，然后删除 checklist；`ganttmd validate` 会输出 info 级收口提醒。
 
 ## 6. 归档规则
 
@@ -344,7 +344,7 @@ archived_reason: done_over_7_days
 - `cancelled` 是否缺少取消原因或处理结论。
 - `done/cancelled` 是否已达到归档提醒阈值。
 - PR follow-up 是否缺少 `source_pr/source_rr`。
-- `accepted` follow-up 是否缺少主控决策链或复核时间。
+- `accepted` follow-up 是否缺少决策链或复核时间。
 - `run` 是否缺少 active 必填字段、引用不存在任务或 current_task 不属于 tasks。
 - checklist 状态是否合法，是否引用不存在任务。
 

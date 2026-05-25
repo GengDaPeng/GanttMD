@@ -1,225 +1,147 @@
-# AI 生成 GanttMD 初始任务文件指南
+# AI 生成初始任务文件指南
 
-本文用于告诉 AI Agent 如何从项目材料中初始化或迁移符合 GanttMD 要求的 `.ganttmd/` 任务文件。
+本文面向想用 AI Agent 初始化 GanttMD 的开发者。目标是从已有项目材料中生成 `.ganttmd/`，而不是让 Agent 凭空规划项目。
 
-本指南只用于项目接入初期或历史材料迁移。接入完成后，动态进度、任务状态、阻塞、证据链和 follow-up 应直接维护在 `.ganttmd/`，不要长期维护另一套“项目进度文档”再反复转换。
+## 输入材料
 
-核心原则：
-
-> Agent 不要凭空规划项目。Agent 只能从项目已有文档、用户明确指令和当前 Git / PR / 代码事实中抽取任务。
-
-## 1. Agent 的输入
-
-初始化或迁移 `.ganttmd/` 前，Agent 必须先读取这些材料：
-
-1. 项目总控看板或路线图。
-2. 项目执行待办或任务清单。
-3. 模块推进清单。
-4. 跨域依赖、风险、延期能力或升级门总账。
-5. 用户本轮明确指定的新增目标。
-
-如果项目没有这些文档，则先让 Agent 读取：
+优先读取：
 
 1. README。
-2. 产品需求文档。
-3. 技术设计文档。
-4. 当前 Git 分支和目录结构。
-5. 用户给出的阶段目标。
+2. 产品需求或路线图。
+3. 技术设计或架构说明。
+4. issue、PR、changelog 或已有任务清单。
+5. 测试、发布或运维说明。
 
-## 2. Agent 的输出
+如果材料不足，先让 Agent 输出缺口清单，不要直接生成大量任务。
 
-Agent 应生成：
+## 输出结构
+
+推荐生成：
 
 ```text
 .ganttmd/
+  README.md
   config.yaml
   followups.md
+  runs.md
   tasks/
-    system-control.md
-    module-specs.md
-    backend.md
-    frontend.md
-    device.md
+    product.md
+    engineering.md
+    quality.md
 ```
 
-具体任务文件可以按项目情况调整。不要机械按代码目录拆分，应按维护便利拆分；任务归属由任务块里的 `track` 和 `domain` 表达。
+任务文件可以按项目维护习惯调整。不要机械按代码目录拆分；任务归属由 `track` 和 `domain` 表达。
 
-## 3. 抽取任务的判断标准
+## 任务抽取标准
 
-只有满足以下条件的事项才写成任务：
+写成任务的事项应满足：
 
 - 有明确产出。
 - 可以判断完成或未完成。
 - 能挂到里程碑或工作主线。
-- 对后续任务有依赖影响，或需要 Agent 领取推进。
+- 对后续任务有依赖影响，或需要被领取推进。
 
 不要写成任务：
 
 - 纯背景说明。
 - 长篇设计原则。
-- 已经关闭且后续没有影响的历史讨论。
-- 还没有被用户确认的想法。
+- 已经关闭且不影响后续的历史讨论。
+- 尚未确认的想法。
 - 没有完成判断的宽泛方向。
 
-## 4. 状态转换规则
+## 状态映射
 
-从源文档状态到 GanttMD 状态：
-
-| 源文档标记 | GanttMD `status` | 说明 |
+| 来源状态 | GanttMD `status` | 说明 |
 | --- | --- | --- |
-| `[x]` | `done` | 已完成，有证据更好 |
-| `[~]` | `in_progress` | 进行中 |
-| 等待复核 / PR / 用户确认 | `review` | 已有产出但尚未闭环 |
-| `[>]` | `todo` | 下一步优先做 |
-| `[ ]` | `todo` | 未开始 |
-| `[!]` | `todo` | 不直接写 blocked，由依赖或正文说明风险 |
-| `[-]` | 不进入当前执行队列，或写入低优先级模块 | 暂缓项不要默认推荐给 Agent |
+| 已完成 | `done` | 应补 `evidence` |
+| 进行中 | `in_progress` | 应补 `owner` 或 `agent` |
+| 等待复核 | `review` | 应补 `review_status` |
+| 未开始 | `todo` | 可被领取 |
+| 明确取消 | `cancelled` | 应补取消原因 |
 
-`blocked` 默认不写入源状态。若任务依赖未完成，页面自动显示阻塞。
+`blocked` 通常不手写。看板会根据依赖自动展示被阻塞任务。外部阻塞可以写入 `blocked_reason` 或 follow-up。
 
-外部业务阻塞写在任务正文：
+## 编号建议
 
-```markdown
-> BLOCKED: 等待海康确认真实设备事件字段。
+使用稳定、可读、不会频繁变动的 ID：
+
+```text
+SPEC-001
+FE-001
+BE-001
+QA-001
+OPS-001
 ```
 
-## 5. 字段生成规则
+同一项目内保持风格一致即可。
 
-### id
+## 任务块示例
 
-沿用源文档已有编号，例如：
-
-```yaml
-id: S-FE-02
-```
-
-如果源文档没有编号，由 Agent 按主线生成稳定编号，例如：
-
-```yaml
-id: PM-001
+```ganttmd-task
 id: BE-001
-id: FE-001
-```
-
-不要频繁改编号。
-
-### title
-
-使用源文档中的任务标题，保持短句。
-
-### source_docs
-
-写任务依据文档路径，不写说明文字。
-
-```yaml
-source_docs: [docs/00-当前基线与范围/00-项目总控执行待办.md]
-```
-
-`source_docs` 不是第二套进度来源。它引用需求、设计、接口、数据模型、测试规范或 PR 证据；任务状态和动态进度仍然只写在 `.ganttmd/`。
-
-### next_action
-
-写“下一步具体要做什么”，不要写“阅读某文档”。
-
-好：
-
-```yaml
-next_action: 完成安全到校前端工作台、状态列表、异常详情和关闭表单最小闭环
-```
-
-不好：
-
-```yaml
-next_action: 阅读安全到校纵切方案
-```
-
-### acceptance
-
-写任务级完成边界，控制在 2-4 条。
-
-```yaml
-acceptance: [工作台能展示关键状态, 异常详情和关闭表单可走通, 模拟设备入口能触发演示链路]
-```
-
-不要把完整业务验收文档搬进任务块。完整验收标准留在 `source_docs`。
-
-### evidence
-
-已完成任务应尽量写证据：
-
-```yaml
-evidence: [PR#27, commit:e5b5411, docs/01-模块规格说明/安全考勤/安全到校纵切实施方案.md]
-```
-
-没有证据时先写空数组：
-
-```yaml
+title: 实现笔记同步 API
+kind: task
+status: todo
+dependencies: [SPEC-001]
+milestone: M2
+track: backend
+domain: sync
+priority: P0
+source_docs: [docs/architecture.md]
+next_action: 实现保存接口和版本冲突响应
+acceptance: [保存接口幂等, 版本冲突返回 409, 错误响应含可读 message]
 evidence: []
+updated_at: 2026-05-25
 ```
 
-## 6. 依赖生成规则
+`source_docs` 是依据引用，不是第二套进度来源。它可以指向需求、设计、测试计划、issue、PR 或 commit。
 
-Agent 应优先从源文档里的箭头、阻塞说明和“输入 / 后续”关系抽取依赖。
+## Follow-up 抽取
 
-例：
+写入 `.ganttmd/followups.md` 的事项应是：
+
+- 当前不适合直接做成任务。
+- 但后续需要复查、决策或追踪。
+- 不记录就容易在聊天、PR 或会议纪要中丢失。
+
+示例：
+
+```ganttmd-followup
+id: FUP-001
+title: 自动化端到端测试延后到同步 API 稳定后
+kind: deferred
+status: accepted
+source_type: planning
+source_task: QA-002
+created_by: qa-dev
+created_at: 2026-05-25
+accepted_by: tech-lead
+accepted_at: 2026-05-25
+next_review_at: 2026-06-10
+decision: 同步 API 字段稳定前只维护回归清单
+reason: 当前接口还在变化，过早写端到端测试会增加维护成本
+suggestion: BE-002 完成后复查 QA-002
+severity: medium
+```
+
+## 推荐提示词
 
 ```text
-S-QA-03 → S-BE-09 → S-FE-02
-```
+你要为这个项目初始化 GanttMD 任务状态数据。
 
-应写成：
+请先读取 README、需求、架构、测试或已有任务材料。
+不要凭空创建任务。
 
-```yaml
-id: S-FE-02
-dependencies: [S-BE-09]
-```
-
-不要为了让图更好看而编造依赖。依赖必须表达“前者不完成，后者不应领取”。
-
-## 7. 生成流程
-
-Agent 应按以下流程生成：
-
-1. 读取源文档。
-2. 列出候选任务。
-3. 过滤掉纯背景、纯历史、暂缓且不可执行事项。
-4. 按主线分组。
-5. 为每个任务写字段。
-6. 检查 ID 是否重复。
-7. 检查依赖是否指向存在任务。
-8. 打开当前 GanttMD 页面或运行静态检查确认任务可读。
-9. 输出“生成依据”和“未纳入事项”。
-
-## 8. 输出前自检
-
-Agent 完成 `.ganttmd/` 后必须自检：
-
-- 是否存在重复 `id`。
-- 是否存在不存在的 `dependencies`。
-- 是否把 `blocked` 写进 `status`。
-- 是否有 `todo` 任务缺少 `source_docs`。
-- 是否有可执行任务缺少 `next_action`。
-- 是否有可执行任务缺少 `acceptance`。
-- 是否把源文档长篇内容复制进任务块。
-
-## 9. 推荐提示词
-
-可直接给 Agent：
-
-```text
-你是本项目的 GanttMD 进度主控。
-
-请先读取项目已有任务材料、总控看板、执行待办、模块推进清单和风险总账。
-然后生成或更新 `.ganttmd/config.yaml` 与 `.ganttmd/tasks/*.md`。
+输出：
+1. .ganttmd/config.yaml
+2. .ganttmd/tasks/*.md
+3. .ganttmd/followups.md
+4. .ganttmd/runs.md
 
 要求：
-1. 只从已有文档和用户明确指令抽取任务，不凭空规划。
-2. status 只允许 todo / in_progress / review / done / cancelled。
-3. 如果任务已有产出但等待复核，使用 review。
-4. blocked 由 dependencies 和 blocked_reason 自动计算，不写入 status。
-5. 每个任务尽量补 source_docs、next_action、acceptance、evidence。
-6. next_action 写下一步动作，不写文档名。
-7. acceptance 写 2-4 条任务级完成边界，不搬运完整业务验收文档。
-8. PR 审查或总结中的后续事项必须登记到 .ganttmd/followups.md。
-9. 完成后输出：新增任务、更新任务、未纳入事项、风险和需要用户裁决的问题。
+- 任务必须有稳定 id、status、dependencies、milestone、track、domain、source_docs、next_action 和 acceptance。
+- done 任务必须有 evidence。
+- 工程类 done 任务必须有 verification。
+- 暂不处理但需要追踪的事项写入 followups.md。
+- 完成后运行 ganttmd validate，并修复 warning。
 ```

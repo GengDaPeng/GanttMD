@@ -91,8 +91,8 @@ created_at: 2026-05-23
 reason: 可延后事项
 suggestion: 转正式任务
 severity: low
-resolution: 已转为正式任务 S-BE-08
-converted_task: S-BE-08
+resolution: 已转为正式任务 API-008
+converted_task: API-008
 \`\`\`
 `,
   });

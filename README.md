@@ -1,12 +1,12 @@
 # GanttMD
 
-GanttMD 是一个 Markdown-native 的项目状态看板，面向 AI Agent 参与开发的项目。
+GanttMD 是一个 Markdown-native 的项目状态看板，面向有 AI Agent 参与的软件开发项目。
 
 它的核心定位是：
 
-> 用 `.ganttmd/` 作为项目任务状态真相源，让人类负责人和 AI Agent 共享同一套可读、可审查、可视化的进度数据。
+> 用 `.ganttmd/` 作为项目任务状态真相源，让开发者、维护者和 AI Agent 共享同一套可读、可审查、可视化的任务数据。
 
-GanttMD 不替代需求文档、技术设计、模块规格、接口清单或测试规范。它只引用这些正式文档，并维护任务状态、依赖、证据链、阻塞项和 follow-up。
+GanttMD 不替代需求文档、技术设计、接口清单或测试规范。它只引用这些正式文档，并维护任务状态、依赖、证据链、阻塞项和 follow-up。
 
 ## 当前形态
 
@@ -21,8 +21,8 @@ GanttMD 不替代需求文档、技术设计、模块规格、接口清单或测
 ## 适合解决什么问题
 
 - AI Agent 不知道下一步该做哪个任务。
-- 人类负责人看不清任务依赖、阻塞和里程碑状态。
-- Agent 经常把“后续再做”停留在口头总结里，没有进入项目跟踪。
+- 维护者看不清任务依赖、阻塞和里程碑状态。
+- Agent 经常把“后续再做”停留在回复里，没有进入项目跟踪。
 - 完成任务缺少 PR、commit、verification、review_status 等证据链。
 
 ## 什么时候不该用 GanttMD
@@ -30,14 +30,14 @@ GanttMD 不替代需求文档、技术设计、模块规格、接口清单或测
 GanttMD 是 AI Agent 驱动的小型项目的任务状态层，不是通用项目管理工具。下列场景不要用它替代专业工具：
 
 - **替代 Jira / Linear / Asana**：没有用户分配、工时、Sprint、Kanban Swimlane、自动通知等团队协作能力，10 人以上团队会很快撑爆。
-- **承载需求文档本身**：任务块只引用正式文档，不复制需求正文。把模块规格写进 `next_action` 或 `acceptance` 会让任务块膨胀失控。
+- **承载需求文档本身**：任务块只引用正式文档，不复制需求正文。把完整需求写进 `next_action` 或 `acceptance` 会让任务块膨胀失控。
 - **代替 PR / Code Review**：交付证据通过 `evidence` 引用 PR，但代码讨论本身仍在 PR 评论区，不要搬到 follow-up 里。
 - **跨组织项目组合管理**：本地服务可以登记多个项目，但它不是企业级 portfolio 管理工具。
 - **长生命周期路线图**（一年以上跨度）：里程碑机制偏轻量，更适合 3-6 个月可见的近期路线，长期愿景仍属正式文档。
 - **强实时协同**：页面是只读的，多人同时改 Markdown 仍需 Git 解决冲突，不适合需要秒级同步的场景。
 - **业务报表 / KPI 仪表盘**：GanttMD 关心的是任务结构和证据，不是业务指标。
 
-如果项目主要痛点是上面这些，请用专业工具。GanttMD 解决的是 **AI Agent 协作时的任务状态、依赖、阻塞、证据链和 follow-up 治理**。
+如果项目主要痛点是上面这些，请用专业工具。GanttMD 解决的是 **AI Agent 协作时的任务状态、依赖、阻塞、证据链和 follow-up 跟踪**。
 
 ## 快速开始
 
@@ -74,8 +74,8 @@ your-project/
     followups.md
     runs.md
     tasks/
-      backend.md
-      frontend.md
+      product.md
+      engineering.md
       quality.md
 ```
 
@@ -84,37 +84,37 @@ your-project/
 然后：
 
 1. 按 [新项目初始化指南](docs/新项目初始化指南.md) 调整 `.ganttmd/config.yaml` 和 `.ganttmd/tasks/*.md`。
-2. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 合并到目标项目的 `AGENTS.md`。
+2. 如项目使用 AI Agent，可参考 [Agent 协作规则模板](docs/Agent协作规则模板.md) 写入目标项目的 `AGENTS.md`。
 3. 运行 `ganttmd validate`，确保没有 warning。
 4. 运行 `ganttmd start`，在 `http://localhost:7777` 查看本地看板。
 
-真实项目接入、工具更新、卸载和 schema 迁移见 [安装、更新、卸载与迁移](docs/user/安装更新卸载与迁移.md)。
+项目接入、工具更新、卸载和 schema 迁移见 [安装、更新、卸载与迁移](docs/user/安装更新卸载与迁移.md)。
 
 也可以直接用本仓库的样例：
 
 ```bash
 ganttmd validate examples/minimal
-ganttmd project add examples/minimal --id minimal --name 最小样例
+ganttmd project add examples/minimal --id acme-notes --name "Acme Notes 样例"
 ganttmd start
 ```
 
 ## 任务文件示例
 
 ````markdown
-### S-BE-01 后端工程骨架专项设计
+### API-001 实现笔记同步 API
 
 ```ganttmd-task
-id: S-BE-01
-title: 后端工程骨架专项设计
+id: API-001
+title: 实现笔记同步 API
 status: todo
-dependencies: []
+dependencies: [SPEC-001]
 milestone: M1
 track: backend
-domain: foundation
+domain: sync
 priority: P0
-source_docs: [docs/技术方案.md]
-next_action: 明确后端目录、模块边界和启动入口
-acceptance: [目录结构确定, 本地启动路径明确, 后续实现任务可承接]
+source_docs: [docs/architecture.md]
+next_action: 实现保存接口和版本冲突响应
+acceptance: [保存接口幂等, 版本冲突返回 409, 错误响应含可读 message]
 evidence: []
 ```
 
@@ -125,12 +125,12 @@ evidence: []
 
 当前页面支持这些内置视图：
 
-- `执行视角`：按 Agent 接手顺序组织任务。
+- `执行视角`：按可接手顺序组织任务。
 - `里程碑视角`：按里程碑组织任务。
 - `主线视角`：按 `track` 分组，例如规格、后端、前端、基础设施、质量、文档和运维。
-- `模块视角`：按 `domain` 分组，例如学生、审批、安全考勤、通知等业务域或能力域。
+- `模块视角`：按 `domain` 分组，例如 editor、sync、sharing、release 等业务域或能力域。
 - `风险视角`：聚合阻塞任务、未清理 Follow-up 和严重健康检查。
-- `Follow-up`：查看 Agent 留下的后续事项、用户裁决、延期复查和外部等待。
+- `Follow-up`：查看后续事项、延期复查、外部等待和风险项。
 
 任务视图顶部提供状态筛选，默认显示 `活跃` 任务。已归档任务需要手动选择 `已归档` 才会显示；执行视角不展示已归档任务，里程碑、主线和模块视角会按任务原本分组展示归档任务。
 
@@ -142,19 +142,20 @@ views:
   default: execution
 ```
 
-## Agent 如何使用
+## Agent 协作建议
 
-Agent 不会天然知道 GanttMD 的存在，必须通过目标项目的 `AGENTS.md` 告诉它：
+如果团队让多个 AI Agent 同时参与项目，建议指定一个专门的任务分发 Agent 或维护负责人维护看板结构。这个角色负责创建、拆分、关闭任务，清理 follow-up，并保持 `.ganttmd/` 与实际交付状态一致。其他 Agent 应只领取已存在任务、补充证据、更新当前任务进度，并追加 `status: open` 的 follow-up。
+
+Agent 不会天然知道 GanttMD 的存在，可以通过目标项目的 `AGENTS.md` 告诉它：
 
 - 任务数据在 `.ganttmd/`。
 - 工作前先读取 `.ganttmd/config.yaml`，再按本次任务读取相关 `.ganttmd/tasks/*.md` 和 follow-up 条目。
 - 执行任务时读取当前任务的 `source_docs`；它是需求、设计或证据依据，不是第二套进度真相源。
-- 只能领取 `status: todo` 且依赖已完成的任务。
+- 优先领取 `status: todo` 且依赖已完成的任务。
 - 领取时更新为 `in_progress`，并补 `agent` 或 `owner`。
 - 完成时补 `evidence`，必要时补 `verification` 和 `review_status`。
 - 遗留事项必须登记到 `.ganttmd/followups.md`，不能只写在聊天总结里。
-- worktree/分支只能通过 `.ganttmd/runs.md` 领取主分支已有任务，并在任务内维护 checklist；不得在分支创建新的顶层 `ganttmd-task`。
-- worktree/分支只能追加 `status: open` 的 follow-up；接受、关闭或转正式任务必须由项目主控在主分支处理。
+- 多分支并行时，可用 `.ganttmd/runs.md` 记录领取批次，并在任务内维护 checklist。
 
 可直接使用 [Agent 协作规则模板](docs/Agent协作规则模板.md)。
 
@@ -162,9 +163,9 @@ Agent 不会天然知道 GanttMD 的存在，必须通过目标项目的 `AGENTS
 
 `.ganttmd/followups.md` 用来解决“口头 follow-up 没有落地”的问题。
 
-普通 Agent 可以追加 `status: open` 的 follow-up，但不能关闭、删除、转正式任务。只有项目主控可以清理、关闭、合并或转任务。
+建议普通执行 Agent 只追加 `status: open` 的 follow-up，不直接关闭、删除或转正式任务。看板维护者或任务分发 Agent 再定期清理、关闭、合并或转任务。
 
-来自 PR 审查的 follow-up 必须带来源：
+来自 PR 审查的 follow-up 建议带来源：
 
 ```yaml
 source_type: pr_review
@@ -177,10 +178,10 @@ source_rr: RR-003
 ## 文档索引
 
 - [Schema](SCHEMA.md)：`.ganttmd/` 文件格式规范。
-- [使用说明](docs/GanttMD落地使用说明.md)：如何在真实项目中使用 GanttMD。
-- [人机协作使用路径与边界](docs/人机协作使用路径与边界.md)：人类负责人、Agent、主控清理和 PR follow-up 的协作边界。
+- [使用说明](docs/GanttMD落地使用说明.md)：如何在项目中使用 GanttMD。
+- [AI Agent 协作建议](docs/人机协作使用路径与边界.md)：多 Agent 项目的看板维护建议。
 - [新项目初始化指南](docs/新项目初始化指南.md)：从 0 创建 `.ganttmd/`。
-- [Agent 协作规则模板](docs/Agent协作规则模板.md)：复制到目标项目 `AGENTS.md` 的规则。
+- [Agent 协作规则模板](docs/Agent协作规则模板.md)：可复制到目标项目 `AGENTS.md` 的规则。
 - [AI 生成初始任务文件指南](docs/AI生成进度文档指南.md)：让 Agent 从现有项目材料初始化或迁移 `.ganttmd/`。
 - [任务字段说明](docs/任务字段说明.md)：任务字段怎么写。
 - [Follow-up 清单机制](docs/Follow-up清单机制.md)：follow-up 权限、来源和状态规则。
@@ -189,7 +190,7 @@ source_rr: RR-003
 
 ## 命令行
 
-`ganttmd` 的职责不是运行业务项目，而是读取 `.ganttmd/` 并提供任务状态治理能力。
+`ganttmd` 的职责不是运行目标项目，而是读取 `.ganttmd/` 并提供任务状态治理能力。
 
 常用命令：
 
@@ -223,7 +224,7 @@ ganttmd static [path] [--out dir]       # 导出离线静态 fallback 页面
 - `done` 任务是否缺少 `evidence`。
 - 工程任务完成后是否缺少 `verification`。
 - PR follow-up 是否缺少 `source_pr` 或 `source_rr`。
-- `accepted` follow-up 是否缺少复核时间和主控决策，或已经超过复核时间。
+- `accepted` follow-up 是否缺少复核时间和决策说明，或已经超过复核时间。
 
 这样 Agent 在提交前、CI 在合并前都能发现结构问题。
 
@@ -242,12 +243,13 @@ ganttmd validate --json
 
 ## 示例
 
-`examples/minimal/` 是公开仓库保留的最小样例，用来展示：
+`examples/minimal/` 是一个虚构的 Acme Notes 产品样例，用来展示：
 
+- 多里程碑、多主线、多领域任务。
 - 可执行、进行中、待复核、被依赖阻塞、已完成和已取消任务。
-- 证据链、校验命令和复核状态。
-- Follow-up 的 open / accepted / converted 状态。
-- 最小 `source_docs` 引用方式。
+- 证据链、校验命令、复核状态、checklist 和 runs。
+- Follow-up 的 open / accepted / converted / done / wontfix 状态。
+- `source_docs` 如何引用需求、架构和质量文档。
 
 ## 许可证
 

@@ -1,17 +1,17 @@
-# GanttMD 最小样例
+# Acme Notes 样例
 
-这是给新用户快速理解 GanttMD 的最小完整样例。
+这是一个虚构的团队笔记产品样例，用于展示 GanttMD 的主要能力。
 
-它用少量任务展示：
+它覆盖：
 
-- 可执行任务。
-- 进行中任务。
-- 待复核任务。
-- 被依赖阻塞的任务。
-- 已完成任务和证据链。
-- 已取消任务。
-- 临时任务 `kind: ad_hoc`。
-- Follow-up 的 open / accepted / converted 状态。
+- 4 个里程碑。
+- 17 个任务，包含 `todo`、`in_progress`、`review`、`done`、`cancelled`。
+- 任务依赖与被阻塞展示。
+- 前端、后端、质量、文档、运维等主线。
+- editor、sync、sharing、release 等领域分组。
+- evidence、verification、review_status。
+- checklist 和 runs。
+- Follow-up 的 open、accepted、converted、done、wontfix 状态。
 
 ## 使用方式
 
@@ -19,15 +19,13 @@
 
 ```bash
 npm run validate -- examples/minimal
-node bin/ganttmd.js project add examples/minimal --id minimal --name 最小样例
+node bin/ganttmd.js project add examples/minimal --id acme-notes --name "Acme Notes 样例"
 node bin/ganttmd.js serve
 ```
 
 然后在本地看板查看执行、里程碑、主线、模块、风险和 Follow-up 视图。
 
-真实项目接入 GanttMD 后，项目内只提交 `.ganttmd/` 数据；页面、校验器和本地服务由安装式 `ganttmd` 工具提供。
-
-真实项目接入 GanttMD 后，在该项目根目录校验：
+安装 GanttMD 后，在自己的项目根目录校验：
 
 ```bash
 ganttmd validate
