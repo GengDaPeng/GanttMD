@@ -73,4 +73,16 @@ test('本地服务提供项目列表和项目运行时状态 API', async (t) => 
   assert.equal(state.source.projectId, 'api-demo');
   assert.equal(state.main.taskCount, 1);
   assert.equal(state.tasks[0].id, 'API-1');
+  assert.equal(state.config.project.id, 'api-demo');
+  assert.ok(state.version > 0);
+
+  const unchanged = await getJson(`${url}/api/events?project=api-demo&since=${state.version}&timeout=5`);
+  assert.equal(unchanged.changed, false);
+  assert.equal(unchanged.version, state.version);
+
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  fs.appendFileSync(path.join(projectRoot, '.ganttmd', 'tasks', 'main.md'), '\n<!-- changed -->\n');
+  const changed = await getJson(`${url}/api/events?project=api-demo&since=${state.version}`);
+  assert.equal(changed.changed, true);
+  assert.ok(changed.version > state.version);
 });

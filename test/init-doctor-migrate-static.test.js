@@ -90,7 +90,8 @@ closed_at: 2026-05-24
 
   const result = exportStatic(root, 'dist-board');
   const html = fs.readFileSync(result.indexPath, 'utf8');
-  assert.match(html, /GanttMD Static/);
+  assert.match(html, /GanttMD Local/);
+  assert.match(html, /GANTTMD_STATIC_STATE/);
   assert.match(html, /T-001/);
   assert.match(html, /样例任务/);
 });

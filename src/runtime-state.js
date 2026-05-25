@@ -86,6 +86,7 @@ function buildRuntimeState(projectRoot, options = {}) {
 
   return {
     project: mainProject.config.project,
+    config: mainProject.config,
     source: {
       projectId: mainProject.config.project.id || mainProject.config.project.name || '',
       root: mainProject.root,

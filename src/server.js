@@ -7,6 +7,8 @@ const Registry = require('./project-registry.js');
 const { buildRuntimeState } = require('./runtime-state.js');
 const { scanGitWorktrees } = require('./worktree-scanner.js');
 
+const watcherState = new Map();
+
 function sendJson(res, statusCode, data) {
   const body = JSON.stringify(data, null, 2);
   res.writeHead(statusCode, {
@@ -63,7 +65,82 @@ function safeScanWorktrees(projectRoot) {
 
 function buildStateForProject(project, options = {}) {
   const worktrees = options.worktrees || safeScanWorktrees(project.root);
-  return buildRuntimeState(project.root, { worktrees });
+  const state = buildRuntimeState(project.root, { worktrees });
+  state.version = getProjectVersion(project.root);
+  return state;
+}
+
+function computeGanttVersion(projectRoot) {
+  const ganttRoot = path.join(projectRoot, '.ganttmd');
+  let version = 0;
+
+  function walk(directory) {
+    if (!fs.existsSync(directory)) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.name === '.backup') continue;
+      const filePath = path.join(directory, entry.name);
+      const stat = fs.statSync(filePath);
+      version = Math.max(version, stat.mtimeMs);
+      if (entry.isDirectory()) walk(filePath);
+    }
+  }
+
+  try {
+    walk(ganttRoot);
+  } catch {
+    return Date.now();
+  }
+  return Math.floor(version);
+}
+
+function watchProject(projectRoot) {
+  const root = path.resolve(projectRoot);
+  const current = watcherState.get(root);
+  if (current) return current;
+  const state = { version: computeGanttVersion(root), watcher: null };
+  watcherState.set(root, state);
+  const ganttRoot = path.join(root, '.ganttmd');
+  if (!fs.existsSync(ganttRoot)) return state;
+  try {
+    state.watcher = fs.watch(ganttRoot, { recursive: true }, () => {
+      state.version = Date.now();
+    });
+    state.watcher.on('error', () => {
+      state.watcher?.close();
+      state.watcher = null;
+    });
+    state.watcher.unref?.();
+  } catch {
+    // 不支持 recursive fs.watch 的平台会退回到 /api/events 的轮询版本比较。
+  }
+  return state;
+}
+
+function getProjectVersion(projectRoot) {
+  const watched = watchProject(projectRoot);
+  const diskVersion = computeGanttVersion(projectRoot);
+  if (diskVersion > watched.version) watched.version = diskVersion;
+  return watched.version;
+}
+
+function waitForProjectChange(projectRoot, since, timeoutMs = 25000) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const tick = () => {
+      const version = getProjectVersion(projectRoot);
+      if (String(version) !== String(since || '0')) {
+        resolve({ changed: true, version });
+        return;
+      }
+      const elapsed = Date.now() - start;
+      if (elapsed >= timeoutMs) {
+        resolve({ changed: false, version });
+        return;
+      }
+      setTimeout(tick, Math.min(1000, Math.max(5, timeoutMs - elapsed)));
+    };
+    tick();
+  });
 }
 
 function createRequestHandler(options = {}) {
@@ -125,6 +202,19 @@ function createRequestHandler(options = {}) {
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/api/events') {
+        const registry = Registry.loadRegistry(registryPath);
+        const project = findProject(registry, url.searchParams.get('project') || '');
+        if (!project) {
+          sendJson(res, 404, { error: '未找到项目' });
+          return;
+        }
+        const since = url.searchParams.get('since') || '0';
+        const timeout = Number(url.searchParams.get('timeout') || 25000);
+        sendJson(res, 200, await waitForProjectChange(project.root, since, Number.isFinite(timeout) ? timeout : 25000));
+        return;
+      }
+
       sendJson(res, 404, { error: 'not found' });
     } catch (error) {
       sendJson(res, 500, { error: error.message });
@@ -148,6 +238,10 @@ function startServer(options = {}) {
 
 module.exports = {
   buildStateForProject,
+  computeGanttVersion,
   createRequestHandler,
+  getProjectVersion,
   startServer,
+  waitForProjectChange,
+  watchProject,
 };
