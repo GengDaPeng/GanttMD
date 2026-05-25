@@ -64,10 +64,12 @@ ganttmd init
 ganttmd validate
 ganttmd doctor
 ganttmd project add .
-ganttmd serve
+ganttmd start
 ```
 
 `ganttmd init` 只创建缺失文件，不覆盖已有 `.ganttmd/` 内容。`ganttmd migrate` 默认只输出 dry-run 计划；只有 `ganttmd migrate --apply` 才会备份后写入。
+
+更新、卸载、迁移和真实项目接入前检查见 [安装、更新、卸载与迁移](user/安装更新卸载与迁移.md)。
 
 ## config.yaml
 
@@ -122,7 +124,7 @@ evidence: []
 
 人的工作流：
 
-1. 运行 `ganttmd serve`。
+1. 运行 `ganttmd start`。
 2. 在本地看板选择项目。
 3. 查看执行视角、风险视角和 Follow-up。
 4. 必要时调整 `.ganttmd/` 文件。
@@ -140,6 +142,8 @@ Agent 的工作流：
 7. 完成后补 `evidence`、必要时补 `verification` 和 `review_status`。
 8. 如有后续事项，写入 `.ganttmd/followups.md`。
 9. 如任务在 worktree/分支中连续推进，更新 `.ganttmd/runs.md`。
+
+worktree/分支不是任务真相源。正式任务只能由主控在主分支创建；分支只负责领取主分支任务、维护任务内 checklist、补充执行证据，并可追加 `status: open` 的 follow-up。接受、关闭、转正式任务和归档必须回到主分支由项目主控处理。
 
 ## 什么时候更新 GanttMD
 
@@ -164,14 +168,16 @@ Agent 的工作流：
 
 ## 本地看板
 
-`ganttmd serve` 启动本地只读看板。它会读取本机项目登记表，聚合主项目 `.ganttmd/`、worktree 状态、runs、checklist 和健康检查结果。
+`ganttmd start` 后台启动本地只读看板。它会读取本机项目登记表，聚合主项目 `.ganttmd/`、worktree 状态、runs、checklist 和健康检查结果。
 
 ```bash
 ganttmd project add /path/to/project --id demo --name 示例项目
-ganttmd serve --port 7777
+ganttmd start --port 7777
+ganttmd status
+ganttmd stop
 ```
 
-本地服务只读展示，不自动修改项目文件。需要写文件的动作必须走显式 CLI 命令。
+本地服务只读展示，不自动修改项目文件。需要写文件的动作必须走显式 CLI 命令。`ganttmd start` 会记录后台服务 pid，`ganttmd stop` 只关闭这一个本地看板服务。
 
 ## 命令行校验
 

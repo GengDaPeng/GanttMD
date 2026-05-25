@@ -1,5 +1,6 @@
 const { loadProject } = require('./project-loader.js');
 const { validateProject } = require('./validator.js');
+const path = require('node:path');
 
 function taskStatusMap(project) {
   const map = new Map();
@@ -56,6 +57,7 @@ function checklistSummary(project) {
       total,
       done,
       open: total - done,
+      items: checklist.items,
       sourceFile: checklist.source_file,
     };
   });
@@ -70,18 +72,86 @@ function loadWorktreeProjects(worktrees) {
     }));
 }
 
+function checkWorktreePolicy(project, worktree, mainTaskIds) {
+  const issues = [];
+
+  for (const task of project.tasks) {
+    issues.push({
+      level: 'warn',
+      id: task.id || '(missing task id)',
+      message: 'worktree 不得写 ganttmd-task；请在主分支创建任务，在 worktree 只用 runs.md 领取任务并维护 checklist',
+      sourceFile: task.source_file,
+      field: 'ganttmd-task',
+      worktree: worktree.root,
+      branch: worktree.branch,
+    });
+  }
+
+  for (const run of project.runs) {
+    for (const taskId of run.tasks || []) {
+      if (mainTaskIds.has(taskId)) continue;
+      issues.push({
+        level: 'warn',
+        id: run.id || '(missing run id)',
+        message: 'worktree run 只能引用主分支已存在任务：' + taskId,
+        sourceFile: run.source_file,
+        field: 'tasks',
+        worktree: worktree.root,
+        branch: worktree.branch,
+      });
+    }
+  }
+
+  for (const checklist of project.checklists) {
+    if (mainTaskIds.has(checklist.task_id)) continue;
+    issues.push({
+      level: 'warn',
+      id: checklist.task_id || '(missing task_id)',
+      message: 'worktree checklist 只能挂到主分支已存在任务',
+      sourceFile: checklist.source_file,
+      field: 'task_id',
+      worktree: worktree.root,
+      branch: worktree.branch,
+    });
+  }
+
+  for (const followup of project.followups) {
+    if (followup.status === 'open') continue;
+    issues.push({
+      level: 'warn',
+      id: followup.id || '(missing followup id)',
+      message: 'worktree follow-up 只能保持 open；接受、转任务、关闭必须由主控在主分支处理',
+      sourceFile: followup.source_file,
+      field: 'status',
+      worktree: worktree.root,
+      branch: worktree.branch,
+    });
+  }
+
+  return issues;
+}
+
 function buildRuntimeState(projectRoot, options = {}) {
   const mainProject = loadProject(projectRoot);
   const worktrees = options.worktrees || [];
-  const worktreeProjects = options.worktreeProjects || loadWorktreeProjects(worktrees);
+  const loadedWorktreeProjects = options.worktreeProjects || loadWorktreeProjects(worktrees);
+  const mainRoot = path.resolve(mainProject.root);
+  const worktreeProjects = loadedWorktreeProjects.filter((item) =>
+    item.worktree?.root && path.resolve(item.worktree.root) !== mainRoot
+  );
   const appearances = buildTaskAppearances(mainProject, worktreeProjects);
+  const mainTaskIds = new Set(mainProject.tasks.map((task) => task.id).filter(Boolean));
   const health = [
     ...validateProject(mainProject),
-    ...worktreeProjects.flatMap((item) => validateProject(item.project).map((issue) => ({
+    ...worktreeProjects.flatMap((item) => validateProject(item.project, {
+      allowTasklessProject: true,
+      externalTaskIds: mainTaskIds,
+    }).map((issue) => ({
       ...issue,
       worktree: item.worktree.root,
       branch: item.worktree.branch,
     }))),
+    ...worktreeProjects.flatMap((item) => checkWorktreePolicy(item.project, item.worktree, mainTaskIds)),
   ];
 
   return {
@@ -107,6 +177,19 @@ function buildRuntimeState(projectRoot, options = {}) {
     checklists: checklistSummary(mainProject),
     worktreeProjects: worktreeProjects.map((item) => ({
       worktree: item.worktree,
+      tasks: item.project.tasks.map((task) => ({
+        id: task.id,
+        title: task.title,
+        status: task.status,
+        owner: task.owner,
+        agent: task.agent,
+        track: task.track,
+        domain: task.domain,
+        milestone: task.milestone,
+        priority: task.priority,
+        sourceFile: task.source_file,
+      })),
+      runs: item.project.runs,
       taskStatus: Object.fromEntries(taskStatusMap(item.project)),
       checklistSummary: checklistSummary(item.project),
     })),
@@ -118,6 +201,7 @@ function buildRuntimeState(projectRoot, options = {}) {
 module.exports = {
   buildRuntimeState,
   buildTaskAppearances,
+  checkWorktreePolicy,
   checklistSummary,
   findTaskConflicts,
   loadWorktreeProjects,

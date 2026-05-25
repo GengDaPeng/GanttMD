@@ -52,7 +52,7 @@ function validateProject(project, options = {}) {
   if (project.taskFileCount === 0) {
     issues.push({ level: 'warn', id: '(project)', message: '未找到 .ganttmd/tasks/*.md；旧项目可继续使用 .ganttmd/modules/*.md', sourceFile: '', field: 'tasks' });
   }
-  if (project.taskFileCount > 0 && project.tasks.length === 0) {
+  if (project.taskFileCount > 0 && project.tasks.length === 0 && !options.allowTasklessProject) {
     issues.push({ level: 'warn', id: '(project)', message: '任务文件存在，但未解析到 ganttmd-task 代码块', sourceFile: '', field: 'tasks' });
   }
 
@@ -67,7 +67,10 @@ function validateProject(project, options = {}) {
     taskById.set(task.id, task);
   }
 
-  context.taskIds = new Set(taskById.keys());
+  context.taskIds = new Set([
+    ...taskById.keys(),
+    ...Array.from(options.externalTaskIds || []),
+  ]);
   context.taskById = taskById;
 
   const childrenByDep = new Map();

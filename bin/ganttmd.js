@@ -2,11 +2,12 @@
 
 const { loadProject, validateProject } = require('../src/validator.js');
 const Registry = require('../src/project-registry.js');
-const { startServer } = require('../src/server.js');
+const { closeWatchers, startServer } = require('../src/server.js');
 const { initProject } = require('../src/project-init.js');
 const { doctorProject } = require('../src/doctor.js');
 const { planMigration, applyMigration } = require('../src/migrator.js');
 const { exportStatic } = require('../src/static-export.js');
+const ServiceControl = require('../src/service-control.js');
 
 function parseRootAndFlags(args) {
   return {
@@ -75,6 +76,9 @@ function printHelp() {
   ganttmd project list [--json]
   ganttmd project remove <id-or-path>
   ganttmd serve [--port 7777]
+  ganttmd start [--port 7777] [--no-open]
+  ganttmd status [--json]
+  ganttmd stop [--json]
   ganttmd --help
   ganttmd --version
 `);
@@ -223,6 +227,56 @@ function runProject(args) {
   return 1;
 }
 
+
+function printServiceStatus(status, options = {}) {
+  if (options.json) {
+    console.log(JSON.stringify(status, null, 2));
+    return 0;
+  }
+  if (status.running) {
+    console.log(`${status.message}：${status.url || `http://127.0.0.1:${status.port}`}`);
+    console.log(`pid: ${status.pid}`);
+  } else {
+    console.log(status.message || 'GanttMD Local 未启动');
+  }
+  return 0;
+}
+
+function runStart(args) {
+  const portValue = readOption(args, '--port');
+  const port = portValue ? Number(portValue) : 7777;
+  if (!Number.isInteger(port) || port <= 0) {
+    console.error('port 必须是正整数');
+    return 1;
+  }
+  const result = ServiceControl.startServerProcess({ port });
+  if (result.alreadyRunning) {
+    console.log(`GanttMD Local 已在运行：${result.url}`);
+    return 0;
+  }
+  console.log(`GanttMD Local 已启动：${result.url}`);
+  console.log(`pid: ${result.pid}`);
+  if (!args.includes('--no-open')) {
+    ServiceControl.openUrl(result.url);
+  }
+  return 0;
+}
+
+function runStatus(args) {
+  const status = ServiceControl.readServerState();
+  return printServiceStatus(status, { json: args.includes('--json') });
+}
+
+function runStop(args) {
+  const result = ServiceControl.stopServerProcess();
+  if (args.includes('--json')) {
+    console.log(JSON.stringify(result, null, 2));
+    return 0;
+  }
+  console.log('GanttMD Local 已停止');
+  return 0;
+}
+
 async function runServe(args) {
   const portValue = readOption(args, '--port');
   const port = portValue ? Number(portValue) : 7777;
@@ -230,7 +284,16 @@ async function runServe(args) {
     console.error('port 必须是正整数');
     return 1;
   }
-  const result = await startServer({ port });
+  const result = await startServer({ port, registryPath: process.env.GANTTMD_REGISTRY_PATH });
+  const shutdown = () => {
+    closeWatchers();
+    result.server.close(() => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(0), 1000).unref();
+  };
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
   console.log(`GanttMD Local: ${result.url}`);
   return new Promise(() => {});
 }
@@ -247,6 +310,18 @@ async function main(argv) {
   if (command === '--version' || command === '-v') {
     console.log(require('../package.json').version);
     return 0;
+  }
+
+  if (command === 'start') {
+    return runStart(args.slice(1));
+  }
+
+  if (command === 'status') {
+    return runStatus(args.slice(1));
+  }
+
+  if (command === 'stop') {
+    return runStop(args.slice(1));
   }
 
   if (command === 'validate') {

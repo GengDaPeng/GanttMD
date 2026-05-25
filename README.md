@@ -14,7 +14,7 @@ GanttMD 不替代需求文档、技术设计、模块规格、接口清单或测
 
 - 项目数据：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`、`.ganttmd/runs.md`
 - 工具入口：`ganttmd` CLI，提供初始化、校验、doctor、迁移、静态导出和本地看板服务
-- 可视化：`ganttmd serve` 启动单端口多项目看板
+- 可视化：`ganttmd start` 后台启动单端口多项目看板，`ganttmd stop` 关闭服务
 - 写入方式：人或 Agent 直接编辑 Markdown；工具写文件必须是显式命令，默认 dry-run 或不覆盖
 - 页面行为：只读聚合，不在浏览器里直接修改任务文件
 
@@ -60,7 +60,7 @@ cd /path/to/your-project
 ganttmd init
 ganttmd validate
 ganttmd project add .
-ganttmd serve
+ganttmd start
 ```
 
 目标项目只需要提交数据目录：
@@ -85,7 +85,9 @@ your-project/
 1. 按 [新项目初始化指南](docs/新项目初始化指南.md) 调整 `.ganttmd/config.yaml` 和 `.ganttmd/tasks/*.md`。
 2. 将 [Agent 协作规则模板](docs/Agent协作规则模板.md) 合并到目标项目的 `AGENTS.md`。
 3. 运行 `ganttmd validate`，确保没有 warning。
-4. 运行 `ganttmd serve`，在 `http://localhost:7777` 查看本地看板。
+4. 运行 `ganttmd start`，在 `http://localhost:7777` 查看本地看板。
+
+真实项目接入、工具更新、卸载和 schema 迁移见 [安装、更新、卸载与迁移](docs/user/安装更新卸载与迁移.md)。
 
 也可以直接用本仓库的样例：
 
@@ -93,7 +95,7 @@ your-project/
 ganttmd validate examples/minimal
 ganttmd validate examples/jwxt-lite
 ganttmd project add examples/jwxt-lite --id jwxt-lite --name 教务系统样例
-ganttmd serve
+ganttmd start
 ```
 
 ## 任务文件示例
@@ -151,6 +153,8 @@ Agent 不会天然知道 GanttMD 的存在，必须通过目标项目的 `AGENTS
 - 领取时更新为 `in_progress`，并补 `agent` 或 `owner`。
 - 完成时补 `evidence`，必要时补 `verification` 和 `review_status`。
 - 遗留事项必须登记到 `.ganttmd/followups.md`，不能只写在聊天总结里。
+- worktree/分支只能通过 `.ganttmd/runs.md` 领取主分支已有任务，并在任务内维护 checklist；不得在分支创建新的顶层 `ganttmd-task`。
+- worktree/分支只能追加 `status: open` 的 follow-up；接受、关闭或转正式任务必须由项目主控在主分支处理。
 
 可直接使用 [Agent 协作规则模板](docs/Agent协作规则模板.md)。
 
@@ -181,6 +185,7 @@ source_rr: RR-003
 - [任务字段说明](docs/任务字段说明.md)：任务字段怎么写。
 - [Follow-up 清单机制](docs/Follow-up清单机制.md)：follow-up 权限、来源和状态规则。
 - [校验脚本检查流程图](docs/校验脚本检查流程图.md)：`ganttmd validate` 的流程、检查项和输出结果。
+- [安装、更新、卸载与迁移](docs/user/安装更新卸载与迁移.md)：使用方项目如何安装工具、更新工具、迁移 schema 和回滚。
 - 历史方案、dogfooding 反馈和旧版截图已移入 [archive](archive/README.md)，不作为当前使用入口。
 
 ## 命令行
@@ -198,7 +203,10 @@ ganttmd migrate [path] --apply          # 备份后显式迁移
 ganttmd project add <path>              # 登记到本机项目列表
 ganttmd project list                    # 查看本机已登记项目
 ganttmd project remove <id-or-path>     # 移除本机登记，不删除项目数据
-ganttmd serve [--port 7777]             # 启动单端口多项目本地看板
+ganttmd start [--port 7777] [--no-open] # 后台启动单端口多项目本地看板
+ganttmd status [--json]                 # 查看本地看板服务状态
+ganttmd stop [--json]                   # 关闭本地看板服务
+ganttmd serve [--port 7777]             # 前台启动服务，适合调试
 ganttmd static [path] [--out dir]       # 导出离线静态 fallback 页面
 ```
 

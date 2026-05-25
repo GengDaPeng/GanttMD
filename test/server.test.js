@@ -64,6 +64,7 @@ test('本地服务提供项目列表和项目运行时状态 API', async (t) => 
 
   const html = await getText(`${url}/`);
   assert.match(html, /GanttMD Local/);
+  assert.doesNotMatch(html, /GanttMD V6/);
 
   const projects = await getJson(`${url}/api/projects`);
   assert.equal(projects.projects.length, 1);

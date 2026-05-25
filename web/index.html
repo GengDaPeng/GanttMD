@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GanttMD V6</title>
+<title>GanttMD Local</title>
 <style>
 :root {
   --bg: #f5f6f8;
@@ -74,7 +74,43 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .project-id { color: var(--muted); font-size: 12px; font-weight: 750; }
 .project-name { font-size: 17px; font-weight: 760; margin-top: 4px; }
 .project-path { color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; font-size: 12px; }
-.agent-panel { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .85fr); gap: 12px; margin-bottom: 18px; }
+.agent-panel { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(480px, .85fr); gap: 12px; margin-bottom: 18px; }
+.runtime-board { margin-bottom: 12px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 8px; background: var(--panel); padding: 12px; }
+.runtime-board-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.runtime-board-head strong { font-size: 14px; }
+.runtime-board-head span { color: var(--muted); font-size: 12px; }
+.runtime-card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.runtime-card { min-height: 72px; border: 1px solid var(--border); border-radius: 7px; background: #f8fafc; padding: 9px 10px; }
+.runtime-card.warn { border-color: #fde68a; background: #fffbeb; }
+.runtime-card.bad { border-color: #fecaca; background: #fef2f2; }
+.runtime-card-label { color: var(--muted); font-size: 11px; font-weight: 750; }
+.runtime-card-value { margin-top: 3px; font-size: 22px; font-weight: 760; line-height: 1.1; }
+.runtime-card-note { margin-top: 4px; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runtime-current { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: #fff; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runtime-current strong { color: var(--text); margin-right: 6px; }
+.runtime-branches { margin-top: 8px; border: 1px solid var(--border); border-radius: 7px; background: #fff; overflow: hidden; }
+.runtime-branches summary { cursor: pointer; padding: 8px 10px; color: var(--muted); font-size: 12px; font-weight: 750; list-style: none; user-select: none; }
+.runtime-branches summary::-webkit-details-marker { display: none; }
+.runtime-branches summary::before { content: '›'; display: inline-block; margin-right: 6px; color: var(--accent); transition: transform .15s; }
+.runtime-branches[open] summary::before { transform: rotate(90deg); }
+.runtime-branch-list { max-height: 220px; overflow: auto; border-top: 1px solid var(--border); padding: 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px; }
+.runtime-branch { border: 1px solid var(--border); border-radius: 7px; background: #fff; padding: 9px 10px; }
+.runtime-branch-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 7px; }
+.runtime-branch-name { font-size: 12px; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runtime-branch-meta { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.runtime-task-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.runtime-task-pill { border: 1px solid var(--border); border-radius: 99px; background: #f8fafc; padding: 2px 7px; font-size: 11px; color: var(--muted); }
+.runtime-task-pill strong { color: var(--text); margin-right: 4px; }
+.runtime-checklist { margin-top: 7px; display: grid; gap: 5px; }
+.runtime-checklist-row { border: 1px solid #dbeafe; border-radius: 6px; background: #eff6ff; padding: 6px 7px; font-size: 11px; color: #1e40af; }
+.runtime-checklist-row strong { margin-right: 6px; }
+.runtime-checklist-items { margin-top: 4px; color: #475569; display: flex; flex-wrap: wrap; gap: 4px; }
+.runtime-checklist-item { border: 1px solid #bfdbfe; background: #fff; border-radius: 99px; padding: 1px 6px; }
+.status-filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
+.status-filter-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+.status-filter { border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 99px; padding: 4px 10px; font-size: 12px; font-weight: 650; cursor: pointer; }
+.status-filter:hover { border-color: #c7d2fe; color: var(--accent); }
+.status-filter.active { border-color: var(--accent); background: #eef2ff; color: var(--accent); }
 .agent-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
 .agent-card.recommend { border-left: 4px solid var(--todo); }
 .agent-card.inspect { border-left: 4px solid var(--accent); }
@@ -85,6 +121,8 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .agent-title .id { color: var(--todo); margin-right: 8px; }
 .agent-card.inspect .agent-title .id { color: var(--accent); }
 .agent-reason { color: var(--muted); margin-top: 7px; font-size: 13px; }
+.runtime-overlay-note { margin-top: 10px; border: 1px solid #c7d2fe; border-radius: 7px; background: #eef2ff; padding: 8px 10px; color: #3730a3; font-size: 12px; line-height: 1.45; }
+.runtime-overlay-note strong { color: #312e81; }
 .handoff-note { margin-top: 10px; padding: 9px 10px; border-radius: 7px; background: #f8fafc; border: 1px solid var(--border); color: var(--text); font-size: 13px; }
 .handoff-note strong { display: block; margin-bottom: 3px; }
 .field-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
@@ -192,6 +230,9 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .badge.review { background: var(--review); }
 .badge.cancelled { background: var(--cancelled); }
 .mod-tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #f0f0f5; color: #555; }
+.mod-tag.worktree { background: #eef2ff; color: var(--accent); border: 1px solid #c7d2fe; }
+.branch-row { margin-top: 6px; display: flex; }
+.branch-tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; padding: 1px 7px; border-radius: 4px; background: #eef2ff; color: var(--accent); border: 1px solid #c7d2fe; }
 .rel-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 7px; }
 .rel-pill { font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--border); background: var(--soft); color: var(--muted); }
 .rel-pill.warn { border-color: #fecaca; background: #fef2f2; color: var(--blocked); font-weight: 650; }
@@ -241,6 +282,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .dep-status.in_progress { background: #fef3c7; color: #b45309; }
 .dep-status.review { background: #f3e8ff; color: #7c3aed; }
 .dep-status.cancelled { background: #f3f4f6; color: #6b7280; }
+.dep-status.skipped { background: #f3f4f6; color: #6b7280; }
 .dep-status.blocked { background: #fee2e2; color: var(--blocked); }
 .dep-empty { color: var(--muted); font-size: 12px; }
 .drawer-details { margin-top: 10px; border: 1px solid var(--border); border-radius: 7px; background: #fff; overflow: hidden; }
@@ -249,6 +291,13 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .drawer-details summary::before { content: '›'; display: inline-block; margin-right: 6px; color: var(--accent); transition: transform .15s; }
 .drawer-details[open] summary::before { transform: rotate(90deg); }
 .drawer-details-body { border-top: 1px solid var(--border); padding: 10px; }
+.checklist-list { display: grid; gap: 7px; }
+.checklist-item { display: grid; grid-template-columns: auto minmax(220px, 1fr) auto minmax(180px, auto); gap: 6px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: #f8fafc; }
+.checklist-item-title { font-size: 12px; font-weight: 750; line-height: 1.35; overflow-wrap: anywhere; }
+.checklist-item-id { color: var(--muted); font-size: 12px; font-weight: 800; }
+.checklist-item .dep-status { grid-column: auto; justify-self: start; white-space: nowrap; }
+.checklist-item-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; color: var(--muted); font-size: 12px; min-width: 0; }
+.checklist-item-meta span { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid var(--border); background: #fff; border-radius: 99px; padding: 1px 7px; }
 
 @keyframes drawerOpen {
   from { grid-template-rows: 0fr; opacity: 0; transform: translateY(-6px); }
@@ -352,6 +401,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
   .header { align-items: flex-start; flex-direction: column; }
   .header-actions { width: 100%; justify-content: space-between; }
   .agent-panel { grid-template-columns: 1fr; }
+  .runtime-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .field-grid { grid-template-columns: 1fr; }
   .evidence-grid { grid-template-columns: 1fr; }
   .summary { flex-wrap: wrap; }
@@ -360,6 +410,8 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
   .task-card-wrap, .task-card { width: 100%; flex-basis: 100%; display: block; }
   .dep-drawer::before { left: 24px; }
   .dep-drawer-body { grid-template-columns: 1fr; }
+  .checklist-item { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .checklist-item-meta { grid-column: 2 / 4; justify-content: flex-start; }
   .tabs { display: flex; width: 100%; }
   .tab-btn { flex: 1; }
   .map-head { flex-direction: column; }
@@ -379,7 +431,6 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
   <div class="header-actions">
     <button class="top-btn" id="projectListBtn">项目列表</button>
     <button class="top-btn" id="mapBtn">全景图</button>
-    <button class="top-btn" id="refreshBtn" title="重新读取当前项目最新数据">刷新</button>
   </div>
 </div>
 
@@ -401,8 +452,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 <script>
 const projectListBtn = document.getElementById('projectListBtn');
 const mapBtn = document.getElementById('mapBtn');
-const refreshBtn = document.getElementById('refreshBtn');
-const state = { page: 'projects', view: 'execution', focusId: null, followupKind: 'all', modules: [], config: null, tasks: [], followups: [], byId: new Map(), children: new Map(), orderIdx: new Map(), criticalPaths: new Map(), criticalSet: new Set(), projects: [], currentProject: '', runtime: null, lastVersion: 0, pollTimer: null };
+const state = { page: 'projects', view: 'execution', focusId: null, followupKind: 'all', taskStatusFilters: ['active'], modules: [], config: null, tasks: [], followups: [], byId: new Map(), children: new Map(), orderIdx: new Map(), criticalPaths: new Map(), criticalSet: new Set(), projects: [], currentProject: '', runtime: null, lastVersion: 0, pollTimer: null };
 const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
 const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
 const TASK_STATUSES = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'blocked'];
@@ -417,6 +467,17 @@ const BUILTIN_VIEWS = {
   followup: { id: 'followup', name: 'Follow-up', group: 'governance', source: 'followups', groupBy: 'status', sortBy: 'created_at', hint: '所有 Agent 可追加 open follow-up；只有项目主控可以清理、关闭或转正式任务' },
 };
 const DEFAULT_ENABLED_VIEWS = ['execution', 'milestone', 'track', 'module', 'risk', 'followup'];
+const TASK_STATUS_FILTERS = [
+  { id: 'all', label: '全部' },
+  { id: 'active', label: '活跃' },
+  { id: 'todo', label: '可执行' },
+  { id: 'in_progress', label: '进行中' },
+  { id: 'review', label: '待复核' },
+  { id: 'blocked', label: '被阻塞' },
+  { id: 'done', label: '已完成' },
+  { id: 'cancelled', label: '已取消' },
+  { id: 'archived', label: '已归档' },
+];
 
 projectListBtn.addEventListener('click', () => {
   history.replaceState(null, '', '/');
@@ -435,27 +496,6 @@ mapBtn.addEventListener('click', () => {
   state.focusId = null;
   renderProjectMapPage();
 });
-refreshBtn.addEventListener('click', async () => {
-  const originalText = refreshBtn.textContent;
-  refreshBtn.disabled = true;
-  refreshBtn.textContent = '⟳ 刷新中…';
-  try {
-    if (state.currentProject) {
-      await loadProjectState(state.currentProject, { keepView: true });
-    } else {
-      await renderProjectListPage();
-    }
-    refreshBtn.textContent = '✓ 已刷新';
-    setTimeout(() => { refreshBtn.textContent = originalText; }, 1200);
-  } catch (err) {
-    console.error(err);
-    refreshBtn.textContent = '✗ 刷新失败';
-    setTimeout(() => { refreshBtn.textContent = originalText; }, 1800);
-  } finally {
-    refreshBtn.disabled = false;
-  }
-});
-
 async function fetchJson(url) {
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) throw new Error(await response.text());
@@ -475,7 +515,7 @@ async function renderProjectListPage() {
       <p style="margin-top:8px;">当前页面是安装式看板入口，不能直接用 <code>file://</code> 读取项目列表。</p>
       <p style="margin-top:8px;">请在终端运行：</p>
       <pre style="margin-top:8px;">ganttmd project add /path/to/project
-ganttmd serve</pre>
+ganttmd start</pre>
       <p style="margin-top:8px;">然后打开 <code>http://127.0.0.1:7777</code>。如果只需要离线页面，请运行 <code>ganttmd static</code> 后打开导出的 HTML。</p>
     </div>`;
     return;
@@ -485,7 +525,7 @@ ganttmd serve</pre>
   if (!state.projects.length) {
     document.getElementById('content').innerHTML = `<div class="empty">
       <p><strong>未登记项目</strong></p>
-      <p style="margin-top:8px;">请在终端运行 <code>ganttmd project add /path/to/project</code>，然后点击刷新。</p>
+      <p style="margin-top:8px;">请在终端运行 <code>ganttmd project add /path/to/project</code>，然后重新打开项目列表。</p>
     </div>`;
     return;
   }
@@ -760,12 +800,22 @@ function loadData(modules, config, followups) {
   const byId = new Map(tasks.map(t => [t.id, t]));
   const children = new Map(tasks.map(t => [t.id, []]));
   for (const t of tasks) {
+    const overlay = getWorktreeTaskOverlay(t.id);
+    if (overlay) {
+      t._worktreeBranch = overlay.branch;
+      t._worktreeRoot = overlay.root;
+      t._runtimeStatus = overlay.status;
+      t._checklist = overlay.checklist;
+      t.owner = overlay.owner || t.owner;
+      t.agent = overlay.agent || t.agent;
+    }
     t._track = getTaskTrack(t);
     t._businessModule = getTaskBusinessModule(t);
     t._openDeps = t.dependencies.filter(d => byId.has(d) && byId.get(d).status !== 'done');
     t._missingDeps = t.dependencies.filter(d => !byId.has(d));
     t._manualBlocked = Boolean(t.blocked_reason);
     t._effective = (t.status === 'todo' && (t._openDeps.length > 0 || t._manualBlocked)) ? 'blocked' : t.status;
+    if (t._runtimeStatus && t._runtimeStatus !== t.status) t._effective = t._runtimeStatus;
   }
   for (const t of tasks) for (const dep of t.dependencies) if (children.has(dep)) children.get(dep).push(t.id);
   const order = topoSort(tasks);
@@ -782,13 +832,37 @@ function loadData(modules, config, followups) {
   state.page = 'board';
   state.view = getInitialView(config);
 
-  const projectName = config?.project?.name || 'GanttMD V6';
+  const projectName = config?.project?.name || 'GanttMD Local';
   document.getElementById('title').textContent = projectName;
   document.getElementById('subtitle').textContent = '';
 
   renderSummary();
   renderMilestones();
   renderContent();
+}
+
+function getWorktreeTaskOverlay(taskId) {
+  const runtime = state.runtime || {};
+  const mainRoot = runtime.main?.root || runtime.source?.root || '';
+  for (const item of runtime.worktreeProjects || []) {
+    if (!item.worktree?.root || item.worktree.root === mainRoot) continue;
+    const task = (item.tasks || []).find(candidate => candidate.id === taskId);
+    const checklist = (item.checklistSummary || []).find(candidate => candidate.taskId === taskId);
+    const activeRun = (item.runs || []).find(run => run.status === 'active' && (
+      run.current_task === taskId || (run.tasks || []).includes(taskId)
+    ));
+    if (!task && !checklist && !activeRun) continue;
+    return {
+      task,
+      branch: item.worktree.branch || '(detached)',
+      root: item.worktree.root || '',
+      status: task?.status || (activeRun ? 'in_progress' : ''),
+      owner: task?.owner || activeRun?.owner || '',
+      agent: task?.agent || '',
+      checklist,
+    };
+  }
+  return null;
 }
 
 function computeCriticalPaths(tasks, milestones) {
@@ -934,6 +1008,7 @@ function renderContent() {
   content.innerHTML = `
     ${renderAgentPanel()}
     ${renderViewNav()}
+    ${renderTaskStatusFilters(view)}
     <span class="hint">${getViewHint()}</span>
     ${state.focusId ? `<span class="legend"><span class="up">上游</span><span class="down">下游</span></span>` : ''}
     <div style="margin-top:18px;">${renderCurrentViewBody(view, groups)}</div>
@@ -956,6 +1031,83 @@ function renderContent() {
     state.followupKind = button.dataset.kind || 'all';
     renderContent();
   }));
+  content.querySelectorAll('.status-filter').forEach(button => button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    toggleTaskStatusFilter(button.dataset.statusFilter || 'all');
+    state.focusId = null;
+    renderContent();
+  }));
+}
+
+function getSelectedStatusFilters() {
+  const filters = Array.isArray(state.taskStatusFilters) ? state.taskStatusFilters.filter(Boolean) : [];
+  return filters.length ? filters : ['all'];
+}
+
+function toggleTaskStatusFilter(filter) {
+  if (filter === 'all' || filter === 'active') {
+    state.taskStatusFilters = [filter];
+    return;
+  }
+  const selected = new Set(getSelectedStatusFilters().filter(item => item !== 'all' && item !== 'active'));
+  if (selected.has(filter)) selected.delete(filter);
+  else selected.add(filter);
+  state.taskStatusFilters = selected.size ? [...selected] : ['all'];
+}
+
+function renderTaskStatusFilters(view) {
+  const viewConfig = BUILTIN_VIEWS[view];
+  if (viewConfig?.source !== 'tasks') return '';
+  const counts = getStatusFilterCounts();
+  const selected = new Set(getSelectedStatusFilters());
+  return `<div class="status-filter-bar">
+    <span class="status-filter-label">状态</span>
+    ${TASK_STATUS_FILTERS.map(item => `<button class="status-filter ${selected.has(item.id) ? 'active' : ''}" type="button" data-status-filter="${esc(item.id)}">
+      ${esc(item.label)} · ${counts[item.id] || 0}
+    </button>`).join('')}
+  </div>`;
+}
+
+function getStatusFilterCounts() {
+  const counts = Object.fromEntries(TASK_STATUS_FILTERS.map(item => [item.id, 0]));
+  for (const task of getFilterableTasks()) {
+    counts.all += 1;
+    if (task.archived_at) {
+      counts.archived += 1;
+      continue;
+    }
+    counts.active += ['done', 'cancelled'].includes(task.status) ? 0 : 1;
+    const effective = task._effective || task.status;
+    if (effective === 'blocked') counts.blocked += 1;
+    if (effective === 'todo') counts.todo += 1;
+    if (effective === 'in_progress') counts.in_progress += 1;
+    if (effective === 'review') counts.review += 1;
+    if (task.status === 'done') counts.done += 1;
+    if (task.status === 'cancelled') counts.cancelled += 1;
+  }
+  return counts;
+}
+
+function getFilteredTasks() {
+  const filters = getSelectedStatusFilters();
+  return getFilterableTasks().filter(task => filters.some(filter => matchesStatusFilter(task, filter)));
+}
+
+function getFilterableTasks() {
+  if (state.view !== 'execution') return state.tasks;
+  return state.tasks;
+}
+
+function matchesStatusFilter(task, filter) {
+  const effective = task._effective || task.status;
+  if (filter === 'all') return true;
+  if (filter === 'archived') return Boolean(task.archived_at);
+  if (task.archived_at) return false;
+  if (filter === 'active') return !['done', 'cancelled'].includes(task.status);
+  if (filter === 'blocked') return effective === 'blocked';
+  if (filter === 'todo') return effective === 'todo';
+  if (['in_progress', 'review', 'blocked'].includes(filter)) return effective === filter;
+  return task.status === filter;
 }
 
 function getTaskGroupsForView(view) {
@@ -1001,9 +1153,9 @@ function renderAgentPanel() {
   const progress = state.tasks.filter(t => t.status === 'in_progress').length;
   const blocked = state.tasks.filter(t => t._effective === 'blocked').length;
   const mainHtml = renderRecommendedPanel(rec);
-  return `<div class="agent-panel">
+  return `${renderRuntimeStrip()}
+  <div class="agent-panel">
     ${mainHtml}
-    ${renderRuntimePanel()}
     <div class="agent-card health">
       <div class="health-head"><strong>协作健康检查</strong><span>${issues.length} 个提示 · ${state.followups.length} 个 follow-up</span></div>
       <div class="agent-metrics" style="margin-top:0;margin-bottom:10px;">
@@ -1020,33 +1172,97 @@ function renderAgentPanel() {
   </div>`;
 }
 
-function renderRuntimePanel() {
+function renderRuntimeStrip() {
   const runtime = state.runtime || {};
   const runs = runtime.runs || [];
   const activeRuns = runs.filter(run => run.status === 'active');
   const worktrees = runtime.worktrees || [];
+  const worktreeProjects = runtime.worktreeProjects || [];
   const dirtyWorktrees = worktrees.filter(wt => wt.isDirty);
   const checklists = runtime.checklists || [];
-  const openChecklistItems = checklists.reduce((sum, item) => sum + (Number(item.open) || 0), 0);
+  const branchChecklists = worktreeProjects.flatMap(item => item.checklistSummary || []);
+  const openChecklistItems = [...checklists, ...branchChecklists].reduce((sum, item) => sum + (Number(item.open) || 0), 0);
   const conflicts = runtime.conflicts || [];
   const active = activeRuns[0];
-  return `<div class="agent-card inspect">
-    <div class="health-head"><strong>运行态</strong><span>${worktrees.length} 个 worktree · ${runs.length} 个 run</span></div>
-    <div class="agent-metrics" style="margin-top:0;margin-bottom:10px;">
-      <span class="metric-pill">${activeRuns.length} active run</span>
-      <span class="metric-pill">${dirtyWorktrees.length} dirty worktree</span>
-      <span class="metric-pill">${openChecklistItems} checklist open</span>
-      <span class="metric-pill">${conflicts.length} conflict</span>
+  const activeText = active
+    ? `${active.id} · ${active.title || ''} · ${active.branch || ''}${active.current_task ? ` · 当前 ${active.current_task}` : ''}`
+    : '暂无 active run';
+  const dirtyNote = dirtyWorktrees[0] ? `${dirtyWorktrees[0].branch || '(detached)'} 有未提交改动` : '工作树干净';
+  const worktreeNote = worktrees[0] ? `${worktrees[0].branch || '(detached)'} · ${worktrees.length} 个工作树` : '未扫描到工作树';
+  return `<div class="runtime-board">
+    <div class="runtime-board-head"><strong>运行态看板</strong><span>${worktrees.length} worktree · ${runs.length} run</span></div>
+    <div class="runtime-card-grid">
+      <div class="runtime-card ${activeRuns.length ? '' : 'warn'}">
+        <div class="runtime-card-label">ACTIVE RUN</div>
+        <div class="runtime-card-value">${activeRuns.length}</div>
+        <div class="runtime-card-note">${esc(active ? active.current_task || active.id : '暂无执行批次')}</div>
+      </div>
+      <div class="runtime-card ${dirtyWorktrees.length ? 'warn' : ''}">
+        <div class="runtime-card-label">WORKTREE</div>
+        <div class="runtime-card-value">${worktrees.length}</div>
+        <div class="runtime-card-note">${esc(dirtyNote || worktreeNote)}</div>
+      </div>
+      <div class="runtime-card ${openChecklistItems ? 'warn' : ''}">
+        <div class="runtime-card-label">CHECKLIST OPEN</div>
+        <div class="runtime-card-value">${openChecklistItems}</div>
+        <div class="runtime-card-note">${esc(checklists.length ? `${checklists.length} 个 checklist` : '暂无 checklist')}</div>
+      </div>
+      <div class="runtime-card ${conflicts.length ? 'bad' : ''}">
+        <div class="runtime-card-label">CONFLICT</div>
+        <div class="runtime-card-value">${conflicts.length}</div>
+        <div class="runtime-card-note">${esc(conflicts.length ? '存在任务状态冲突' : '暂无冲突')}</div>
+      </div>
     </div>
-    ${active ? `<div class="handoff-note">
-      <strong>${esc(active.id)} · ${esc(active.title || '')}</strong>
-      <span>${esc(active.branch || '')}${active.current_task ? ` · 当前 ${esc(active.current_task)}` : ''}</span>
-    </div>` : '<div class="issue ok"><span class="issue-id">RUN</span><span class="issue-text">暂无 active run。</span></div>'}
-    ${worktrees.length ? `<div class="issue-list" style="margin-top:8px;">${worktrees.slice(0, 2).map(wt => `
-      <div class="issue ${wt.isDirty ? 'warn' : 'ok'}">
-        <span class="issue-id">${esc(wt.branch || '(detached)')}</span>
-        <span class="issue-text">${esc(wt.root || '')}</span>
-      </div>`).join('')}</div>` : ''}
+    <div class="runtime-current"><strong>当前批次</strong>${esc(activeText)}</div>
+    ${renderRuntimeBranches(worktreeProjects)}
+  </div>`;
+}
+
+function renderRuntimeBranches(worktreeProjects) {
+  const mainRoot = state.runtime?.main?.root || state.runtime?.source?.root || '';
+  const branches = (worktreeProjects || []).filter(item => item.worktree?.root && item.worktree.root !== mainRoot);
+  if (!branches.length) return '';
+  const branchCount = branches.length;
+  const taskCount = branches.reduce((sum, item) => sum + ((item.tasks || []).length), 0);
+  const checklistCount = branches.reduce((sum, item) => sum + ((item.checklistSummary || []).length), 0);
+  const dirtyCount = branches.filter(item => item.worktree?.isDirty).length;
+  return `<details class="runtime-branches">
+    <summary>工作树任务 · ${branchCount} 个分支 · ${taskCount} 个任务 · ${checklistCount} 个 checklist${dirtyCount ? ` · ${dirtyCount} 个未提交` : ''}</summary>
+    <div class="runtime-branch-list">
+    ${branches.map(renderRuntimeBranch).join('')}
+    </div>
+  </details>`;
+}
+
+function renderRuntimeBranch(item) {
+  const wt = item.worktree || {};
+  const tasks = item.tasks || [];
+  const checklists = item.checklistSummary || [];
+  const shownTasks = tasks.slice(0, 8);
+  const more = tasks.length > shownTasks.length ? ` +${tasks.length - shownTasks.length}` : '';
+  return `<div class="runtime-branch">
+    <div class="runtime-branch-head">
+      <div class="runtime-branch-name">${esc(wt.branch || '(detached)')}</div>
+      <div class="runtime-branch-meta">${tasks.length} 任务 · ${checklists.length} checklist${more}</div>
+    </div>
+    <div class="runtime-task-pills">
+      ${shownTasks.length ? shownTasks.map(task => `<span class="runtime-task-pill"><strong>${esc(task.id)}</strong>${esc(statusLabel(task.status))}</span>`).join('') : '<span class="runtime-task-pill">暂无任务</span>'}
+    </div>
+    ${checklists.length ? `<div class="runtime-checklist">
+      ${checklists.map(renderRuntimeChecklistRow).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+function renderRuntimeChecklistRow(checklist) {
+  const items = (checklist.items || []).slice(0, 4);
+  const more = (checklist.items || []).length > items.length ? ` +${(checklist.items || []).length - items.length}` : '';
+  return `<div class="runtime-checklist-row">
+    <strong>${esc(checklist.taskId)}</strong>${Number(checklist.done) || 0}/${Number(checklist.total) || 0} 完成 · ${Number(checklist.open) || 0} 未完成
+    ${items.length ? `<div class="runtime-checklist-items">
+      ${items.map(item => `<span class="runtime-checklist-item">${esc(item.id)} ${esc(checklistStatusLabel(item.status))}</span>`).join('')}
+      ${more ? `<span class="runtime-checklist-item">${esc(more)}</span>` : ''}
+    </div>` : ''}
   </div>`;
 }
 
@@ -1389,35 +1605,84 @@ function renderSelectedTaskContent(task) {
 }
 
 function renderDrawerTaskContent(task) {
+  const checklist = getTaskChecklist(task);
+  const showAgentCommand = shouldShowAgentCommand(task);
+  const openDetails = !checklist;
   return `
     <div class="agent-kicker">当前任务诊断</div>
     <div class="agent-reason">${esc(getTaskDiagnosis(task))}</div>
-    ${renderCollapsedAgentCommand(task)}
+    ${renderRuntimeOverlayNotice(task)}
+    ${checklist ? renderTaskChecklistBlock(checklist) : ''}
+    ${showAgentCommand ? renderCollapsedAgentCommand(task) : ''}
     ${renderCollapsedEvidenceBlock(task)}
-    <details class="drawer-details">
-      <summary>详细信息</summary>
-      <div class="drawer-details-body">
-        <div class="field-grid">
-          <div class="field-box">
-            <strong>下一步动作</strong>
-            <span>${esc(task.next_action || '未填写，当前只能使用通用推进模板。')}</span>
-          </div>
-          <div class="field-box">
-            <strong>验收标准</strong>
-            ${renderSmallList(task.acceptance, '未填写验收标准')}
-          </div>
-          <div class="field-box">
-            <strong>来源文档</strong>
-            ${renderSmallList(task.source_docs, '未填写来源文档')}
-          </div>
-        </div>
-        ${task.downstream_constraints?.length ? `<div class="constraint-box">
-          <strong>⚠ 下游约束 — 实现本任务时必须考虑</strong>
-          <ul>${task.downstream_constraints.map(c => `<li>${esc(c)}</li>`).join('')}</ul>
-        </div>` : ''}
-      </div>
-    </details>
+    ${renderTaskDetailsBlock(task, openDetails)}
   `;
+}
+
+function renderRuntimeOverlayNotice(task) {
+  if (!task._worktreeBranch) return '';
+  return `<div class="runtime-overlay-note">
+    <strong>分支运行态：</strong>${esc(task._worktreeBranch)} 正在承接此任务。任务定义、依赖和验收仍以主分支为准；worktree 只记录领取批次、任务清单和 open follow-up。
+  </div>`;
+}
+
+function getTaskChecklist(task) {
+  if (task._checklist?.items?.length) return task._checklist;
+  return (state.runtime?.checklists || []).find(checklist =>
+    checklist.taskId === task.id && checklist.items?.length
+  );
+}
+
+function renderTaskChecklistBlock(checklist) {
+  return `<details class="drawer-details checklist-details" open>
+    <summary>任务清单 · ${Number(checklist.done) || 0}/${Number(checklist.total) || checklist.items.length} 完成</summary>
+    <div class="drawer-details-body">
+      <div class="checklist-list">
+        ${checklist.items.map(renderChecklistItem).join('')}
+      </div>
+    </div>
+  </details>`;
+}
+
+function renderChecklistItem(item) {
+  const status = item.status || 'todo';
+  const evidence = Array.isArray(item.evidence) ? item.evidence : [];
+  const meta = [
+    ...evidence.map(value => `证据：${value}`),
+    item.blocker_reason ? `阻塞：${item.blocker_reason}` : '',
+  ].filter(Boolean);
+  return `<div class="checklist-item">
+    <span class="checklist-item-id">${esc(item.id || '')}</span>
+    <span class="checklist-item-title">${esc(item.title || '未命名检查项')}</span>
+    <span class="dep-status ${esc(status)}">${esc(checklistStatusLabel(status))}</span>
+    ${meta.length ? `<div class="checklist-item-meta">${meta.map(text => `<span>${esc(text)}</span>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+function renderTaskDetailsBlock(task, open) {
+  return `<details class="drawer-details task-details"${open ? ' open' : ''}>
+    <summary>详细信息</summary>
+    <div class="drawer-details-body">
+      <div class="field-grid">
+        <div class="field-box">
+          <strong>下一步动作</strong>
+          <span>${esc(task.next_action || '未填写，当前只能使用通用推进模板。')}</span>
+        </div>
+        <div class="field-box">
+          <strong>验收标准</strong>
+          ${renderSmallList(task.acceptance, '未填写验收标准')}
+        </div>
+        <div class="field-box">
+          <strong>来源文档</strong>
+          ${renderSmallList(task.source_docs, '未填写来源文档')}
+        </div>
+      </div>
+      ${task.downstream_constraints?.length ? `<div class="constraint-box">
+        <strong>⚠ 下游约束 — 实现本任务时必须考虑</strong>
+        <ul>${task.downstream_constraints.map(c => `<li>${esc(c)}</li>`).join('')}</ul>
+      </div>` : ''}
+    </div>
+  </details>`;
 }
 
 function renderCollapsedAgentCommand(task) {
@@ -1446,9 +1711,13 @@ function renderCollapsedEvidenceBlock(task) {
   </details>`;
 }
 
+function shouldShowAgentCommand(task) {
+  return (task._effective || task.status) !== 'in_progress';
+}
+
 function shouldOpenAgentCommand(task) {
   const status = task._effective || task.status;
-  return status === 'todo' || task.status === 'in_progress';
+  return status === 'todo';
 }
 
 function shouldOpenEvidenceBlock(task) {
@@ -1496,6 +1765,14 @@ function renderEvidenceBlock(task) {
 }
 
 function reviewStatusLabel(s) { return {pending:'待复核', passed:'已通过', must_fix:'必须修', deferred:'延期复核'}[s] || s; }
+
+function taskCardPath(task) {
+  return task.source_file ? `.ganttmd/${task.source_file}` : '.ganttmd/tasks/*.md';
+}
+
+function getTaskSourceDocs(task) {
+  return (task.source_docs || []).filter(doc => !String(doc).includes('.ganttmd/followups.md'));
+}
 
 function renderIssue(issue) {
   return `<div class="issue ${issue.level}">
@@ -1723,7 +2000,7 @@ function getTaskDiagnosis(task) {
   if (task.blocked_reason) return `当前任务存在外部阻塞：${task.blocked_reason}。`;
   if (task._effective === 'blocked') return `当前任务不能直接推进，需要先完成 ${task._openDeps.length} 个前置任务。`;
   if (task._effective === 'todo') return '当前任务没有未完成前置依赖，可以作为 Agent 下一步领取对象。';
-  if (task.status === 'in_progress') return task.owner || task.agent ? '当前任务已在推进中，继续前应确认最新上下文。' : '当前任务已在推进中，但缺少 owner/agent 标记，存在多 Agent 撞车风险。';
+  if (task._effective === 'in_progress') return task.owner || task.agent ? '当前任务已在推进中，继续前应确认最新上下文。' : '当前任务已在推进中，但缺少 owner/agent 标记，存在多 Agent 撞车风险。';
   if (task.status === 'review') return '当前任务已有产出，等待复核、PR 或用户判断。';
   if (task.status === 'done') return '当前任务已完成，重点检查验收证据和它解锁的后续任务。';
   if (task.status === 'cancelled') return '当前任务已取消，通常不进入默认推进队列。';
@@ -1742,11 +2019,13 @@ function getAgentHandoff(task) {
 }
 
 function getAgentCommand(task) {
-  const sources = task.source_docs?.length ? task.source_docs.join(', ') : `.ganttmd/modules/*.md`;
+  const taskFile = taskCardPath(task);
+  const sourceDocs = getTaskSourceDocs(task);
+  const sources = sourceDocs.length ? sourceDocs.join(', ') : '任务卡已包含足够执行信息，按需再补正式依据文档';
   const nextAction = task.next_action || '按任务描述推进下一步工作';
   const acceptance = task.acceptance?.length ? task.acceptance.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. 补充本任务的验收标准\n2. 完成后补充 evidence';
   if (task._missingDeps?.length) {
-    return `任务 ${task.id} 的依赖数据不完整。\n先读取 ${sources}，修正 dependencies 中不存在的任务：${task._missingDeps.join(', ')}。\n修正后重新判断它是否可执行，不要直接开始实现。`;
+    return `任务 ${task.id} 的依赖数据不完整。\n先读取任务卡：${taskFile}\n再读取来源文档：${sources}\n修正 dependencies 中不存在的任务：${task._missingDeps.join(', ')}。\n修正后重新判断它是否可执行，不要直接开始实现。`;
   }
   if (task.blocked_reason) {
     return `不建议领取 ${task.id}：${task.title || ''}\n当前存在外部阻塞：${task.blocked_reason}。`;
@@ -1759,22 +2038,22 @@ function getAgentCommand(task) {
     : '';
   const cpText = state.criticalSet.has(task.id) ? '\n注意：本任务在关键路径上，延迟会直接影响里程碑交付。' : '';
   if (task._effective === 'todo') {
-    return `领取任务 ${task.id}：${task.title || ''}\n1. 读取来源文档：${sources}\n2. 将该任务 status 更新为 in_progress，并补充 owner/agent 与 start_date。\n3. 下一步动作：${nextAction}\n4. 按以下验收标准收口：\n${acceptance}\n5. 完成后补充 evidence，再将 status 更新为 done。${constraintText}${cpText}`;
+    return `领取任务 ${task.id}：${task.title || ''}\n1. 读取任务卡：${taskFile}\n2. 读取来源文档：${sources}\n3. 将该任务 status 更新为 in_progress，并补充 owner/agent 与 start_date。\n4. 下一步动作：${nextAction}\n5. 按以下验收标准收口：\n${acceptance}\n6. 完成后在任务卡补充 evidence，再将 status 更新为 done。${constraintText}${cpText}`;
   }
   if (task.status === 'in_progress') {
-    return `接续进行中任务 ${task.id}：${task.title || ''}\n1. 读取来源文档：${sources}\n2. 核对当前 owner/agent 与实际接手人是否一致。\n3. 下一步动作：${nextAction}\n4. 按以下验收标准检查进度：\n${acceptance}${constraintText}${cpText}`;
+    return `接续进行中任务 ${task.id}：${task.title || ''}\n1. 读取任务卡：${taskFile}\n2. 读取来源文档：${sources}\n3. 核对当前 owner/agent 与实际接手人是否一致。\n4. 下一步动作：${nextAction}\n5. 按以下验收标准检查进度：\n${acceptance}${constraintText}${cpText}`;
   }
   if (task.status === 'review') {
-    return `复核任务 ${task.id}：${task.title || ''}\n1. 读取来源文档：${sources}\n2. 检查 evidence、verification 和 review_status 是否完整。\n3. 如复核通过，将 status 更新为 done；如必须修，登记修复任务或退回 in_progress。${constraintText}${cpText}`;
+    return `复核任务 ${task.id}：${task.title || ''}\n1. 读取任务卡：${taskFile}\n2. 读取来源文档：${sources}\n3. 检查 evidence、verification 和 review_status 是否完整。\n4. 如复核通过，将 status 更新为 done；如必须修，登记修复任务或退回 in_progress。${constraintText}${cpText}`;
   }
   if (task.status === 'done') {
     const downstream = state.children.get(task.id) || [];
-    return `复核已完成任务 ${task.id}。\n读取来源文档：${sources}\n检查 evidence 是否覆盖以下验收标准：\n${acceptance}\n若已确认完成，下一步关注它的后续任务：${downstream.length ? downstream.join(', ') : '暂无后续任务'}。`;
+    return `复核已完成任务 ${task.id}。\n读取任务卡：${taskFile}\n读取来源文档：${sources}\n检查 evidence 是否覆盖以下验收标准：\n${acceptance}\n若已确认完成，下一步关注它的后续任务：${downstream.length ? downstream.join(', ') : '暂无后续任务'}。`;
   }
   if (task.status === 'cancelled') {
-    return `任务 ${task.id} 已取消。\n读取 ${sources}，确认取消原因、剩余风险和是否需要登记 follow-up。`;
+    return `任务 ${task.id} 已取消。\n读取任务卡：${taskFile}\n读取来源文档：${sources}\n确认取消原因、剩余风险和是否需要登记 follow-up。`;
   }
-  return `读取 ${sources}，补充任务 ${task.id} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
+  return `读取任务卡：${taskFile}\n读取来源文档：${sources}\n补充任务 ${task.id} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
 }
 
 function getHealthIssues() {
@@ -1877,11 +2156,12 @@ async function copyText(text) {
 }
 
 function groupByExecution() {
-  const ready = state.tasks.filter(t => t._effective === 'todo').sort((a, b) => getExecutionScore(b) - getExecutionScore(a));
-  const progress = state.tasks.filter(t => t.status === 'in_progress');
-  const review = state.tasks.filter(t => t.status === 'review');
-  const blocked = state.tasks.filter(t => t._effective === 'blocked');
-  const done = state.tasks.filter(t => t.status === 'done');
+  const visibleTasks = getFilteredTasks();
+  const ready = visibleTasks.filter(t => t._effective === 'todo').sort((a, b) => getExecutionScore(b) - getExecutionScore(a));
+  const progress = visibleTasks.filter(t => t._effective === 'in_progress');
+  const review = visibleTasks.filter(t => t._effective === 'review');
+  const blocked = visibleTasks.filter(t => t._effective === 'blocked');
+  const done = visibleTasks.filter(t => t.status === 'done');
   return [
     { id: 'NEXT', name: '可立即执行', status: ready.length ? 'in_progress' : 'backlog', tasks: ready },
     { id: 'DOING', name: '进行中', status: progress.length ? 'in_progress' : 'backlog', tasks: progress },
@@ -1895,7 +2175,7 @@ function groupByMilestone() {
   const milestones = state.config?.milestones || [];
   const groups = milestones.map(ms => ({ id: ms.id, name: ms.name, status: ms.status, tasks: [] }));
   const fallback = { id: '_other', name: '其他任务', status: 'backlog', tasks: [] };
-  for (const t of state.tasks) {
+  for (const t of getFilteredTasks()) {
     const group = groups.find(g => g.id === t.milestone) || fallback;
     group.tasks.push(t);
   }
@@ -1905,7 +2185,7 @@ function groupByMilestone() {
 
 function groupByModule() {
   const groups = new Map();
-  for (const task of state.tasks) {
+  for (const task of getFilteredTasks()) {
     const id = task._businessModule || 'unknown';
     if (!groups.has(id)) groups.set(id, { id: moduleLabel(id), name: moduleLabel(id), status: 'in_progress', tasks: [] });
     groups.get(id).tasks.push(task);
@@ -1918,7 +2198,7 @@ function groupByModule() {
 function groupByTrack() {
   const order = ['spec', 'backend', 'frontend', 'infra', 'quality_gate'];
   const groups = new Map();
-  for (const task of state.tasks) {
+  for (const task of getFilteredTasks()) {
     const id = task._track || 'unknown';
     if (!groups.has(id)) groups.set(id, { id, name: trackLabel(id), status: 'in_progress', tasks: [] });
     groups.get(id).tasks.push(task);
@@ -1975,7 +2255,7 @@ function renderCards(tasks) {
     const focusIndex = rowTasks.findIndex(t => t.id === state.focusId);
     html += `<div class="task-row">${rowTasks.map(t => renderTaskCard(t, focus)).join('')}</div>`;
     if (focusIndex >= 0) {
-      html += renderDependencyDrawer(state.byId.get(state.focusId), focusIndex);
+      html += renderDependencyDrawer(state.byId.get(state.focusId) || rowTasks[focusIndex], focusIndex);
     }
   }
   return html;
@@ -2008,6 +2288,7 @@ function renderTaskCard(t, focus) {
         <span class="mod-tag">${esc(trackLabel(t._track))}</span>
         <span class="mod-tag">${esc(moduleLabel(t._businessModule))}</span>
       </div>
+      ${t._worktreeBranch ? `<div class="branch-row"><span class="branch-tag">${esc(t._worktreeBranch)}</span></div>` : ''}
       <div class="rel-row">
         ${onCritical ? `<span class="rel-pill cp">关键路径</span>` : ''}
         ${t._openDeps.length ? `<span class="rel-pill warn">↑${t._openDeps.length} 阻塞</span>` : ''}
@@ -2108,6 +2389,7 @@ function getRelationClass(id, focus) {
 }
 
 function statusLabel(s) { return {done:'已完成',in_progress:'进行中',todo:'可执行',review:'待复核',cancelled:'已取消',blocked:'被阻塞'}[s]||s; }
+function checklistStatusLabel(s) { return {done:'已完成',skipped:'已跳过',in_progress:'进行中',todo:'待处理',review:'待复核',blocked:'被阻塞'}[s]||s; }
 function esc(v) { return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 async function initApp() {

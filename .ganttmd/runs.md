@@ -25,3 +25,16 @@ started_at: 2026-05-24
 updated_at: 2026-05-24
 note: 补齐多 worktree 隔离和本地运行经验，服务后续安装式 GanttMD 接入
 ```
+
+```ganttmd-run
+id: RUN-GMD-MAIN-DEMO
+title: GanttMD 主分支运行态演示
+status: active
+branch: main
+owner: codex
+tasks: [MAIN-DEMO-01, MAIN-DEMO-02]
+current_task: MAIN-DEMO-01
+started_at: 2026-05-25
+updated_at: 2026-05-25
+note: 用于验证主分支任务和任务清单能在本地看板中展示
+```

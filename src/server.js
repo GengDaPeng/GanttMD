@@ -116,6 +116,14 @@ function watchProject(projectRoot) {
   return state;
 }
 
+function closeWatchers() {
+  for (const state of watcherState.values()) {
+    state.watcher?.close();
+    state.watcher = null;
+  }
+  watcherState.clear();
+}
+
 function getProjectVersion(projectRoot) {
   const watched = watchProject(projectRoot);
   const diskVersion = computeGanttVersion(projectRoot);
@@ -238,6 +246,7 @@ function startServer(options = {}) {
 
 module.exports = {
   buildStateForProject,
+  closeWatchers,
   computeGanttVersion,
   createRequestHandler,
   getProjectVersion,
