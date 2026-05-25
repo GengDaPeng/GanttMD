@@ -6,10 +6,11 @@ const Rules = require('../src/rules.js');
 test('共享规则模块导出完整接口', () => {
   const required = [
     'TASK_STATUSES', 'TASK_KINDS', 'FOLLOWUP_STATUSES', 'FOLLOWUP_KINDS',
+    'RUN_STATUSES', 'CHECKLIST_STATUSES',
     'TASK_TRACKS', 'TRACK_ALIASES', 'ENGINEERING_TRACKS',
     'DEFAULT_REVIEW_STALE_DAYS', 'DEFAULT_ARCHIVE_AFTER_DAYS',
     'parseDate', 'daysBetween', 'normalizeTrack',
-    'checkTask', 'checkFollowup', 'defaultContext',
+    'checkTask', 'checkFollowup', 'checkRun', 'checkChecklist', 'defaultContext',
   ];
   for (const k of required) assert.ok(k in Rules, `missing export: ${k}`);
 });

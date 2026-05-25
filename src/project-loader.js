@@ -80,6 +80,64 @@ function parseFollowup(raw, sourceFile) {
   return followup;
 }
 
+function parseRun(raw, sourceFile) {
+  const run = parseKeyValueBlock(raw);
+  run.source_file = sourceFile;
+  run.tasks = toArray(run.tasks);
+  return run;
+}
+
+function parseChecklistItem(line) {
+  const match = line.trim().match(/^-\s+([A-Za-z0-9_.-]+)\s+\[([a-z_]+)\]\s+([^|]*?)(?:\s*\|\s*(.*))?$/);
+  if (!match) {
+    return { raw: line.trim(), parse_error: true };
+  }
+
+  const item = {
+    id: match[1],
+    status: match[2],
+    title: match[3].trim(),
+    evidence: [],
+  };
+
+  const meta = match[4] || '';
+  for (const part of meta.split('|')) {
+    const separator = part.indexOf(':');
+    if (separator === -1) continue;
+    const key = part.slice(0, separator).trim();
+    const value = part.slice(separator + 1).trim();
+    if (!key) continue;
+    item[key] = key === 'evidence' ? toArray(parseScalar(value)) : value;
+  }
+
+  return item;
+}
+
+function parseChecklist(raw, sourceFile) {
+  const checklist = { task_id: '', items: [], source_file: sourceFile };
+  let inItems = false;
+
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    if (trimmed === 'items:') {
+      inItems = true;
+      continue;
+    }
+    if (inItems && trimmed.startsWith('- ')) {
+      checklist.items.push(parseChecklistItem(trimmed));
+      continue;
+    }
+    const separator = trimmed.indexOf(':');
+    if (separator === -1) continue;
+    const key = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1);
+    checklist[key] = parseScalar(value);
+  }
+
+  return checklist;
+}
+
 function parseConfig(text) {
   const config = { project: {}, views: {}, milestones: [] };
   let section = '';
@@ -144,6 +202,20 @@ function loadProject(projectRoot = process.cwd()) {
   const followups = extractBlocks(followupsText, 'ganttmd-followup')
     .map((block) => parseFollowup(block, 'followups.md'));
 
+  const runsPath = path.join(ganttRoot, 'runs.md');
+  const runsText = readTextIfExists(runsPath);
+  const runs = extractBlocks(runsText, 'ganttmd-run')
+    .map((block) => parseRun(block, 'runs.md'));
+
+  const checklists = [];
+  for (const filePath of taskFiles) {
+    const relativeFile = path.relative(ganttRoot, filePath);
+    const text = readTextIfExists(filePath);
+    for (const block of extractBlocks(text, 'ganttmd-checklist')) {
+      checklists.push(parseChecklist(block, relativeFile));
+    }
+  }
+
   return {
     root,
     ganttRoot,
@@ -153,6 +225,8 @@ function loadProject(projectRoot = process.cwd()) {
     config: parseConfig(readTextIfExists(path.join(ganttRoot, 'config.yaml'))),
     tasks,
     followups,
+    runs,
+    checklists,
   };
 }
 
@@ -166,6 +240,9 @@ module.exports = {
   toArray,
   parseTask,
   parseFollowup,
+  parseRun,
+  parseChecklistItem,
+  parseChecklist,
   parseConfig,
   loadProject,
 };

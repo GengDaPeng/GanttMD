@@ -85,6 +85,14 @@ evidence: []
 updated_at: 2026-05-21
 ```
 
+```ganttmd-checklist
+task_id: S-MOD-06
+items:
+  - C1 [done] 审批与考勤字段回写路径完成初步对齐 | evidence: source-docs/00-跨域依赖收口总账.md
+  - C2 [in_progress] 设备通知统计审计数据库落点分流
+  - C3 [todo] 稳定结论反馈系统总调度
+```
+
 说明：这是模块总控向系统总调度反馈稳定结论的质量门任务，不是模块内部派单。
 
 ### S-STAT-01 统计与审计主规格启动

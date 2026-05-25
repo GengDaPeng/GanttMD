@@ -8,6 +8,8 @@ const TASK_STATUSES = Rules.TASK_STATUSES;
 const TASK_KINDS = Rules.TASK_KINDS;
 const FOLLOWUP_STATUSES = Rules.FOLLOWUP_STATUSES;
 const FOLLOWUP_KINDS = Rules.FOLLOWUP_KINDS;
+const RUN_STATUSES = Rules.RUN_STATUSES;
+const CHECKLIST_STATUSES = Rules.CHECKLIST_STATUSES;
 const TASK_TRACKS = Rules.TASK_TRACKS;
 const TRACK_ALIASES = Rules.TRACK_ALIASES;
 const ENGINEERING_TRACKS = Rules.ENGINEERING_TRACKS;
@@ -37,6 +39,8 @@ function validateProject(project, options = {}) {
     archiveAfterDays: options.archiveAfterDays != null ? options.archiveAfterDays : DEFAULT_ARCHIVE_AFTER_DAYS,
     milestoneIds: milestoneIds,
     sourceDocExists: (relPath) => fs.existsSync(path.resolve(project.root, relPath)),
+    taskIds: null,
+    taskById: null,
   };
 
   if (!project.hasGanttRoot) {
@@ -62,6 +66,9 @@ function validateProject(project, options = {}) {
     }
     taskById.set(task.id, task);
   }
+
+  context.taskIds = new Set(taskById.keys());
+  context.taskById = taskById;
 
   const childrenByDep = new Map();
   for (const task of project.tasks) {
@@ -89,6 +96,36 @@ function validateProject(project, options = {}) {
     for (const ri of ruleIssues) issues.push(toCliIssue(ri));
   }
 
+  for (const run of project.runs) {
+    const ruleIssues = Rules.checkRun(run, context);
+    for (const ri of ruleIssues) issues.push(toCliIssue(ri));
+  }
+
+  const activeTaskToRun = new Map();
+  for (const run of project.runs) {
+    if (run.status !== 'active') continue;
+    for (const taskId of run.tasks || []) {
+      const task = taskById.get(taskId);
+      if (!task || task.status === 'done' || task.status === 'cancelled') continue;
+      if (!activeTaskToRun.has(taskId)) {
+        activeTaskToRun.set(taskId, run.id);
+        continue;
+      }
+      issues.push({
+        level: 'warn',
+        id: run.id || '(missing run id)',
+        message: '同一未完成任务出现在多个 active run：' + taskId + '（已有 ' + activeTaskToRun.get(taskId) + '）',
+        sourceFile: run.source_file,
+        field: 'tasks',
+      });
+    }
+  }
+
+  for (const checklist of project.checklists) {
+    const ruleIssues = Rules.checkChecklist(checklist, context);
+    for (const ri of ruleIssues) issues.push(toCliIssue(ri));
+  }
+
   return issues;
 }
 
@@ -97,6 +134,8 @@ module.exports = {
   TASK_KINDS,
   FOLLOWUP_STATUSES,
   FOLLOWUP_KINDS,
+  RUN_STATUSES,
+  CHECKLIST_STATUSES,
   TASK_TRACKS,
   TRACK_ALIASES,
   ENGINEERING_TRACKS,

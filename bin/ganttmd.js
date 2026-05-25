@@ -24,6 +24,8 @@ function printValidateResult(project, issues, options) {
       ganttRoot: project.ganttRoot,
       taskCount: project.tasks.length,
       followupCount: project.followups.length,
+      runCount: project.runs.length,
+      checklistCount: project.checklists.length,
       issueCount: issues.length,
       warningCount: warnings.length,
       issues,
@@ -32,7 +34,7 @@ function printValidateResult(project, issues, options) {
   }
 
   console.log(`GanttMD 校验：${project.ganttRoot}`);
-  console.log(`任务 ${project.tasks.length} 个，follow-up ${project.followups.length} 个，警告 ${warnings.length} 个，提示 ${issues.length - warnings.length} 个。`);
+  console.log(`任务 ${project.tasks.length} 个，follow-up ${project.followups.length} 个，run ${project.runs.length} 个，checklist ${project.checklists.length} 个，警告 ${warnings.length} 个，提示 ${issues.length - warnings.length} 个。`);
 
   if (issues.length === 0) {
     console.log('未发现结构问题。');

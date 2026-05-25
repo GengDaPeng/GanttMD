@@ -23,6 +23,14 @@ review_status: passed
 completed_date: 2026-05-23
 ```
 
+```ganttmd-checklist
+task_id: MIN-001
+items:
+  - C1 [done] README 写清入口 | evidence: README.md
+  - C2 [done] AGENTS 写清代理规则 | evidence: AGENTS.md
+  - C3 [done] 页面能读取任务目录 | evidence: examples/minimal/.ganttmd/index.html
+```
+
 ### MIN-002 补齐任务校验规则
 
 ```ganttmd-task
@@ -41,6 +49,14 @@ next_action: 检查 validator 能发现缺证据、缺来源、非法状态和 f
 acceptance: [validator 可运行, 样例数据无 warning, 规则说明能被 Agent 理解]
 evidence: []
 updated_at: 2026-05-23
+```
+
+```ganttmd-checklist
+task_id: MIN-002
+items:
+  - C1 [done] validator 可运行 | evidence: npm run validate -- examples/minimal
+  - C2 [in_progress] runs 和 checklist 规则接入源码
+  - C3 [todo] 更新安装式 CLI 文档
 ```
 
 ### MIN-003 展示被依赖阻塞任务

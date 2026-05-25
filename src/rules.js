@@ -17,6 +17,8 @@
   const TASK_KINDS = ['task', 'bugfix', 'ad_hoc', 'review', 'harness'];
   const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
   const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
+  const RUN_STATUSES = ['planned', 'active', 'review', 'merged', 'abandoned'];
+  const CHECKLIST_STATUSES = ['todo', 'in_progress', 'blocked', 'done', 'skipped'];
   const TASK_TRACKS = ['spec', 'backend', 'frontend', 'infra', 'quality', 'docs', 'ops'];
   const TRACK_ALIASES = { quality_gate: 'quality' };
   const ENGINEERING_TRACKS = ['backend', 'frontend', 'infra'];
@@ -229,6 +231,102 @@
     return issues;
   }
 
+  // checkRun(run, ctx) -> Array<Issue>
+  //
+  // ctx: { taskIds: Set }
+  function checkRun(run, ctx) {
+    const issues = [];
+    const id = run.id || '(missing run id)';
+    const make = makeIssueFactory(id, run.source_file, issues);
+    const tasks = toArray(run.tasks);
+
+    if (!run.id) make.warn('run 缺少 id', 'id');
+    if (!run.title) make.warn('run 缺少 title', 'title');
+    if (!run.status) make.warn('run 缺少 status', 'status');
+    if (run.status && RUN_STATUSES.indexOf(run.status) === -1) {
+      make.warn('run status 非法：' + run.status, 'status');
+    }
+
+    if (run.status === 'active') {
+      if (!run.branch) make.warn('active run 必须填写 branch', 'branch');
+      if (!run.owner) make.warn('active run 必须填写 owner', 'owner');
+      if (tasks.length === 0) make.warn('active run 必须填写 tasks', 'tasks');
+    }
+
+    if (run.current_task && tasks.indexOf(run.current_task) === -1) {
+      make.warn('current_task 必须属于 tasks：' + run.current_task, 'current_task');
+    }
+
+    if (ctx.taskIds) {
+      for (let i = 0; i < tasks.length; i++) {
+        if (!ctx.taskIds.has(tasks[i])) {
+          make.warn('run 引用不存在任务：' + tasks[i], 'tasks');
+        }
+      }
+    }
+
+    return issues;
+  }
+
+  // checkChecklist(checklist, ctx) -> Array<Issue>
+  //
+  // ctx: { taskIds: Set, taskById: Map }
+  function checkChecklist(checklist, ctx) {
+    const issues = [];
+    const id = checklist.task_id || '(missing task_id)';
+    const make = makeIssueFactory(id, checklist.source_file, issues);
+    const itemIds = new Set();
+    const items = Array.isArray(checklist.items) ? checklist.items : [];
+
+    if (!checklist.task_id) {
+      make.warn('checklist 缺少 task_id', 'task_id');
+    } else if (ctx.taskIds && !ctx.taskIds.has(checklist.task_id)) {
+      make.warn('checklist 引用不存在任务：' + checklist.task_id, 'task_id');
+    }
+
+    if (items.length === 0) {
+      make.warn('checklist 缺少 items', 'items');
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const itemField = 'items[' + i + ']';
+      if (item.parse_error) {
+        make.warn('checklist item 格式非法：' + item.raw, itemField);
+        continue;
+      }
+      if (!item.id) make.warn('checklist item 缺少 id', itemField);
+      if (item.id && itemIds.has(item.id)) {
+        make.warn('checklist item id 重复：' + item.id, itemField);
+      }
+      if (item.id) itemIds.add(item.id);
+      if (!item.title) make.warn('checklist item 缺少 title：' + item.id, itemField);
+      if (!item.status) {
+        make.warn('checklist item 缺少 status：' + item.id, itemField);
+      } else if (CHECKLIST_STATUSES.indexOf(item.status) === -1) {
+        make.warn('checklist item status 非法：' + item.status, itemField);
+      }
+      if (item.status === 'blocked' && !item.blocker_reason) {
+        make.warn('blocked checklist item 必须填写 blocker_reason：' + item.id, itemField);
+      }
+      if (item.status === 'done' && toArray(item.evidence).length === 0) {
+        make.info('done checklist item 建议填写 evidence：' + item.id, itemField);
+      }
+    }
+
+    if (ctx.taskById && checklist.task_id && ctx.taskById.has(checklist.task_id)) {
+      const task = ctx.taskById.get(checklist.task_id);
+      const unfinished = items.filter(function (item) {
+        return !item.parse_error && CHECKLIST_STATUSES.indexOf(item.status) !== -1 && item.status !== 'done' && item.status !== 'skipped';
+      });
+      if (task.status === 'done' && unfinished.length > 0) {
+        make.warn('父任务已 done，但 checklist 仍有未完成项：' + unfinished.map(function (item) { return item.id; }).join(', '), 'items');
+      }
+    }
+
+    return issues;
+  }
+
   function defaultContext(overrides) {
     const ctx = {
       now: new Date(),
@@ -248,6 +346,8 @@
     TASK_KINDS: TASK_KINDS,
     FOLLOWUP_STATUSES: FOLLOWUP_STATUSES,
     FOLLOWUP_KINDS: FOLLOWUP_KINDS,
+    RUN_STATUSES: RUN_STATUSES,
+    CHECKLIST_STATUSES: CHECKLIST_STATUSES,
     TASK_TRACKS: TASK_TRACKS,
     TRACK_ALIASES: TRACK_ALIASES,
     ENGINEERING_TRACKS: ENGINEERING_TRACKS,
@@ -258,6 +358,8 @@
     normalizeTrack: normalizeTrack,
     checkTask: checkTask,
     checkFollowup: checkFollowup,
+    checkRun: checkRun,
+    checkChecklist: checkChecklist,
     defaultContext: defaultContext,
   };
 }));
