@@ -42,6 +42,8 @@ evidence: [PR#7]
 verification: 规范文档评审通过
 review_status: passed
 updated_at: 2026-05-11
+archived_at: 2026-05-25
+archived_reason: done_over_7_days
 ```
 
 ### S-BE-03 创建后端工程基础结构
@@ -62,6 +64,8 @@ evidence: [PR#20, commit:e11e16e]
 verification: pnpm test:e2e + 本地 api/worker 启动验证
 review_status: passed
 updated_at: 2026-05-13
+archived_at: 2026-05-25
+archived_reason: done_over_7_days
 ```
 
 ### S-BE-04 建立 Prisma 与数据库迁移跑道
@@ -82,6 +86,8 @@ evidence: [PR#23, commit:faa93a4, commit:3cbd3a2]
 verification: pnpm prisma migrate dev + 集成测试通过
 review_status: passed
 updated_at: 2026-05-14
+archived_at: 2026-05-25
+archived_reason: done_over_7_days
 ```
 
 ### S-BE-05 建立 Redis / BullMQ / MinIO 本地依赖
@@ -102,6 +108,8 @@ evidence: [PR#22, commit:58549e8]
 verification: docker compose up + /health 接口验证
 review_status: passed
 updated_at: 2026-05-14
+archived_at: 2026-05-25
+archived_reason: done_over_7_days
 ```
 
 ### S-BE-06 建立本地一键启动与基础 CI
@@ -122,6 +130,8 @@ evidence: [PR#24, commit:a7f8693]
 verification: GitHub Actions CI 全绿 + 本地 pnpm dev 启动验证
 review_status: passed
 updated_at: 2026-05-16
+archived_at: 2026-05-25
+archived_reason: done_over_7_days
 ```
 
 ### S-QA-13 测试规范骨架与定稿

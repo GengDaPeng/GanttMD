@@ -8,7 +8,7 @@
 
 - 任务状态唯一真相源：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`
 - 执行批次与 worktree 承接记录：`.ganttmd/runs.md`
-- 人类查看入口：`ganttmd serve` 本地看板
+- 人类查看入口：`ganttmd start` 本地看板；`ganttmd serve` 只用于前台调试
 - 字段、状态和规则以项目内 `.ganttmd/`、`ganttmd validate` 和 `ganttmd doctor` 为准
 
 ### 工作边界

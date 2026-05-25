@@ -28,7 +28,7 @@ task_id: MIN-001
 items:
   - C1 [done] README 写清入口 | evidence: README.md
   - C2 [done] AGENTS 写清代理规则 | evidence: AGENTS.md
-  - C3 [done] 页面能读取任务目录 | evidence: examples/minimal/.ganttmd/index.html
+  - C3 [done] 页面能读取任务目录 | evidence: web/index.html
 ```
 
 ### MIN-002 补齐任务校验规则

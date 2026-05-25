@@ -19,6 +19,8 @@ acceptance: [学生班级教师系统设置审批组织权限六模块 P0 接口
 evidence: [source-docs/00-模块规格推进清单.md, source-docs/00-跨域依赖收口总账.md]
 review_status: passed
 updated_at: 2026-05-15
+archived_at: 2026-05-25
+archived_reason: done_over_7_days
 ```
 
 范围：学生、班级、教师、系统设置、审批中心、组织权限六模块 P0 接口首轮关闭。
