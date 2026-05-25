@@ -307,6 +307,8 @@ items:
 
 页面会把 checklist 展示到任务抽屉和运行态面板中，帮助人类负责人看清“大任务做到了哪一步”。
 
+checklist 是执行过程记录，不是长期任务事实。父任务进入 `done` 或 `cancelled` 后，项目主控应把 checklist 结果收口到 `evidence`、`verification`、follow-up 或新任务，然后删除 checklist；`ganttmd validate` 会输出 info 级收口提醒。
+
 ## 6. 归档规则
 
 GanttMD 不自动删除任务。`done` 或 `cancelled` 任务关闭超过 `validation.archive_after_days` 后，`validate` 会输出 info 级归档提醒。

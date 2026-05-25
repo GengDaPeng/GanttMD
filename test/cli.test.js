@@ -20,7 +20,7 @@ test('ganttmd validate --json 输出机器可读校验结果', () => {
   assert.equal(data.taskCount, 5);
   assert.equal(data.followupCount, 2);
   assert.equal(data.runCount, 1);
-  assert.equal(data.checklistCount, 2);
+  assert.equal(data.checklistCount, 1);
   assert.equal(data.warningCount, 0);
   assert.ok(Array.isArray(data.issues));
 });

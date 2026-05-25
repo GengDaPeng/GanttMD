@@ -322,6 +322,9 @@
       if (task.status === 'done' && unfinished.length > 0) {
         make.warn('父任务已 done，但 checklist 仍有未完成项：' + unfinished.map(function (item) { return item.id; }).join(', '), 'items');
       }
+      if ((task.status === 'done' || task.status === 'cancelled') && items.length > 0) {
+        make.info('父任务已 ' + task.status + '，请将 checklist 结果收口到 evidence、verification、follow-up 或新任务后删除 checklist', 'items');
+      }
     }
 
     return issues;

@@ -23,6 +23,7 @@
 - 连续任务、worktree 分支或批次推进必须登记或更新 `runs.md`
 - worktree/分支只能领取主分支已有任务，不得创建新的顶层 `ganttmd-task`
 - worktree/分支只能维护当前任务内的 `ganttmd-checklist`，不得改任务依赖、里程碑、主线、验收标准等结构字段
+- 任务关闭后，项目主控必须把 checklist 结果收口到 evidence、verification、follow-up 或新任务，并删除 checklist
 - worktree/分支只能追加 `status: open` 的 follow-up；接受、转任务、关闭或拒绝必须由项目主控在主分支处理
 - 大范围重排任务文件必须先得到用户明确要求
 

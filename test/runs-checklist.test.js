@@ -144,4 +144,9 @@ current_task: OTHER
   assert(issues.some((issue) => issue.id === 'T-1' && issue.message.includes('item id 重复')));
   assert(issues.some((issue) => issue.id === 'T-1' && issue.message.includes('blocked checklist item')));
   assert(issues.some((issue) => issue.id === 'T-1' && issue.message.includes('父任务已 done')));
+  assert(issues.some((issue) =>
+    issue.level === 'info'
+    && issue.id === 'T-1'
+    && issue.message.includes('请将 checklist 结果收口')
+  ));
 });
