@@ -1,6 +1,6 @@
 # Agent 协作规则
 
-本样例使用 GanttMD 跟踪任务状态。
+本样例使用 GanttMD 跟踪 Acme Notes 的任务状态。
 
 开始工作前读取：
 
@@ -12,14 +12,9 @@
 当前任务的 source_docs
 ```
 
-真实项目接入 GanttMD 后，在该项目根目录提交 `.ganttmd/` 改动前运行：
+本样例建议由一个任务分发 Agent 维护看板结构；执行 Agent 只更新当前任务、补充证据，并追加 `status: open` 的 follow-up。
 
-```bash
-ganttmd validate
-ganttmd doctor
-```
-
-如果从 GanttMD 仓库根目录校验这个内置样例，使用：
+从 GanttMD 仓库根目录校验这个内置样例：
 
 ```bash
 npm run validate -- examples/minimal
