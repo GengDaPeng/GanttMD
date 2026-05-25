@@ -8,6 +8,7 @@
 
 ```text
 .ganttmd/
+  README.md
   config.yaml
   tasks/
     active.md
@@ -19,6 +20,7 @@
 
 | 文件 | 必需 | 用途 |
 |---|---:|---|
+| `README.md` | 建议 | 当前项目的 .ganttmd 操作边界说明 |
 | `config.yaml` | 是 | 项目元信息、里程碑、视图配置和校验参数 |
 | `tasks/*.md` | 是 | 任务状态真相源，一个文件可放多个任务 |
 | `followups.md` | 建议 | follow-up、用户裁决、延期项和外部等待项 |

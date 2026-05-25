@@ -69,6 +69,7 @@ ganttmd start
 your-project/
   AGENTS.md
   .ganttmd/
+    README.md
     config.yaml
     followups.md
     runs.md

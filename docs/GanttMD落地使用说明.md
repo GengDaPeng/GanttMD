@@ -21,6 +21,7 @@ GanttMD 也不要求项目再维护一套“项目进度文档”。动态进度
 ```text
 AGENTS.md
 .ganttmd/
+  README.md               # 当前项目的 .ganttmd 操作边界说明
   config.yaml             # 项目、里程碑和视图配置
   followups.md            # Agent 后续事项、用户裁决、延期复查和外部等待
   runs.md                 # 主控派工批次、分支和 worktree 承接记录
@@ -34,6 +35,7 @@ AGENTS.md
 
 其中：
 
+- `.ganttmd/README.md`：当前项目的 .ganttmd 操作边界说明。
 - `.ganttmd/config.yaml`：项目、里程碑和视图配置。
 - `.ganttmd/tasks/*.md`：任务状态真相源。
 - `.ganttmd/followups.md`：Agent 后续事项、用户裁决、延期复查和外部等待。

@@ -1,7 +1,4 @@
-const fs = require('node:fs');
-const path = require('node:path');
-
-const README_CONTENT = `# GanttMD 项目任务状态
+# GanttMD 项目任务状态
 
 本目录是项目任务状态唯一真相源。它只维护任务状态、依赖、阻塞、证据、follow-up 和 worktree 执行记录；需求、设计、接口、测试规范等正式正文仍放在项目原有 docs/ 中，并通过 source_docs 引用。
 
@@ -56,66 +53,3 @@ checklist 是执行过程记录，不是长期任务事实。
 - 新正式任务
 
 然后删除 checklist。ganttmd validate 会对已关闭任务仍保留 checklist 的情况给出提示。
-`;
-
-function writeIfMissing(filePath, content, created) {
-  if (fs.existsSync(filePath)) return false;
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content);
-  created.push(filePath);
-  return true;
-}
-
-function initProject(projectRoot = process.cwd()) {
-  const root = path.resolve(projectRoot);
-  const ganttRoot = path.join(root, '.ganttmd');
-  const created = [];
-
-  writeIfMissing(path.join(ganttRoot, 'README.md'), README_CONTENT, created);
-
-  writeIfMissing(path.join(ganttRoot, 'config.yaml'), `ganttmd:
-  schema_version: 1
-project:
-  id: ${path.basename(root)}
-  name: ${path.basename(root)}
-
-views:
-  default: execution
-
-milestones:
-  - id: M1
-    name: 第一阶段
-    status: in_progress
-`, created);
-
-  writeIfMissing(path.join(ganttRoot, 'tasks', 'main.md'), `# 主任务
-
-## M1 第一阶段
-
-\`\`\`ganttmd-task
-id: T-001
-title: 初始化 GanttMD 任务状态
-status: todo
-milestone: M1
-track: docs
-source_docs: [PR#init]
-next_action: 把这个样例任务替换为项目真实任务
-acceptance: [项目至少登记一个真实任务]
-\`\`\`
-
-`, created);
-
-  writeIfMissing(path.join(ganttRoot, 'followups.md'), `# Follow-up
-
-`, created);
-
-  writeIfMissing(path.join(ganttRoot, 'runs.md'), `# 执行批次
-
-`, created);
-
-  return { root, ganttRoot, created };
-}
-
-module.exports = {
-  initProject,
-};
