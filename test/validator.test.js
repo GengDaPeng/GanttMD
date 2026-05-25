@@ -4,7 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { loadProject, validateProject } = require('../examples/minimal/.ganttmd/validate');
+const { loadProject, validateProject } = require('../src/validator.js');
 
 function createProject(files) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-'));

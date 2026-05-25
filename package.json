@@ -2,13 +2,16 @@
   "name": "ganttmd",
   "version": "1.0.0",
   "description": "Markdown-native 项目进度管理工具，面向 AI Agent 开发场景。",
-  "main": "index.js",
+  "main": "src/validator.js",
+  "bin": {
+    "ganttmd": "bin/ganttmd.js"
+  },
   "directories": {
     "example": "examples"
   },
   "scripts": {
     "test": "node --test",
-    "validate": "node examples/minimal/.ganttmd/validate.js"
+    "validate": "node bin/ganttmd.js validate"
   },
   "keywords": [],
   "author": "",

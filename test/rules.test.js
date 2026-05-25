@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const Rules = require('../examples/minimal/.ganttmd/rules.js');
+const Rules = require('../src/rules.js');
 
 test('共享规则模块导出完整接口', () => {
   const required = [
@@ -166,7 +166,7 @@ test('checkFollowup 对合法 follow-up 返回 0 issue', () => {
 
 test('页面和 CLI 通过同一份规则模块（loadProject 应等价于直接 checkTask）', () => {
   // 防止有人偷偷在 validator.js 里复制规则逻辑而不调用 rules.js
-  const validator = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'examples', 'minimal', '.ganttmd', 'validate.js'), 'utf8');
+  const validator = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'src', 'validator.js'), 'utf8');
   assert.ok(validator.includes("require('./rules.js')"), 'validate.js 必须 require 同目录的 rules.js');
   assert.ok(validator.includes('Rules.checkTask'), 'validate.js 必须调用 Rules.checkTask');
   assert.ok(validator.includes('Rules.checkFollowup'), 'validate.js 必须调用 Rules.checkFollowup');
