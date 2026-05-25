@@ -1,4 +1,6 @@
 const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
 const { URL } = require('node:url');
 
 const Registry = require('./project-registry.js');
@@ -17,6 +19,15 @@ function sendJson(res, statusCode, data) {
 function sendText(res, statusCode, text) {
   res.writeHead(statusCode, { 'content-type': 'text/plain; charset=utf-8' });
   res.end(text);
+}
+
+function sendHtml(res, html) {
+  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  res.end(html);
+}
+
+function readWebIndex() {
+  return fs.readFileSync(path.join(__dirname, '..', 'web', 'index.html'), 'utf8');
 }
 
 function readBody(req) {
@@ -63,7 +74,12 @@ function createRequestHandler(options = {}) {
 
     try {
       if (req.method === 'GET' && url.pathname === '/') {
-        sendText(res, 200, 'GanttMD Local\n');
+        sendHtml(res, readWebIndex());
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname.startsWith('/project/')) {
+        sendHtml(res, readWebIndex());
         return;
       }
 

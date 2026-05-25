@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GanttMD Local</title>
+<style>
+:root {
+  --bg: #f5f6f8;
+  --panel: #fff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #4f46e5;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --done: #10b981;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 24px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.brand h1 { margin: 0; font-size: 22px; }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.shell { padding: 20px 24px 40px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.project-card { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.project-card:hover { border-color: var(--accent); box-shadow: 0 6px 18px rgba(15,23,42,.08); }
+.kicker { color: var(--muted); font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.title { font-size: 17px; font-weight: 760; margin: 0; }
+.path { color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; font-size: 12px; }
+.section { margin-top: 18px; }
+.section h2 { font-size: 15px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.metrics { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pill { border: 1px solid var(--border); background: #f9fafb; border-radius: 99px; padding: 2px 8px; color: var(--muted); font-size: 12px; }
+.pill.warn { border-color: #fde68a; background: #fffbeb; color: #b45309; }
+.pill.danger { border-color: #fecaca; background: #fef2f2; color: var(--danger); }
+.pill.done { border-color: #bbf7d0; background: #f0fdf4; color: #047857; }
+.toolbar { display: flex; gap: 8px; align-items: center; }
+button { border: 1px solid var(--border); background: #fff; border-radius: 7px; padding: 7px 10px; cursor: pointer; font-weight: 650; color: var(--text); }
+button:hover { border-color: #c7d2fe; color: var(--accent); }
+.hidden { display: none; }
+.empty { color: var(--muted); padding: 16px; border: 1px dashed var(--border); border-radius: 8px; background: #fff; }
+.table { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 140px 1fr auto; gap: 10px; align-items: center; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; background: #fff; }
+.row strong { font-size: 13px; }
+.row span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #111827; color: #e5e7eb; padding: 12px; border-radius: 8px; max-height: 280px; overflow: auto; }
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="brand">
+    <h1>GanttMD Local</h1>
+    <p id="subtitle">本机多项目任务状态入口</p>
+  </div>
+  <div class="toolbar">
+    <button id="backBtn" class="hidden">项目列表</button>
+    <button id="refreshBtn">刷新</button>
+  </div>
+</header>
+<main class="shell">
+  <section id="projectsView">
+    <div class="section">
+      <h2>项目</h2>
+      <div id="projects" class="grid"></div>
+    </div>
+  </section>
+  <section id="projectView" class="hidden">
+    <div id="projectSummary" class="card"></div>
+    <div class="section">
+      <h2>执行批次</h2>
+      <div id="runs" class="table"></div>
+    </div>
+    <div class="section">
+      <h2>Worktrees</h2>
+      <div id="worktrees" class="table"></div>
+    </div>
+    <div class="section">
+      <h2>Checklist</h2>
+      <div id="checklists" class="table"></div>
+    </div>
+    <div class="section">
+      <h2>健康检查</h2>
+      <div id="health" class="table"></div>
+    </div>
+    <div class="section">
+      <h2>冲突</h2>
+      <div id="conflicts" class="table"></div>
+    </div>
+  </section>
+</main>
+<script>
+const state = { projects: [], currentProject: '' };
+
+function el(id) { return document.getElementById(id); }
+
+async function fetchJson(url) {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
+}
+
+function pill(text, type) {
+  return `<span class="pill ${type || ''}">${text}</span>`;
+}
+
+function renderProjects() {
+  const container = el('projects');
+  if (!state.projects.length) {
+    container.innerHTML = '<div class="empty">未登记项目。请在终端运行 <code>ganttmd project add /path/to/project</code>。</div>';
+    return;
+  }
+  container.innerHTML = state.projects.map(project => `
+    <article class="card project-card" data-project="${project.id}">
+      <div class="kicker">${project.id}</div>
+      <h3 class="title">${project.name}</h3>
+      <div class="path">${project.root}</div>
+      <div class="metrics">${pill(project.lastOpenedAt ? '已登记' : '未打开', 'done')}</div>
+    </article>
+  `).join('');
+  container.querySelectorAll('.project-card').forEach(card => {
+    card.addEventListener('click', () => openProject(card.dataset.project));
+  });
+}
+
+function renderRows(id, rows, emptyText) {
+  const container = el(id);
+  if (!rows.length) {
+    container.innerHTML = `<div class="empty">${emptyText}</div>`;
+    return;
+  }
+  container.innerHTML = rows.join('');
+}
+
+function renderProject(stateData) {
+  el('projectsView').classList.add('hidden');
+  el('projectView').classList.remove('hidden');
+  el('backBtn').classList.remove('hidden');
+  el('subtitle').textContent = `${stateData.source.projectId || 'project'} · ${stateData.source.root}`;
+
+  const warnCount = stateData.health.filter(item => item.level === 'warn').length;
+  el('projectSummary').innerHTML = `
+    <div class="kicker">当前项目</div>
+    <h2 class="title">${stateData.project.name || stateData.source.projectId || '未命名项目'}</h2>
+    <div class="path">${stateData.source.root}</div>
+    <div class="metrics">
+      ${pill(`${stateData.main.taskCount} 任务`)}
+      ${pill(`${stateData.main.runCount} run`)}
+      ${pill(`${stateData.main.checklistCount} checklist`)}
+      ${pill(`${stateData.worktrees.length} worktree`)}
+      ${pill(`${warnCount} warning`, warnCount ? 'danger' : 'done')}
+      ${pill(`${stateData.conflicts.length} conflict`, stateData.conflicts.length ? 'warn' : 'done')}
+    </div>
+  `;
+
+  renderRows('runs', stateData.runs.map(run => `
+    <div class="row"><strong>${run.id}</strong><span>${run.title || ''}<br>${run.branch || ''}</span>${pill(run.status || 'unknown')}</div>
+  `), '暂无执行批次。');
+
+  renderRows('worktrees', stateData.worktrees.map(wt => `
+    <div class="row"><strong>${wt.branch || '(detached)'}</strong><span>${wt.root}<br>${wt.head || ''}</span>${pill(wt.isDirty ? 'dirty' : 'clean', wt.isDirty ? 'warn' : 'done')}</div>
+  `), '未发现 worktree。');
+
+  renderRows('checklists', stateData.checklists.map(item => `
+    <div class="row"><strong>${item.taskId}</strong><span>${item.done}/${item.total} 已收口</span>${pill(`${item.open} open`, item.open ? 'warn' : 'done')}</div>
+  `), '暂无 checklist。');
+
+  renderRows('health', stateData.health.slice(0, 20).map(issue => `
+    <div class="row"><strong>${issue.id}</strong><span>${issue.message || issue.text}<br>${issue.sourceFile || ''}</span>${pill(issue.level, issue.level === 'warn' ? 'danger' : 'warn')}</div>
+  `), '未发现健康检查问题。');
+
+  renderRows('conflicts', stateData.conflicts.map(conflict => `
+    <div class="row"><strong>${conflict.taskId}</strong><span>${conflict.entries.map(e => `${e.source.branch}:${e.status}`).join(' / ')}</span>${pill(conflict.type, 'danger')}</div>
+  `), '暂无跨 worktree 状态冲突。');
+}
+
+async function loadProjects() {
+  const data = await fetchJson('/api/projects');
+  state.projects = data.projects || [];
+  renderProjects();
+}
+
+async function openProject(id) {
+  state.currentProject = id;
+  const data = await fetchJson(`/api/state?project=${encodeURIComponent(id)}`);
+  history.replaceState(null, '', `/project/${encodeURIComponent(id)}`);
+  renderProject(data);
+}
+
+async function refresh() {
+  if (state.currentProject) {
+    await openProject(state.currentProject);
+  } else {
+    await loadProjects();
+  }
+}
+
+el('refreshBtn').addEventListener('click', refresh);
+el('backBtn').addEventListener('click', () => {
+  state.currentProject = '';
+  history.replaceState(null, '', '/');
+  el('projectView').classList.add('hidden');
+  el('projectsView').classList.remove('hidden');
+  el('backBtn').classList.add('hidden');
+  el('subtitle').textContent = '本机多项目任务状态入口';
+  loadProjects();
+});
+
+loadProjects().then(() => {
+  const match = location.pathname.match(/^\/project\/(.+)$/);
+  if (match) openProject(decodeURIComponent(match[1]));
+}).catch(error => {
+  el('projects').innerHTML = `<pre>${error.stack || error.message}</pre>`;
+});
+</script>
+</body>
+</html>

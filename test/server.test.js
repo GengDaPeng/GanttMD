@@ -36,6 +36,12 @@ async function getJson(url) {
   return response.json();
 }
 
+async function getText(url) {
+  const response = await fetch(url);
+  assert.equal(response.status, 200);
+  return response.text();
+}
+
 test('本地服务提供项目列表和项目运行时状态 API', async (t) => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-server-'));
   const registryPath = path.join(tmp, 'projects.json');
@@ -55,6 +61,9 @@ test('本地服务提供项目列表和项目运行时状态 API', async (t) => 
     }],
   });
   t.after(() => server.close());
+
+  const html = await getText(`${url}/`);
+  assert.match(html, /GanttMD Local/);
 
   const projects = await getJson(`${url}/api/projects`);
   assert.equal(projects.projects.length, 1);
