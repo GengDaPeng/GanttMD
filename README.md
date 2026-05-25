@@ -94,8 +94,7 @@ your-project/
 
 ```bash
 ganttmd validate examples/minimal
-ganttmd validate examples/jwxt-lite
-ganttmd project add examples/jwxt-lite --id jwxt-lite --name 教务系统样例
+ganttmd project add examples/minimal --id minimal --name 最小样例
 ganttmd start
 ```
 
@@ -187,7 +186,6 @@ source_rr: RR-003
 - [Follow-up 清单机制](docs/Follow-up清单机制.md)：follow-up 权限、来源和状态规则。
 - [校验脚本检查流程图](docs/校验脚本检查流程图.md)：`ganttmd validate` 的流程、检查项和输出结果。
 - [安装、更新、卸载与迁移](docs/user/安装更新卸载与迁移.md)：使用方项目如何安装工具、更新工具、迁移 schema 和回滚。
-- 历史方案、dogfooding 反馈和旧版截图已移入 [archive](archive/README.md)，不作为当前使用入口。
 
 ## 命令行
 
@@ -244,13 +242,13 @@ ganttmd validate --json
 
 ## 示例
 
-`examples/jwxt-lite/` 是一个从教务系统项目状态材料抽取出来的真实感样例，用来展示：
+`examples/minimal/` 是公开仓库保留的最小样例，用来展示：
 
-- 里程碑路线图。
-- 执行、主线、模块、风险和 Follow-up 视图。
-- 证据链、复核状态、取消任务和外部阻塞。
-- PR/RR 来源的 follow-up。
+- 可执行、进行中、待复核、被依赖阻塞、已完成和已取消任务。
+- 证据链、校验命令和复核状态。
+- Follow-up 的 open / accepted / converted 状态。
+- 最小 `source_docs` 引用方式。
 
 ## 许可证
 
-当前仓库尚未补充正式许可证文件。开源发布前应新增 `LICENSE` 并在本节声明许可证类型。
+本项目使用 ISC License，详见 [LICENSE](LICENSE)。

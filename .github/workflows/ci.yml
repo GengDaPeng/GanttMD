@@ -24,8 +24,5 @@ jobs:
       - name: 运行 validator 单测
         run: npm test
 
-      - name: 校验 jwxt-lite 样例数据
-        run: npm run validate -- examples/jwxt-lite
-
       - name: 校验 minimal 样例数据
         run: npm run validate -- examples/minimal

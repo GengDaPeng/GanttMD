@@ -6,6 +6,24 @@
   "bin": {
     "ganttmd": "bin/ganttmd.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GengDaPeng/GanttMD.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GengDaPeng/GanttMD/issues"
+  },
+  "homepage": "https://github.com/GengDaPeng/GanttMD#readme",
+  "files": [
+    "bin/",
+    "src/",
+    "web/",
+    "docs/",
+    "examples/minimal/",
+    "README.md",
+    "SCHEMA.md",
+    "LICENSE"
+  ],
   "directories": {
     "example": "examples"
   },
