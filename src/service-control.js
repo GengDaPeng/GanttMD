@@ -131,7 +131,14 @@ function stopServerProcess(options = {}) {
   } catch {
     // 进程可能已经退出，后面统一写入 stopped 状态。
   }
-  waitUntilStopped(Number(state.pid));
+  if (!waitUntilStopped(Number(state.pid))) {
+    try {
+      process.kill(Number(state.pid), 'SIGKILL');
+    } catch {
+      // 进程可能在 SIGTERM 等待后刚好退出。
+    }
+    waitUntilStopped(Number(state.pid), 1000);
+  }
 
   const stopped = {
     ...state,
