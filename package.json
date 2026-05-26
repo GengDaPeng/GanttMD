@@ -1,6 +1,6 @@
 {
   "name": "ganttmd",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Markdown-native 项目进度管理工具，面向 AI Agent 开发场景。",
   "main": "src/validator.js",
   "bin": {
@@ -18,7 +18,10 @@
     "bin/",
     "src/",
     "web/",
-    "docs/",
+    "docs/新项目初始化指南.md",
+    "docs/Agent协作规则模板.md",
+    "docs/任务字段说明.md",
+    "docs/Follow-up清单机制.md",
     "examples/minimal/",
     "README.md",
     "SCHEMA.md",
