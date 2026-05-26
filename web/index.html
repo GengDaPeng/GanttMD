@@ -233,6 +233,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
 .mod-tag.worktree { background: #eef2ff; color: var(--accent); border: 1px solid #c7d2fe; }
 .branch-row { margin-top: 6px; display: flex; }
 .branch-tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; padding: 1px 7px; border-radius: 4px; background: #eef2ff; color: var(--accent); border: 1px solid #c7d2fe; }
+.completed-branch-tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; padding: 1px 7px; border-radius: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 .rel-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 7px; }
 .rel-pill { font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--border); background: var(--soft); color: var(--muted); }
 .rel-pill.warn { border-color: #fecaca; background: #fef2f2; color: var(--blocked); font-weight: 650; }
@@ -2274,6 +2275,7 @@ function renderTaskCard(t, focus) {
   const onCritical = state.criticalSet.has(t.id);
   const hasConstraints = t.downstream_constraints?.length > 0;
   const expanded = t.id === state.focusId;
+  const completedBranch = !t._worktreeBranch && t.status === 'done' && t.completed_branch;
   return `<div class="task-card-wrap ${expanded ? 'expanded' : ''}">
     <div class="task-card status-${status} ${relationClass}" data-task-id="${esc(t.id)}">
       <div class="task-head">
@@ -2289,6 +2291,7 @@ function renderTaskCard(t, focus) {
         <span class="mod-tag">${esc(moduleLabel(t._businessModule))}</span>
       </div>
       ${t._worktreeBranch ? `<div class="branch-row"><span class="branch-tag">${esc(t._worktreeBranch)}</span></div>` : ''}
+      ${completedBranch ? `<div class="branch-row"><span class="completed-branch-tag">完成分支 ${esc(t.completed_branch)}</span></div>` : ''}
       <div class="rel-row">
         ${onCritical ? `<span class="rel-pill cp">关键路径</span>` : ''}
         ${t._openDeps.length ? `<span class="rel-pill warn">↑${t._openDeps.length} 阻塞</span>` : ''}

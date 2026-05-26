@@ -236,10 +236,11 @@ CI 里也直接运行同一条命令：
 已完成和已取消任务不要直接删除。推荐流程是：
 
 1. 任务进入 `done` 时填写 `completed_date`；缺失时 validator 会回退使用 `closed_at` 或 `updated_at`。
-2. 任务进入 `cancelled` 时填写 `closed_at` 或 `cancelled_at`；缺失时 validator 会回退使用 `updated_at`。
-3. `ganttmd validate` 每次运行时检查是否超过 7 天归档阈值。
-4. 超过阈值后，validate 只提示“可归档”，不自动写文件。
-5. 看板维护者可补 `archived_at` 和 `archived_reason` 手动归档；恢复时删除这两个字段。
-6. 未来如提供 `ganttmd archive --apply`，再由显式命令移动到历史文件。
+2. 如果任务由分支或 worktree 完成，主控把任务改为 `done` 时建议填写 `completed_branch`，用于保留完成来源；它不代表任务仍在该分支上活跃承接。
+3. 任务进入 `cancelled` 时填写 `closed_at` 或 `cancelled_at`；缺失时 validator 会回退使用 `updated_at`。
+4. `ganttmd validate` 每次运行时检查是否超过 7 天归档阈值。
+5. 超过阈值后，validate 只提示“可归档”，不自动写文件。
+6. 看板维护者可补 `archived_at` 和 `archived_reason` 手动归档；恢复时删除这两个字段。
+7. 未来如提供 `ganttmd archive --apply`，再由显式命令移动到历史文件。
 
 不建议做后台定时自动清理。GanttMD 是文件真相源，自动写文件应尽量可见、可审查、可回滚。

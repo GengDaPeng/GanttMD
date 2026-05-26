@@ -129,6 +129,7 @@ updated_at: 2026-05-25
 | `evidence` | 完成态必填 | PR、commit、测试报告或文档证据 |
 | `verification` | 工程完成态必填 | 测试命令、CI、手工验证或未验证原因 |
 | `review_status` | review 必填 | 任务级复核状态，只允许 `pending`、`passed`、`deferred`；`done` 如填写必须为 `passed` |
+| `completed_branch` | 完成态建议 | 完成本任务的分支名，用于任务闭环后的历史追踪；不代表当前活跃 worktree |
 | `blocked_reason` | 显式 blocked 必填 | 阻塞原因 |
 | `downstream_constraints` | 多下游建议 | 实现时不得破坏的下游约束 |
 | `created_at` / `updated_at` | 建议 | 创建和更新时间 |

@@ -159,7 +159,7 @@ Agent 不会天然知道 GanttMD 的存在，可以通过目标项目的 `AGENTS
 - 执行任务时读取当前任务的 `source_docs`；它是需求、设计或证据依据，不是第二套进度真相源。
 - 优先领取 `status: todo` 且依赖已完成的任务。
 - 领取时更新为 `in_progress`，并补 `agent` 或 `owner`。
-- 完成时补 `evidence`，必要时补 `verification` 和 `review_status`。
+- 完成时补 `evidence`，必要时补 `verification`、`review_status` 和 `completed_branch`。
 - 遗留事项必须登记到 `.ganttmd/followups.md`，不能只写在聊天总结里。
 - 多分支并行时，可用 `.ganttmd/runs.md` 记录领取批次，并在任务内维护 checklist。
 

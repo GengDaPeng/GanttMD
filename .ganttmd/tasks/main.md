@@ -21,6 +21,7 @@ next_action: 已完成 MVP 范围说明
 acceptance: [核心用户路径明确, 非目标能力已列出, 后续任务可引用范围边界]
 evidence: [source-docs/product.md]
 review_status: passed
+completed_branch: feature/mvp-scope
 completed_date: 2026-05-25
 ```
 
@@ -41,6 +42,7 @@ next_action: 已完成 README 和样例说明
 acceptance: [README 说明项目用途, 示例文档可被新贡献者找到, 校验命令写清楚]
 evidence: [README.md, .ganttmd/README.md]
 review_status: passed
+completed_branch: docs/onboarding
 completed_date: 2026-05-25
 ```
 
@@ -62,6 +64,7 @@ acceptance: [有主导航, 有空状态, 移动端布局不溢出]
 evidence: [web/index.html]
 verification: npm test
 review_status: passed
+completed_branch: feature/app-shell
 completed_date: 2026-05-25
 ```
 
@@ -83,6 +86,7 @@ acceptance: [有 notes 列表接口, 有 notes 保存接口, 错误返回结构�
 evidence: [source-docs/architecture.md]
 verification: npm test
 review_status: passed
+completed_branch: feature/notes-api
 completed_date: 2026-05-25
 ```
 
@@ -104,6 +108,7 @@ acceptance: [CI 可安装依赖, 单测可运行, 样例数据可校验]
 evidence: [.github/workflows/ci.yml]
 verification: npm test && npm run validate
 review_status: passed
+completed_branch: infra/basic-ci
 completed_date: 2026-05-25
 ```
 

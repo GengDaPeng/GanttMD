@@ -25,6 +25,7 @@
 - 领取已存在任务。
 - 更新当前任务的 `status`、`owner` / `agent`、`evidence` 和 `verification`。
 - 完成交付后可写 `status: review` 和 `review_status: pending`；`passed` / `deferred` 由主控或维护者填写。
+- 主控把任务改为 `status: done` 时，建议同时填写 `completed_branch` 记录完成分支。
 - `status: done` 不强制填写 `review_status`；如果填写，只能是 `passed`。
 - 维护当前任务内的 checklist。
 - 追加 `status: open` 的 follow-up。
