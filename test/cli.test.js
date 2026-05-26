@@ -4,7 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const cliPath = path.join(__dirname, '..', 'bin', 'ganttmd.js');
-const minimalPath = path.join(__dirname, '..', 'examples', 'minimal');
+const samplePath = path.join(__dirname, '..');
 
 test('ganttmd --version 输出 package 版本', () => {
   const result = spawnSync(process.execPath, [cliPath, '--version'], { encoding: 'utf8' });
@@ -13,10 +13,10 @@ test('ganttmd --version 输出 package 版本', () => {
 });
 
 test('ganttmd validate --json 输出机器可读校验结果', () => {
-  const result = spawnSync(process.execPath, [cliPath, 'validate', minimalPath, '--json'], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [cliPath, 'validate', samplePath, '--json'], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const data = JSON.parse(result.stdout);
-  assert.equal(data.root, minimalPath);
+  assert.equal(data.root, samplePath);
   assert.equal(data.taskCount, 17);
   assert.equal(data.followupCount, 6);
   assert.equal(data.runCount, 3);

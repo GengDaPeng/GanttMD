@@ -29,3 +29,22 @@ test('project registry 支持 add/list/remove 且不依赖项目 Git', () => {
   registry = Registry.loadRegistry(registryPath);
   assert.equal(registry.projects.length, 0);
 });
+
+test('内置样例只在空登记表中写入，不覆盖已有用户项目', () => {
+  const registryPath = tempRegistryPath();
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-project-'));
+  const sampleRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-sample-'));
+  fs.mkdirSync(path.join(sampleRoot, '.ganttmd'), { recursive: true });
+  fs.writeFileSync(path.join(sampleRoot, '.ganttmd', 'config.yaml'), 'project:\n  id: sample\n');
+
+  Registry.addProject(projectRoot, {
+    id: 'user-project',
+    name: '用户项目',
+    lastOpenedAt: '2026-05-24T00:00:00.000Z',
+  }, registryPath);
+
+  const registry = Registry.ensureSampleProject(registryPath, sampleRoot);
+  assert.equal(registry.projects.length, 1);
+  assert.equal(registry.projects[0].id, 'user-project');
+  assert.equal(registry.projects[0].root, projectRoot);
+});

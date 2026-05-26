@@ -137,6 +137,53 @@ items:
   assert.equal(state.health.some((issue) => issue.message.includes('worktree 不得')), false);
 });
 
+test('worktree 复制主分支任务文件时只把 run 或 checklist 引用的任务标为分支承接', () => {
+  const mainRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-main-'));
+  const wtRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-wt-'));
+  writeBaseProject(mainRoot);
+  fs.writeFileSync(path.join(mainRoot, '.ganttmd', 'tasks', 'extra.md'), `# Extra
+
+\`\`\`ganttmd-task
+id: T-2
+title: 未领取任务
+status: todo
+dependencies: []
+track: backend
+source_docs: [docs/spec.md]
+next_action: 等待领取
+acceptance: [完成]
+evidence: []
+\`\`\`
+`);
+  fs.cpSync(path.join(mainRoot, '.ganttmd'), path.join(wtRoot, '.ganttmd'), { recursive: true });
+  fs.mkdirSync(path.join(wtRoot, 'docs'), { recursive: true });
+  fs.writeFileSync(path.join(wtRoot, 'docs', 'spec.md'), '# spec');
+  fs.writeFileSync(path.join(wtRoot, '.ganttmd', 'runs.md'), `# Runs
+
+\`\`\`ganttmd-run
+id: RUN-1
+title: 只领取一个任务
+status: active
+branch: codex/demo
+owner: codex
+tasks: [T-1]
+current_task: T-1
+\`\`\`
+`);
+
+  const state = buildRuntimeState(mainRoot, {
+    worktrees: [{
+      root: wtRoot,
+      branch: 'codex/demo',
+      head: 'abc123',
+      isDirty: false,
+      hasGanttmd: true,
+    }],
+  });
+
+  assert.deepEqual(state.worktreeProjects[0].tasks.map((task) => task.id), ['T-1']);
+});
+
 test('worktree 创建顶层任务或关闭 follow-up 时产生权限告警', () => {
   const mainRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-main-'));
   const wtRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-wt-'));

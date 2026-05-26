@@ -39,7 +39,7 @@ priority: P1
 source_docs: [source-docs/product.md]
 next_action: 已完成 README 和样例说明
 acceptance: [README 说明项目用途, 示例文档可被新贡献者找到, 校验命令写清楚]
-evidence: [README.md, examples/minimal/README.md]
+evidence: [README.md, .ganttmd/README.md]
 review_status: passed
 completed_date: 2026-05-25
 ```
@@ -102,7 +102,7 @@ source_docs: [source-docs/qa.md]
 next_action: 已完成测试与样例校验入口
 acceptance: [CI 可安装依赖, 单测可运行, 样例数据可校验]
 evidence: [.github/workflows/ci.yml]
-verification: npm test && npm run validate -- examples/minimal
+verification: npm test && npm run validate
 review_status: passed
 completed_date: 2026-05-25
 ```
@@ -184,7 +184,7 @@ priority: P1
 source_docs: [source-docs/product.md]
 next_action: 等待产品和支持同事复核是否覆盖首次使用路径
 acceptance: [说明创建笔记, 说明编辑笔记, 说明同步状态]
-evidence: [examples/minimal/README.md]
+evidence: [README.md]
 review_status: pending
 updated_at: 2026-05-25
 ```

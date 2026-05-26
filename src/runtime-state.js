@@ -63,6 +63,20 @@ function checklistSummary(project) {
   });
 }
 
+function claimedTaskIds(project) {
+  const ids = new Set();
+  for (const run of project.runs) {
+    for (const taskId of run.tasks || []) {
+      if (taskId) ids.add(taskId);
+    }
+    if (run.current_task) ids.add(run.current_task);
+  }
+  for (const checklist of project.checklists) {
+    if (checklist.task_id) ids.add(checklist.task_id);
+  }
+  return ids;
+}
+
 function loadWorktreeProjects(worktrees) {
   return worktrees
     .filter((worktree) => worktree.hasGanttmd)
@@ -175,24 +189,27 @@ function buildRuntimeState(projectRoot, options = {}) {
     tasks: mainProject.tasks,
     followups: mainProject.followups,
     checklists: checklistSummary(mainProject),
-    worktreeProjects: worktreeProjects.map((item) => ({
-      worktree: item.worktree,
-      tasks: item.project.tasks.map((task) => ({
-        id: task.id,
-        title: task.title,
-        status: task.status,
-        owner: task.owner,
-        agent: task.agent,
-        track: task.track,
-        domain: task.domain,
-        milestone: task.milestone,
-        priority: task.priority,
-        sourceFile: task.source_file,
-      })),
-      runs: item.project.runs,
-      taskStatus: Object.fromEntries(taskStatusMap(item.project)),
-      checklistSummary: checklistSummary(item.project),
-    })),
+    worktreeProjects: worktreeProjects.map((item) => {
+      const claimedIds = claimedTaskIds(item.project);
+      return {
+        worktree: item.worktree,
+        tasks: item.project.tasks.filter((task) => claimedIds.has(task.id)).map((task) => ({
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          owner: task.owner,
+          agent: task.agent,
+          track: task.track,
+          domain: task.domain,
+          milestone: task.milestone,
+          priority: task.priority,
+          sourceFile: task.source_file,
+        })),
+        runs: item.project.runs,
+        taskStatus: Object.fromEntries(taskStatusMap(item.project)),
+        checklistSummary: checklistSummary(item.project),
+      };
+    }),
     health,
     conflicts: findTaskConflicts(appearances),
   };
@@ -203,6 +220,7 @@ module.exports = {
   buildTaskAppearances,
   checkWorktreePolicy,
   checklistSummary,
+  claimedTaskIds,
   findTaskConflicts,
   loadWorktreeProjects,
   taskStatusMap,

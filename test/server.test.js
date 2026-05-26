@@ -87,3 +87,33 @@ test('本地服务提供项目列表和项目运行时状态 API', async (t) => 
   assert.equal(changed.changed, true);
   assert.ok(changed.version > state.version);
 });
+
+test('本地服务在空登记表中自动提供内置样例项目', async (t) => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-server-sample-'));
+  const registryPath = path.join(tmp, 'projects.json');
+  const sampleRoot = path.join(tmp, 'sample');
+  writeProject(sampleRoot);
+
+  const { server, url } = await startServer({
+    port: 0,
+    registryPath,
+    sampleRoot,
+    worktrees: [{
+      root: sampleRoot,
+      branch: 'main',
+      head: 'abc123',
+      isDirty: false,
+      hasGanttmd: true,
+    }],
+  });
+  t.after(() => server.close());
+
+  const projects = await getJson(`${url}/api/projects`);
+  assert.equal(projects.projects.length, 1);
+  assert.equal(projects.projects[0].id, 'acme-notes');
+  assert.equal(projects.projects[0].root, sampleRoot);
+
+  const state = await getJson(`${url}/api/state`);
+  assert.equal(state.source.projectId, 'api-demo');
+  assert.equal(state.main.taskCount, 1);
+});

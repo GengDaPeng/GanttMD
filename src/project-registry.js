@@ -6,6 +6,10 @@ function defaultRegistryPath() {
   return path.join(os.homedir(), '.ganttmd', 'projects.json');
 }
 
+function defaultSampleRoot() {
+  return path.resolve(__dirname, '..');
+}
+
 function readJsonIfExists(filePath, fallback) {
   if (!fs.existsSync(filePath)) return fallback;
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -63,6 +67,17 @@ function addProject(projectPath, options = {}, filePath = defaultRegistryPath())
   return saveRegistry(registry, filePath);
 }
 
+function ensureSampleProject(filePath = defaultRegistryPath(), sampleRoot = defaultSampleRoot()) {
+  const registry = loadRegistry(filePath);
+  if (registry.projects.length > 0) return registry;
+  if (!fs.existsSync(path.join(sampleRoot, '.ganttmd', 'config.yaml'))) return registry;
+  registry.projects.push(normalizeProjectEntry(sampleRoot, {
+    id: 'acme-notes',
+    name: 'Acme Notes 样例',
+  }));
+  return saveRegistry(registry, filePath);
+}
+
 function removeProject(idOrPath, filePath = defaultRegistryPath()) {
   const registry = loadRegistry(filePath);
   const absolute = path.resolve(idOrPath);
@@ -72,6 +87,8 @@ function removeProject(idOrPath, filePath = defaultRegistryPath()) {
 
 module.exports = {
   defaultRegistryPath,
+  defaultSampleRoot,
+  ensureSampleProject,
   loadRegistry,
   saveRegistry,
   addProject,

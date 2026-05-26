@@ -48,5 +48,5 @@ ganttmd doctor
 如果从 GanttMD 仓库根目录校验内置样例，使用：
 
 ```bash
-npm run validate -- examples/minimal
+npm run validate
 ```

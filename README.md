@@ -90,12 +90,18 @@ your-project/
 
 项目接入、工具更新、卸载和 schema 迁移见 [安装、更新、卸载与迁移](docs/user/安装更新卸载与迁移.md)。
 
-也可以直接用本仓库的样例：
+本仓库根目录已经内置一套 Acme Notes 样例数据，路径与真实使用方项目一致：
 
 ```bash
-ganttmd validate examples/minimal
-ganttmd project add examples/minimal --id acme-notes --name "Acme Notes 样例"
+ganttmd validate
+ganttmd project add . --id acme-notes --name "Acme Notes 样例"
 ganttmd start
+```
+
+通过 npm 安装后，如果本机还没有登记任何 GanttMD 项目，首次启动本地看板会自动登记发行包内置的 Acme Notes 样例，方便直接学习真实 `.ganttmd/` 数据结构。准备接入自己的项目时，可以移除样例登记：
+
+```bash
+ganttmd project remove acme-notes
 ```
 
 ## 任务文件示例
@@ -241,9 +247,9 @@ ganttmd validate --json
   run: ganttmd validate
 ```
 
-## 示例
+## 内置样例
 
-`examples/minimal/` 是一个虚构的 Acme Notes 产品样例，用来展示：
+仓库根目录的 `.ganttmd/` 是一个虚构的 Acme Notes 产品样例，用来模拟真实项目部署路径并展示：
 
 - 多里程碑、多主线、多领域任务。
 - 可执行、进行中、待复核、被依赖阻塞、已完成和已取消任务。

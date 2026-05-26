@@ -153,6 +153,7 @@ function waitForProjectChange(projectRoot, since, timeoutMs = 25000) {
 
 function createRequestHandler(options = {}) {
   const registryPath = options.registryPath || Registry.defaultRegistryPath();
+  Registry.ensureSampleProject(registryPath, options.sampleRoot);
 
   return async function handleRequest(req, res) {
     const url = new URL(req.url, 'http://localhost');

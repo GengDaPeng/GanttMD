@@ -14,7 +14,7 @@
 从 GanttMD 仓库根目录校验样例：
 
 ```bash
-npm run validate -- examples/minimal
+npm run validate
 ```
 
 安装 GanttMD 后，在任意接入项目根目录运行：
