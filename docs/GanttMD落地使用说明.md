@@ -206,13 +206,14 @@ ganttmd validate /path/to/project/.ganttmd
 - 任务缺少 `milestone` 或 `track`。
 - 任务引用配置中不存在的里程碑。
 - `source_docs` 缺失或指向不存在的正式文档。
-- `in_progress` 任务缺少 `owner/agent`，或二者明显冲突。
+- `in_progress` 任务缺少 `owner/agent`。
 - `review` 任务长期未更新。
 - `done` / `cancelled` 任务关闭超过阈值后可归档。
 - `done` 任务缺少 `evidence`。
 - 工程类 `done` 任务缺少 `verification`。
-- `review` 任务缺少 `review_status`。
-- PR 审查来源 follow-up 缺少 `source_pr` 或 `source_rr`。
+- `review` 任务缺少 `review_status`，或提前写成 `passed`。
+- `done` 任务如果填写 `review_status`，但不是 `passed`。
+- PR 审查来源 follow-up 缺少 `source_pr`，或缺少 `source_rr` / `source_comment` / `source_url` 中任一追溯字段。
 - `accepted` follow-up 缺少决策说明或复核时间，或已经超过复核时间。
 
 Agent 在改动 `.ganttmd/` 后，建议先运行：

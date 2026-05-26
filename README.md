@@ -221,15 +221,16 @@ ganttmd static [path] [--out dir]       # 导出离线静态 fallback 页面
 - 任务 ID 是否重复。
 - `dependencies` 是否指向不存在的任务。
 - `status`、`kind`、`review_status` 是否非法。
+- `review_status` 是否和 `review` / `done` 状态矛盾。
 - 任务是否缺少 `milestone` 或 `track`。
 - `milestone` 是否指向配置中不存在的里程碑。
 - `source_docs` 是否缺失或指向不存在的正式文档。
-- `in_progress` 任务是否缺少 `owner/agent`，或二者明显冲突。
+- `in_progress` 任务是否缺少 `owner/agent`。
 - `review` 任务是否长期未更新。
 - `done` / `cancelled` 任务关闭超过阈值后是否可归档。
 - `done` 任务是否缺少 `evidence`。
 - 工程任务完成后是否缺少 `verification`。
-- PR follow-up 是否缺少 `source_pr` 或 `source_rr`。
+- PR follow-up 是否缺少 `source_pr`，或缺少 `source_rr` / `source_comment` / `source_url` 中任一追溯字段。
 - `accepted` follow-up 是否缺少复核时间和决策说明，或已经超过复核时间。
 
 这样 Agent 在提交前、CI 在合并前都能发现结构问题。

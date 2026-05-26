@@ -182,6 +182,9 @@ current_task: T-1
   });
 
   assert.deepEqual(state.worktreeProjects[0].tasks.map((task) => task.id), ['T-1']);
+  assert.equal(state.health.some((issue) =>
+    issue.branch === 'codex/demo' && issue.message.includes('worktree 不得写 ganttmd-task')
+  ), false);
 });
 
 test('worktree 创建顶层任务或关闭 follow-up 时产生权限告警', () => {
@@ -227,7 +230,7 @@ next_action: 维护者复核
   });
   const messages = state.health.map((issue) => issue.message);
 
-  assert.ok(messages.some((message) => message.includes('worktree 不得写 ganttmd-task')));
+  assert.ok(messages.some((message) => message.includes('worktree 不得新增顶层 ganttmd-task')));
   assert.ok(messages.some((message) => message.includes('worktree follow-up 只能保持 open')));
 });
 

@@ -6,7 +6,7 @@ const Rules = require('../src/rules.js');
 test('共享规则模块导出完整接口', () => {
   const required = [
     'TASK_STATUSES', 'TASK_KINDS', 'FOLLOWUP_STATUSES', 'FOLLOWUP_KINDS',
-    'RUN_STATUSES', 'CHECKLIST_STATUSES',
+    'RUN_STATUSES', 'CHECKLIST_STATUSES', 'REVIEW_STATUSES',
     'TASK_TRACKS', 'TRACK_ALIASES', 'ENGINEERING_TRACKS',
     'DEFAULT_REVIEW_STALE_DAYS', 'DEFAULT_ARCHIVE_AFTER_DAYS',
     'parseDate', 'daysBetween', 'normalizeTrack',
@@ -67,7 +67,7 @@ test('checkTask 对完整合法任务返回 0 issue', () => {
   assert.equal(Rules.checkTask(task, ctx).length, 0);
 });
 
-test('checkTask 命中 review 超期与 owner/agent 冲突等关键规则', () => {
+test('checkTask 命中 review 超期，但 owner/agent 可表达负责人和执行者', () => {
   const ctx = Rules.defaultContext({
     now: new Date('2026-05-23T00:00:00Z'),
     milestoneIds: new Set(['M1']),
@@ -91,8 +91,138 @@ test('checkTask 命中 review 超期与 owner/agent 冲突等关键规则', () =
     _downstreamCount: 0,
   };
   const issues = Rules.checkTask(task, ctx);
-  assert.ok(issues.some(i => i.text.includes('owner 与 agent 不一致')));
+  assert.equal(issues.filter(i => i.text.includes('owner 与 agent 不一致')).length, 0);
   assert.ok(issues.some(i => i.text.includes('review 状态超过')));
+});
+
+test('checkTask 拦截非法 review_status，PR 返修不使用 must_fix', () => {
+  const ctx = Rules.defaultContext({
+    now: new Date('2026-05-23T00:00:00Z'),
+    milestoneIds: new Set(['M1']),
+    sourceDocExists: null,
+  });
+  const task = {
+    id: 'REVIEW-BAD',
+    title: '非法复核状态',
+    status: 'review',
+    kind: 'task',
+    track: 'docs',
+    milestone: 'M1',
+    dependencies: [],
+    source_docs: ['docs/spec.md'],
+    evidence: ['PR#1'],
+    review_status: 'must_fix',
+    updated_at: '2026-05-23',
+    _openDeps: [],
+    _missingDeps: [],
+    _downstreamCount: 0,
+  };
+  const issues = Rules.checkTask(task, ctx);
+  assert.ok(issues.some(i => i.level === 'warn' && i.field === 'review_status' && i.text.includes('review_status 非法')));
+});
+
+test('checkTask 允许项目显式扩展 review_status 枚举', () => {
+  const ctx = Rules.defaultContext({
+    now: new Date('2026-05-23T00:00:00Z'),
+    milestoneIds: new Set(['M1']),
+    sourceDocExists: null,
+    reviewStatuses: ['pending', 'passed', 'deferred', 'must_fix'],
+  });
+  const task = {
+    id: 'REVIEW-CUSTOM',
+    title: '自定义复核状态',
+    status: 'review',
+    kind: 'task',
+    track: 'docs',
+    milestone: 'M1',
+    dependencies: [],
+    source_docs: ['docs/spec.md'],
+    evidence: ['PR#1'],
+    review_status: 'must_fix',
+    updated_at: '2026-05-23',
+    _openDeps: [],
+    _missingDeps: [],
+    _downstreamCount: 0,
+  };
+  const issues = Rules.checkTask(task, ctx);
+  assert.equal(issues.filter(i => i.field === 'review_status').length, 0);
+});
+
+test('checkTask 拦截 done 任务携带未通过的 review_status', () => {
+  const ctx = Rules.defaultContext({
+    now: new Date('2026-05-23T00:00:00Z'),
+    milestoneIds: new Set(['M1']),
+    sourceDocExists: null,
+  });
+  const task = {
+    id: 'DONE-PENDING',
+    title: '完成但仍待复核',
+    status: 'done',
+    kind: 'task',
+    track: 'docs',
+    milestone: 'M1',
+    dependencies: [],
+    source_docs: ['docs/spec.md'],
+    evidence: ['PR#1'],
+    review_status: 'pending',
+    completed_date: '2026-05-23',
+    _openDeps: [],
+    _missingDeps: [],
+    _downstreamCount: 0,
+  };
+  const issues = Rules.checkTask(task, ctx);
+  assert.ok(issues.some(i => i.level === 'warn' && i.field === 'review_status' && i.text.includes('done 任务如果填写 review_status')));
+});
+
+test('checkTask 拦截 review 任务提前标记 passed', () => {
+  const ctx = Rules.defaultContext({
+    now: new Date('2026-05-23T00:00:00Z'),
+    milestoneIds: new Set(['M1']),
+    sourceDocExists: null,
+  });
+  const task = {
+    id: 'REVIEW-PASSED',
+    title: '复核中但已通过',
+    status: 'review',
+    kind: 'task',
+    track: 'docs',
+    milestone: 'M1',
+    dependencies: [],
+    source_docs: ['docs/spec.md'],
+    evidence: ['PR#1'],
+    review_status: 'passed',
+    updated_at: '2026-05-23',
+    _openDeps: [],
+    _missingDeps: [],
+    _downstreamCount: 0,
+  };
+  const issues = Rules.checkTask(task, ctx);
+  assert.ok(issues.some(i => i.level === 'warn' && i.field === 'review_status' && i.text.includes('review 任务不能使用 review_status: passed')));
+});
+
+test('checkTask 不强制 done 任务必须填写 review_status', () => {
+  const ctx = Rules.defaultContext({
+    now: new Date('2026-05-23T00:00:00Z'),
+    milestoneIds: new Set(['M1']),
+    sourceDocExists: null,
+  });
+  const task = {
+    id: 'DONE-NO-REVIEW',
+    title: '无需复核字段的完成任务',
+    status: 'done',
+    kind: 'task',
+    track: 'docs',
+    milestone: 'M1',
+    dependencies: [],
+    source_docs: ['docs/spec.md'],
+    evidence: ['commit:abc'],
+    completed_date: '2026-05-23',
+    _openDeps: [],
+    _missingDeps: [],
+    _downstreamCount: 0,
+  };
+  const issues = Rules.checkTask(task, ctx);
+  assert.equal(issues.filter(i => i.field === 'review_status').length, 0);
 });
 
 test('checkTask 默认 7 天后提示终态任务可归档', () => {
@@ -163,6 +293,26 @@ test('checkFollowup 对合法 follow-up 返回 0 issue', () => {
     severity: 'medium',
   };
   assert.equal(Rules.checkFollowup(f, ctx).length, 0);
+});
+
+test('checkFollowup 允许 PR review 来源用 source_comment 替代 source_rr', () => {
+  const ctx = Rules.defaultContext({ now: new Date('2026-05-23T00:00:00Z') });
+  const followup = {
+    id: 'FUP-PR',
+    title: 'PR 评论尾项',
+    kind: 'followup',
+    status: 'open',
+    source_type: 'pr_review',
+    source_pr: 'PR#12',
+    source_comment: 'https://github.com/org/repo/pull/12#discussion_r1',
+    created_by: 'codex',
+    created_at: '2026-05-23',
+    reason: '评审提出可后续处理的事项',
+    suggestion: '后续转正式任务',
+    severity: 'medium',
+  };
+  const issues = Rules.checkFollowup(followup, ctx);
+  assert.equal(issues.filter(i => i.field === 'source_pr').length, 0);
 });
 
 test('CLI 和本地服务通过同一份规则模块生成健康检查', () => {

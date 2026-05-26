@@ -1,6 +1,6 @@
 # GanttMD Schema 规范
 
-本文档定义当前版本 `.ganttmd/` 数据目录的文件结构、字段约定和校验规则。GanttMD 的任务状态真相源只放在 `.ganttmd/`；需求正文、技术设计、接口清单、测试规范、PR 讨论等仍留在项目原有正式位置，通过 `source_docs`、`source_pr`、`source_rr`、`source_commit` 引用。
+本文档定义当前版本 `.ganttmd/` 数据目录的文件结构、字段约定和校验规则。GanttMD 的任务状态真相源只放在 `.ganttmd/`；需求正文、技术设计、接口清单、测试规范、PR 讨论等仍留在项目原有正式位置，通过 `source_docs`、`source_pr`、`source_rr`、`source_comment`、`source_url`、`source_commit` 引用。
 
 ## 1. 目录结构
 
@@ -122,13 +122,13 @@ updated_at: 2026-05-25
 | `track` | 建议 | 主线，见 track 约定 |
 | `domain` | 建议 | 业务域或能力域，例如 `editor`、`sync`、`sharing` |
 | `priority` | 建议 | `P0`、`P1`、`P2`、`P3` |
-| `owner` / `agent` | 进行中必填 | 当前承接者。二者都写时必须一致 |
+| `owner` / `agent` | 进行中必填 | `owner` 表示负责人，`agent` 表示当前执行者；二者可不同 |
 | `source_docs` | 活跃任务建议 | 需求、设计、接口、测试或证据依据路径，可带章节 |
 | `next_action` | 活跃任务建议 | 下一步动作，给接手 Agent 使用 |
 | `acceptance` | 活跃任务建议 | 完成边界，不要塞入长篇需求正文 |
 | `evidence` | 完成态必填 | PR、commit、测试报告或文档证据 |
 | `verification` | 工程完成态必填 | 测试命令、CI、手工验证或未验证原因 |
-| `review_status` | review 必填 | 复核状态或复核结论 |
+| `review_status` | review 必填 | 任务级复核状态，只允许 `pending`、`passed`、`deferred`；`done` 如填写必须为 `passed` |
 | `blocked_reason` | 显式 blocked 必填 | 阻塞原因 |
 | `downstream_constraints` | 多下游建议 | 实现时不得破坏的下游约束 |
 | `created_at` / `updated_at` | 建议 | 创建和更新时间 |
@@ -142,12 +142,38 @@ updated_at: 2026-05-25
 |---|---|---|
 | `todo` | 已登记，未开工 | 依赖完成后可领取 |
 | `in_progress` | 已有 Agent 或人承接 | 必须有 `owner` 或 `agent` |
-| `review` | 已产出，等待复核、PR 或用户判断 | 必须有 `review_status`，长期不更新会报警 |
-| `done` | 已真实闭环 | 必须有 `evidence`；工程任务还要有 `verification` |
+| `review` | 已产出，等待复核、PR 或用户判断 | 必须有 `review_status`，不能提前写 `passed`，长期不更新会报警 |
+| `done` | 已真实闭环 | 必须有 `evidence`；工程任务还要有 `verification`；如填写 `review_status` 必须为 `passed` |
 | `cancelled` | 明确不做 | 必须有 `cancel_reason` 或 `resolution` |
 | `blocked` | 显式阻塞 | 允许写入，但必须有 `blocked_reason` |
 
 实际页面还会派生阻塞态：即使源数据 `status` 不是 `blocked`，只要前置依赖未完成，页面也会把任务视为当前不可执行。
+
+### review_status
+
+`review_status` 只记录任务级复核状态，不承接 PR 每轮评审意见。
+
+合法值：
+
+- `pending`：任务已有产出，等待最终复核、合并或用户判断。
+- `passed`：任务级复核通过，通常与 `status: done` 一起使用。
+- `deferred`：主控明确决定暂缓最终复核，通常应配合 follow-up 记录复查条件和时间。
+
+PR 中的 requested changes、修改意见和返工要求应保留在 PR review 或评论中，不写入 `review_status`；修完后仍回到 `review_status: pending` 等待复核。
+
+关键质量门：
+
+- `status: review` 时，`review_status` 不能是 `passed`；通过后应进入 `status: done`。
+- `status: done` 不强制填写 `review_status`，但如果填写，只能是 `passed`。
+
+默认配置不启用 `must_fix`，避免主控为了记录 PR 返修结论跨分支修改任务状态。若团队没有 PR review 流程，或确实希望把返修结论写入任务状态，可以在 `.ganttmd/config.yaml` 中显式扩展：
+
+```yaml
+ganttmd:
+  review_statuses: [pending, passed, deferred, must_fix]
+```
+
+一旦项目自定义 `review_statuses`，校验器按项目配置判断合法值。
 
 ### track 约定
 
@@ -217,7 +243,7 @@ next_review_at: 2026-06-01
 | `source_type` | 是 | `task`、`pr_review`、`discussion`、`user`、`ci` 等 |
 | `source_task` | 视来源 | 来源任务 |
 | `source_pr` | PR 来源必填 | PR 编号 |
-| `source_rr` | PR 来源必填 | PR review item 编号 |
+| `source_rr` / `source_comment` / `source_url` | PR 来源三选一 | PR review item 编号、评论链接或可追溯 URL |
 | `created_by` | 是 | 登记者 |
 | `created_at` | 是 | 登记日期 |
 | `reason` | 是 | 为什么需要登记 |
@@ -336,14 +362,15 @@ archived_reason: done_over_7_days
 - 任务是否缺少 `milestone` 或 `track`。
 - `milestone` 是否指向配置中不存在的里程碑。
 - `source_docs` 是否缺失或指向不存在的正式文档。
-- `in_progress` 是否缺少 `owner/agent`，或二者不一致。
-- `review` 是否缺少 `review_status` 或长期未更新。
+- `in_progress` 是否缺少 `owner/agent`。
+- `review` 是否缺少 `review_status`、长期未更新，或提前写成 `passed`。
+- `done` 如填写 `review_status`，是否为 `passed`。
 - `blocked` 是否缺少 `blocked_reason`。
 - `done` 是否缺少 `evidence`。
 - 工程类 `done` 是否缺少 `verification`。
 - `cancelled` 是否缺少取消原因或处理结论。
 - `done/cancelled` 是否已达到归档提醒阈值。
-- PR follow-up 是否缺少 `source_pr/source_rr`。
+- PR follow-up 是否缺少 `source_pr`，或缺少 `source_rr/source_comment/source_url` 中任一追溯字段。
 - `accepted` follow-up 是否缺少决策链或复核时间。
 - `run` 是否缺少 active 必填字段、引用不存在任务或 current_task 不属于 tasks。
 - checklist 状态是否合法，是否引用不存在任务。

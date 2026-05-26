@@ -23,9 +23,13 @@
 执行 Agent 建议只做当前任务范围内的更新：
 
 - 领取已存在任务。
-- 更新当前任务的 `status`、`owner` / `agent`、`evidence`、`verification`、`review_status`。
+- 更新当前任务的 `status`、`owner` / `agent`、`evidence` 和 `verification`。
+- 完成交付后可写 `status: review` 和 `review_status: pending`；`passed` / `deferred` 由主控或维护者填写。
+- `status: done` 不强制填写 `review_status`；如果填写，只能是 `passed`。
 - 维护当前任务内的 checklist。
 - 追加 `status: open` 的 follow-up。
+
+PR 修改意见、requested changes 和返工要求保留在 PR review 或评论中，不写入 `review_status`。
 
 ## checklist 收口
 

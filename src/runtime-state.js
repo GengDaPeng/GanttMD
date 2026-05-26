@@ -90,10 +90,11 @@ function checkWorktreePolicy(project, worktree, mainTaskIds) {
   const issues = [];
 
   for (const task of project.tasks) {
+    if (mainTaskIds.has(task.id)) continue;
     issues.push({
       level: 'warn',
       id: task.id || '(missing task id)',
-      message: 'worktree 不得写 ganttmd-task；请在主分支创建任务，在 worktree 只用 runs.md 领取任务并维护 checklist',
+      message: 'worktree 不得新增顶层 ganttmd-task；请在主分支创建任务，在 worktree 只用 runs.md 领取任务并维护 checklist',
       sourceFile: task.source_file,
       field: 'ganttmd-task',
       worktree: worktree.root,

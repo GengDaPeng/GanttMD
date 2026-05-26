@@ -37,6 +37,9 @@ function validateProject(project, options = {}) {
     now: options.now || new Date(),
     reviewStaleDays: options.reviewStaleDays != null ? options.reviewStaleDays : DEFAULT_REVIEW_STALE_DAYS,
     archiveAfterDays: options.archiveAfterDays != null ? options.archiveAfterDays : DEFAULT_ARCHIVE_AFTER_DAYS,
+    reviewStatuses: Array.isArray(project.config.ganttmd.review_statuses) && project.config.ganttmd.review_statuses.length
+      ? project.config.ganttmd.review_statuses
+      : Rules.REVIEW_STATUSES,
     milestoneIds: milestoneIds,
     sourceDocExists: (relPath) => fs.existsSync(path.resolve(project.root, relPath)),
     taskIds: null,

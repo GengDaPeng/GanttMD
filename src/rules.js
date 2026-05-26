@@ -19,6 +19,7 @@
   const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
   const RUN_STATUSES = ['planned', 'active', 'review', 'merged', 'abandoned'];
   const CHECKLIST_STATUSES = ['todo', 'in_progress', 'blocked', 'done', 'skipped'];
+  const REVIEW_STATUSES = ['pending', 'passed', 'deferred'];
   const TASK_TRACKS = ['spec', 'backend', 'frontend', 'infra', 'quality', 'docs', 'ops'];
   const TRACK_ALIASES = { quality_gate: 'quality' };
   const ENGINEERING_TRACKS = ['backend', 'frontend', 'infra'];
@@ -64,6 +65,7 @@
     const make = makeIssueFactory(id, task.source_file, issues);
     const reviewStaleDays = ctx.reviewStaleDays != null ? ctx.reviewStaleDays : DEFAULT_REVIEW_STALE_DAYS;
     const archiveAfterDays = ctx.archiveAfterDays != null ? ctx.archiveAfterDays : DEFAULT_ARCHIVE_AFTER_DAYS;
+    const reviewStatuses = Array.isArray(ctx.reviewStatuses) && ctx.reviewStatuses.length ? ctx.reviewStatuses : REVIEW_STATUSES;
 
     if (!task.title) make.warn('任务缺少 title', 'title');
     if (!task.status) make.warn('任务缺少 status', 'status');
@@ -77,10 +79,6 @@
     if (task.status === 'in_progress' && !task.owner && !task.agent) {
       make.warn('in_progress 任务缺少 owner/agent，容易造成多 Agent 撞车', 'owner');
     }
-    if (task.owner && task.agent && task.owner !== task.agent) {
-      make.warn('owner 与 agent 不一致：' + task.owner + ' / ' + task.agent, 'agent');
-    }
-
     const normalizedTrack = normalizeTrack(task.track);
     if (!task.track) {
       make.warn('任务缺少 track，无法挂载到主线视图', 'track');
@@ -112,6 +110,15 @@
     }
     if (task.status === 'review' && !task.review_status) {
       make.warn('review 任务缺少 review_status', 'review_status');
+    }
+    if (task.review_status && reviewStatuses.indexOf(task.review_status) === -1) {
+      make.warn('review_status 非法：' + task.review_status + '；PR 修改意见应保留在 PR review 中，默认任务级复核只允许 pending/passed/deferred', 'review_status');
+    }
+    if (task.status === 'done' && task.review_status && task.review_status !== 'passed') {
+      make.warn('done 任务如果填写 review_status，必须为 passed；否则应保持 review 或 deferred 流程', 'review_status');
+    }
+    if (task.status === 'review' && task.review_status === 'passed') {
+      make.warn('review 任务不能使用 review_status: passed；通过后应改为 status: done', 'review_status');
     }
     if (task.status === 'review') {
       const updatedAt = parseDate(task.updated_at);
@@ -198,8 +205,13 @@
     if (f.kind && FOLLOWUP_KINDS.indexOf(f.kind) === -1) {
       make.warn('follow-up kind 非法：' + f.kind, 'kind');
     }
-    if (f.source_type === 'pr_review' && (!f.source_pr || !f.source_rr)) {
-      make.warn('PR 审查来源 follow-up 必须填写 source_pr 和 source_rr', 'source_pr');
+    if (f.source_type === 'pr_review') {
+      if (!f.source_pr) {
+        make.warn('PR 审查来源 follow-up 必须填写 source_pr', 'source_pr');
+      }
+      if (!f.source_rr && !f.source_comment && !f.source_url) {
+        make.warn('PR 审查来源 follow-up 必须填写 source_rr、source_comment 或 source_url 之一', 'source_pr');
+      }
     }
     if (f.kind === 'decision' && !f.decision_owner) {
       make.warn('用户裁决类 follow-up 缺少 decision_owner', 'decision_owner');
@@ -337,6 +349,7 @@
       archiveAfterDays: DEFAULT_ARCHIVE_AFTER_DAYS,
       milestoneIds: null,
       sourceDocExists: null,
+      reviewStatuses: REVIEW_STATUSES,
     };
     if (overrides) {
       for (const k in overrides) ctx[k] = overrides[k];
@@ -351,6 +364,7 @@
     FOLLOWUP_KINDS: FOLLOWUP_KINDS,
     RUN_STATUSES: RUN_STATUSES,
     CHECKLIST_STATUSES: CHECKLIST_STATUSES,
+    REVIEW_STATUSES: REVIEW_STATUSES,
     TASK_TRACKS: TASK_TRACKS,
     TRACK_ALIASES: TRACK_ALIASES,
     ENGINEERING_TRACKS: ENGINEERING_TRACKS,

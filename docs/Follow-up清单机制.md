@@ -96,13 +96,14 @@ severity: medium
 | `source_task` | 来源任务 ID |
 | `source_pr` | 来源 PR，例如 `PR#42` |
 | `source_rr` | 来源 review record，例如 `RR-001` |
+| `source_comment` / `source_url` | 来源评论链接或可追溯 URL |
 | `created_by` | 记录人或 Agent |
 | `created_at` | 创建日期 |
 | `reason` | 为什么需要跟踪 |
 | `suggestion` | 建议下一步 |
 | `severity` | `low`、`medium`、`high` |
 
-来自 PR 审查的 follow-up 建议填写 `source_pr` 和 `source_rr`，便于追溯。
+来自 PR 审查的 follow-up 必须填写 `source_pr`，并在 `source_rr`、`source_comment`、`source_url` 中至少填写一个，避免 Agent 为了满足字段而编造 review record。
 
 ## 转成正式任务
 

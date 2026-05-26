@@ -103,6 +103,43 @@ converted_task: API-008
   assert(!issues.some((issue) => issue.level === 'warn' && issue.id === 'FUP-2' && issue.field === 'next_review_at'));
 });
 
+test('项目配置可以扩展 review_status 枚举', () => {
+  const root = createProject({
+    '.ganttmd/config.yaml': `ganttmd:
+  review_statuses: [pending, passed, deferred, must_fix]
+project:
+  name: Custom Review Status
+
+milestones:
+  - id: M1
+    name: 第一阶段
+`,
+    '.ganttmd/tasks/main.md': `# 主任务
+
+\`\`\`ganttmd-task
+id: T-REVIEW
+title: 自定义复核状态
+status: review
+dependencies: []
+milestone: M1
+track: docs
+source_docs: [docs/spec.md]
+next_action: 等待团队自定义复核流程
+acceptance: [完成]
+evidence: [PR#1]
+review_status: must_fix
+updated_at: 2026-05-23
+\`\`\`
+`,
+    'docs/spec.md': '# spec',
+  });
+
+  const project = loadProject(root);
+  const issues = validateProject(project, { now: new Date('2026-05-23T00:00:00Z') });
+
+  assert.equal(issues.filter((issue) => issue.field === 'review_status').length, 0);
+});
+
 test('校验器优先支持 tasks 目录并兼容 domain 字段', () => {
   const root = createProject({
     '.ganttmd/config.yaml': `project:
@@ -288,7 +325,7 @@ severity: medium
 
   assert(issues.some((issue) => issue.level === 'warn' && issue.id === 'D' && issue.message.includes('kind 非法')));
   assert(issues.some((issue) => issue.level === 'warn' && issue.id === 'D' && issue.message.includes('review 状态超过')));
-  assert(issues.some((issue) => issue.level === 'warn' && issue.id === 'D' && issue.message.includes('owner 与 agent 不一致')));
+  assert(!issues.some((issue) => issue.level === 'warn' && issue.id === 'D' && issue.message.includes('owner 与 agent 不一致')));
   assert(issues.some((issue) => issue.level === 'warn' && issue.id === 'D' && issue.message.includes('source_docs')));
   assert(issues.some((issue) => issue.level === 'warn' && issue.id === 'E' && issue.message.includes('in_progress 任务缺少 owner/agent')));
   assert(issues.some((issue) => issue.level === 'warn' && issue.id === 'FUP-3' && issue.message.includes('超过 next_review_at')));
