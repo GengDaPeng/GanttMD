@@ -2019,33 +2019,91 @@ function getAgentHandoff(task) {
   return '状态信息不足。';
 }
 
+function getBranchCommand(task) {
+  const type = inferBranchType(task);
+  const taskId = normalizeTaskId(task.id);
+  const topic = inferBranchTopic(task);
+  return `bash scripts/new-task.sh ${type} ${taskId || '-'} ${topic}`;
+}
+
+function inferBranchType(task) {
+  const text = `${task.id || ''} ${task.title || ''} ${task.track || ''} ${task.domain || ''}`.toLowerCase();
+  if (task.track === 'frontend' || task.track === 'backend') return 'feature';
+  if (task.track === 'spec') return 'docs';
+  if (text.includes('fix') || text.includes('修复') || text.includes('缺陷')) return 'fix';
+  if (text.includes('refactor') || text.includes('重构')) return 'refactor';
+  if (text.includes('ci') || text.includes('脚本') || text.includes('门禁')) return 'chore';
+  if (task.track === 'quality' || task.track === 'ops' || task.track === 'infra') return 'chore';
+  return 'docs';
+}
+
+function normalizeTaskId(id) {
+  const normalized = String(id || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return normalized || '-';
+}
+
+function inferBranchTopic(task) {
+  const text = `${task.title || ''} ${task.next_action || ''} ${task.domain || ''}`.toLowerCase();
+  const keywordTopics = [
+    { keys: ['本地代理', '真实后端联调', 'vite_access_mode'], topic: 'frontend-backend-proxy' },
+    { keys: ['scoperesolver', 'scope resolver', '查询端'], topic: 'scope-resolver-query' },
+    { keys: ['escalation', '升级 run', '升级扫描'], topic: 'escalation-run' },
+    { keys: ['物理落点', 'prisma'], topic: 'attendance-db-placement' },
+    { keys: ['通知意图'], topic: 'notification-intent' },
+    { keys: ['设备输入'], topic: 'device-input' },
+    { keys: ['验收清单'], topic: 'acceptance-checklist' },
+    { keys: ['部署', '运维'], topic: 'deployment-runbook' },
+  ];
+  const matched = keywordTopics.find(item => item.keys.some(key => text.includes(key)));
+  if (matched) return matched.topic;
+
+  const domainTopics = {
+    safety_attendance: 'attendance',
+    master_data: 'master-data',
+    auth_permission: 'auth-scope',
+    device_input: 'device-input',
+    notification: 'notification',
+    data_lifecycle: 'data-lifecycle',
+    local_dev: 'local-dev',
+    project_governance: 'project-governance',
+    crosscutting: 'crosscutting',
+    identity: 'identity',
+  };
+  if (task.domain && domainTopics[task.domain]) return domainTopics[task.domain];
+  if (task.track === 'frontend') return 'frontend-task';
+  if (task.track === 'backend') return 'backend-task';
+  if (task.track === 'spec') return 'spec-task';
+  if (task.track === 'quality') return 'quality-task';
+  if (task.track === 'infra') return 'infra-task';
+  return 'task';
+}
+
 function getAgentCommand(task) {
   const taskFile = taskCardPath(task);
   const sourceDocs = getTaskSourceDocs(task);
-  const sources = sourceDocs.length ? sourceDocs.join(', ') : '任务卡已包含足够执行信息，按需再补正式依据文档';
+  const sources = sourceDocs.length ? sourceDocs.map(doc => `- ${doc}`).join('\n') : '- 任务卡已包含足够执行信息，按需再补正式依据文档';
   const nextAction = task.next_action || '按任务描述推进下一步工作';
   const acceptance = task.acceptance?.length ? task.acceptance.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. 补充本任务的验收标准\n2. 完成后补充 evidence';
+  const constraints = task.downstream_constraints?.length ? task.downstream_constraints.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. 无额外下游约束；按任务卡和正式规范执行。';
+  const branchCommand = getBranchCommand(task);
   if (task._missingDeps?.length) {
-    return `任务 ${task.id} 的依赖数据不完整。\n先读取任务卡：${taskFile}\n再读取来源文档：${sources}\n修正 dependencies 中不存在的任务：${task._missingDeps.join(', ')}。\n修正后重新判断它是否可执行，不要直接开始实现。`;
+    return `任务 ${task.id} 的依赖数据不完整。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行。本任务涉及 Git / 分支时，按 docs/工程方法与规范/Git工作流与提交规范.md §0 路由执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n必读事实源：\n${sources}\n\n处理要求：\n修正 dependencies 中不存在的任务：${task._missingDeps.join(', ')}。\n修正后重新判断它是否可执行，不要直接开始实现。`;
   }
   if (task.blocked_reason) {
-    return `不建议领取 ${task.id}：${task.title || ''}\n当前存在外部阻塞：${task.blocked_reason}。`;
+    return `不建议领取 ${task.id}：${task.title || ''}\n\n当前存在外部阻塞：\n${task.blocked_reason}。`;
   }
   if (task._effective === 'blocked') {
-    return `不建议领取 ${task.id}：${task.title || ''}\n当前被 ${task._openDeps.length} 个前置任务阻塞：${task._openDeps.join(', ')}。`;
+    return `不建议领取 ${task.id}：${task.title || ''}\n\n当前被 ${task._openDeps.length} 个前置任务阻塞：${task._openDeps.join(', ')}。`;
   }
-  const constraintText = task.downstream_constraints?.length
-    ? `\n\n⚠ 下游约束（实现时必须考虑）：\n${task.downstream_constraints.map((c, i) => `${i + 1}. ${c}`).join('\n')}`
-    : '';
   const cpText = state.criticalSet.has(task.id) ? '\n注意：本任务在关键路径上，延迟会直接影响里程碑交付。' : '';
   if (task._effective === 'todo') {
-    return `领取任务 ${task.id}：${task.title || ''}\n1. 读取任务卡：${taskFile}\n2. 读取来源文档：${sources}\n3. 将该任务 status 更新为 in_progress，并补充 owner/agent 与 start_date。\n4. 下一步动作：${nextAction}\n5. 按以下验收标准收口：\n${acceptance}\n6. 完成后在任务卡补充 evidence，再将 status 更新为 done。${constraintText}${cpText}`;
+    return `你接手任务 ${task.id}：${task.title || ''}。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行。本任务涉及 Git / 分支时，按 docs/工程方法与规范/Git工作流与提交规范.md §0 路由执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n建议开工命令：\n\`\`\`bash\n${branchCommand}\n\`\`\`\n\n必读事实源：\n${sources}\n\n任务目标：\n${nextAction}\n\n验收口径：\n${acceptance}\n\n不做项 / 下游约束：\n${constraints}\n\n交付要求：\n更新任务卡 status / evidence / verification / review_status，并按工作流规范 §6 / §8 / §9 完成验证、PR 证据和回写。${cpText}`;
   }
   if (task.status === 'in_progress') {
-    return `接续进行中任务 ${task.id}：${task.title || ''}\n1. 读取任务卡：${taskFile}\n2. 读取来源文档：${sources}\n3. 核对当前 owner/agent 与实际接手人是否一致。\n4. 下一步动作：${nextAction}\n5. 按以下验收标准检查进度：\n${acceptance}${constraintText}${cpText}`;
+    return `接续进行中任务 ${task.id}：${task.title || ''}。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行。本任务涉及 Git / 分支时，按 docs/工程方法与规范/Git工作流与提交规范.md §0 路由执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n必读事实源：\n${sources}\n\n任务目标：\n${nextAction}\n\n验收口径：\n${acceptance}\n\n不做项 / 下游约束：\n${constraints}\n\n接续要求：\n核对当前 owner / agent 与实际接手人是否一致；更新任务卡 status / evidence / verification / review_status，并按工作流规范 §6 / §8 / §9 完成验证、PR 证据和回写。${cpText}`;
   }
   if (task.status === 'review') {
-    return `复核任务 ${task.id}：${task.title || ''}\n1. 读取任务卡：${taskFile}\n2. 读取来源文档：${sources}\n3. 检查 evidence、verification 和 review_status 是否完整。\n4. 如复核通过，将 status 更新为 done；如必须修，登记修复任务或退回 in_progress。${constraintText}${cpText}`;
+    return `复核任务 ${task.id}：${task.title || ''}。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行；复核按工作流规范 §7 执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n必读事实源：\n${sources}\n\n验收口径：\n${acceptance}\n\n不做项 / 下游约束：\n${constraints}\n\n复核要求：\n检查 evidence、verification 和 review_status 是否完整。如复核通过，将 status 更新为 done；如必须修，登记修复任务或退回 in_progress。${cpText}`;
   }
   if (task.status === 'done') {
     const downstream = state.children.get(task.id) || [];
