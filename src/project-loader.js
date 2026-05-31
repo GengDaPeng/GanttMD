@@ -71,6 +71,7 @@ function parseTask(raw, sourceFile) {
   task.acceptance = toArray(task.acceptance);
   task.evidence = toArray(task.evidence);
   task.downstream_constraints = toArray(task.downstream_constraints);
+  task.verification_commands = toArray(task.verification_commands);
   return task;
 }
 

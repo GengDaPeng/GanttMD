@@ -18,8 +18,12 @@ test('Agent 指令草案由任务字段生成可复制开工模板', () => {
   assert.ok(html.includes('bash scripts/new-task.sh'), '指令草案必须包含统一分支创建脚本');
   assert.ok(html.includes('必读事实源'), '指令草案必须展开 source_docs');
   assert.ok(html.includes('任务目标'), '指令草案必须展开 next_action');
-  assert.ok(html.includes('验收口径'), '指令草案必须展开 acceptance');
-  assert.ok(html.includes('不做项 / 下游约束'), '指令草案必须展开 downstream_constraints');
+  assert.ok(html.includes('执行范围'), '指令草案必须展开执行范围');
+  assert.ok(html.includes('产出物 / 结果落点'), '指令草案必须展开交付落点');
+  assert.ok(html.includes('验收重点'), '指令草案必须展开 acceptance');
+  assert.ok(html.includes('边界 / 禁止事项'), '指令草案必须展开 downstream_constraints');
+  assert.ok(html.includes('验证命令'), '指令草案必须展开 verification_commands 或默认验证要求');
+  assert.ok(html.includes('分支 / worktree 要求'), '指令草案必须展开统一分支要求');
   assert.ok(html.includes('AI solo 项目运行工作流规范.md §0'), '指令草案必须引用工作流入口而不是重复红线');
   assert.ok(html.includes('Git工作流与提交规范.md §0'), '指令草案必须引用 Git 动作路由');
 });
