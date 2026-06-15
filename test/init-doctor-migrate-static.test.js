@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 const test = require('node:test');
 
@@ -72,6 +73,62 @@ test('migrate dry-run 只生成计划，apply 写入 schema 并保留备份', ()
   assert.ok(fs.existsSync(path.join(applied.backupRoot, 'config.yaml')));
   assert.equal(fs.readFileSync(path.join(applied.backupRoot, 'config.yaml'), 'utf8'), original);
   assert.match(fs.readFileSync(configPath, 'utf8'), /ganttmd:\n  schema_version: 1/);
+});
+
+test('migrate --apply 只改 config，不改任务/followup/run 内容', () => {
+  const root = makeTempProject();
+  fs.mkdirSync(path.join(root, '.ganttmd'), { recursive: true });
+  fs.writeFileSync(path.join(root, '.ganttmd', 'config.yaml'), 'project:\n  id: demo\n  name: Demo\n');
+
+  const taskPath = path.join(root, '.ganttmd', 'tasks', 'main.md');
+  fs.mkdirSync(path.dirname(taskPath), { recursive: true });
+  fs.writeFileSync(
+    taskPath,
+    '# 主任务\n\n```ganttmd-task\nid: T-1\nstatus: done\nmilestone: M1\ntrack: docs\n```\n'
+  );
+
+  const followupsPath = path.join(root, '.ganttmd', 'followups.md');
+  fs.writeFileSync(
+    followupsPath,
+    '# Follow-up\n\n```ganttmd-followup\nid: FU-1\nstatus: open\n```\n'
+  );
+
+  const runsPath = path.join(root, '.ganttmd', 'runs.md');
+  fs.writeFileSync(
+    runsPath,
+    '# Runs\n\n```ganttmd-run\nid: R-1\nstatus: open\ncurrent_task: T-1\n```\n'
+  );
+
+  const before = {
+    task: fs.readFileSync(taskPath, 'utf8'),
+    followups: fs.readFileSync(followupsPath, 'utf8'),
+    runs: fs.readFileSync(runsPath, 'utf8'),
+  };
+
+  const beforeHash = {
+    task: crypto.createHash('sha256').update(before.task).digest('hex'),
+    followups: crypto.createHash('sha256').update(before.followups).digest('hex'),
+    runs: crypto.createHash('sha256').update(before.runs).digest('hex'),
+  };
+
+  const applied = applyMigration(root);
+  assert.equal(applied.applied, true);
+
+  const after = {
+    task: fs.readFileSync(taskPath, 'utf8'),
+    followups: fs.readFileSync(followupsPath, 'utf8'),
+    runs: fs.readFileSync(runsPath, 'utf8'),
+  };
+
+  const afterHash = {
+    task: crypto.createHash('sha256').update(after.task).digest('hex'),
+    followups: crypto.createHash('sha256').update(after.followups).digest('hex'),
+    runs: crypto.createHash('sha256').update(after.runs).digest('hex'),
+  };
+
+  assert.equal(beforeHash.task, afterHash.task);
+  assert.equal(beforeHash.followups, afterHash.followups);
+  assert.equal(beforeHash.runs, afterHash.runs);
 });
 
 test('exportStatic 生成可直接打开的静态看板', () => {
