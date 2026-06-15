@@ -98,6 +98,12 @@ closed_at: 2026-05-24
   assert.match(html, /样例任务/);
 });
 
+test('exportStatic 输出目录必须在项目内', () => {
+  const root = makeTempProject();
+  initProject(root);
+  assert.throws(() => exportStatic(root, '../outside-board'), /输出目录必须位于项目内/);
+});
+
 test('CLI 暴露 init、doctor、migrate、static 命令', () => {
   const root = makeTempProject();
 

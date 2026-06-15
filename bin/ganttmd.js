@@ -90,6 +90,12 @@ function readOption(args, name) {
   return args[index + 1] || '';
 }
 
+function parsePort(value) {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) return NaN;
+  return port;
+}
+
 function runInit(args) {
   const root = args.find((arg) => !arg.startsWith('--')) || process.cwd();
   const result = initProject(root);
@@ -244,7 +250,7 @@ function printServiceStatus(status, options = {}) {
 
 function runStart(args) {
   const portValue = readOption(args, '--port');
-  const port = portValue ? Number(portValue) : 7777;
+  const port = portValue ? parsePort(portValue) : 7777;
   if (!Number.isInteger(port) || port <= 0) {
     console.error('port 必须是正整数');
     return 1;
@@ -279,7 +285,7 @@ function runStop(args) {
 
 async function runServe(args) {
   const portValue = readOption(args, '--port');
-  const port = portValue ? Number(portValue) : 7777;
+  const port = portValue ? parsePort(portValue) : 7777;
   if (!Number.isInteger(port) || port <= 0) {
     console.error('port 必须是正整数');
     return 1;

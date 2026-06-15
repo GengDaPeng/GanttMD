@@ -8,10 +8,17 @@ const { buildRuntimeState } = require('./runtime-state.js');
 const { scanGitWorktrees } = require('./worktree-scanner.js');
 
 const watcherState = new Map();
+const MAX_REQUEST_BYTES = 32 * 1024;
+const MIN_EVENT_TIMEOUT_MS = 500;
+const MAX_EVENT_TIMEOUT_MS = 120000;
 
 function sendJson(res, statusCode, data) {
   const body = JSON.stringify(data, null, 2);
   res.writeHead(statusCode, {
+    'content-security-policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';",
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'referrer-policy': 'no-referrer',
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
   });
@@ -19,12 +26,24 @@ function sendJson(res, statusCode, data) {
 }
 
 function sendText(res, statusCode, text) {
-  res.writeHead(statusCode, { 'content-type': 'text/plain; charset=utf-8' });
+  res.writeHead(statusCode, {
+    'content-security-policy': "default-src 'self';",
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'referrer-policy': 'no-referrer',
+    'content-type': 'text/plain; charset=utf-8',
+  });
   res.end(text);
 }
 
 function sendHtml(res, html) {
-  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  res.writeHead(200, {
+    'content-security-policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';",
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'referrer-policy': 'no-referrer',
+    'content-type': 'text/html; charset=utf-8',
+  });
   res.end(html);
 }
 
@@ -34,16 +53,55 @@ function readWebIndex() {
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
-    let body = '';
-    req.setEncoding('utf8');
-    req.on('data', (chunk) => { body += chunk; });
-    req.on('end', () => resolve(body));
+    const contentLength = Number(req.headers['content-length']);
+    if (Number.isInteger(contentLength) && contentLength > MAX_REQUEST_BYTES) {
+      reject(new Error('payload_too_large'));
+      return;
+    }
+
+    const chunks = [];
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > MAX_REQUEST_BYTES) {
+        reject(new Error('payload_too_large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     req.on('error', reject);
   });
 }
 
+function parseSafeInt(value, options = {}) {
+  const { min = -Infinity, max = Infinity, defaultValue = NaN } = options;
+  if (value == null || value === '') return defaultValue;
+  if (typeof value !== 'string') return NaN;
+  if (!/^-?\d+$/.test(value)) return NaN;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) return NaN;
+  return parsed;
+}
+
+function parseBodyAsJson(req) {
+  return readBody(req).then((raw) => {
+    if (!raw) return {};
+    return JSON.parse(raw);
+  });
+}
+
+function normalizeProjectId(raw) {
+  const id = String(raw || '').trim();
+  if (!id) return '';
+  return id.slice(0, 64);
+}
+
 function findProject(registry, id) {
-  return registry.projects.find((project) => project.id === id || project.root === id);
+  if (typeof id !== 'string') return undefined;
+  const normalized = path.resolve(id);
+  return registry.projects.find((project) => project.id === id || project.root === normalized);
 }
 
 function safeScanWorktrees(projectRoot) {
@@ -175,16 +233,31 @@ function createRequestHandler(options = {}) {
       }
 
       if (req.method === 'POST' && url.pathname === '/api/projects') {
-        const payload = JSON.parse(await readBody(req) || '{}');
-        if (!payload.root) {
+        let payload;
+        try {
+          payload = await parseBodyAsJson(req);
+        } catch (bodyError) {
+          if (bodyError && bodyError.message === 'payload_too_large') {
+            sendJson(res, 413, { error: '请求体过大' });
+            return;
+          }
+          sendJson(res, 400, { error: '请求体不是合法 JSON' });
+          return;
+        }
+        if (typeof payload.root !== 'string' || !payload.root.trim()) {
           sendJson(res, 400, { error: '缺少 root' });
           return;
         }
-        const registry = Registry.addProject(payload.root, {
-          id: payload.id,
-          name: payload.name,
-        }, registryPath);
-        sendJson(res, 200, registry);
+
+        try {
+          const registry = Registry.addProject(payload.root, {
+            id: normalizeProjectId(payload.id),
+            name: payload.name,
+          }, registryPath);
+          sendJson(res, 200, registry);
+        } catch (error) {
+          sendJson(res, 400, { error: error.message });
+        }
         return;
       }
 
@@ -218,9 +291,21 @@ function createRequestHandler(options = {}) {
           sendJson(res, 404, { error: '未找到项目' });
           return;
         }
-        const since = url.searchParams.get('since') || '0';
-        const timeout = Number(url.searchParams.get('timeout') || 25000);
-        sendJson(res, 200, await waitForProjectChange(project.root, since, Number.isFinite(timeout) ? timeout : 25000));
+        const since = parseSafeInt(url.searchParams.get('since'), {
+          min: 0,
+          max: Number.MAX_SAFE_INTEGER,
+          defaultValue: 0,
+        });
+        const timeout = parseSafeInt(url.searchParams.get('timeout'), {
+          min: MIN_EVENT_TIMEOUT_MS,
+          max: MAX_EVENT_TIMEOUT_MS,
+          defaultValue: 25000,
+        });
+        if (Number.isNaN(since) || Number.isNaN(timeout)) {
+          sendJson(res, 400, { error: '参数无效：since 或 timeout' });
+          return;
+        }
+        sendJson(res, 200, await waitForProjectChange(project.root, String(since), timeout));
         return;
       }
 
@@ -234,6 +319,9 @@ function createRequestHandler(options = {}) {
 function startServer(options = {}) {
   const port = options.port !== undefined ? options.port : 7777;
   const host = options.host || '127.0.0.1';
+  if (host !== '127.0.0.1' && host !== 'localhost') {
+    throw new Error('仅允许在本机回环地址上监听服务');
+  }
   const server = http.createServer(createRequestHandler(options));
   return new Promise((resolve, reject) => {
     server.once('error', reject);

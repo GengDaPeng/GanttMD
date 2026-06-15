@@ -42,6 +42,26 @@ async function getText(url) {
   return response.text();
 }
 
+async function postJson(url, body) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body,
+  });
+  return { response, body: await response.json() };
+}
+
+async function postRaw(url, body, headers = {}) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body,
+  });
+  return { response, body: await response.json() };
+}
+
 test('本地服务提供项目列表和项目运行时状态 API', async (t) => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-server-'));
   const registryPath = path.join(tmp, 'projects.json');
@@ -88,6 +108,50 @@ test('本地服务提供项目列表和项目运行时状态 API', async (t) => 
   assert.ok(changed.version > state.version);
 });
 
+test('服务 API 对 /api/projects 进行安全输入校验', async (t) => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-server-guard-'));
+  const registryPath = path.join(tmp, 'projects.json');
+
+  const { server, url } = await startServer({
+    port: 0,
+    registryPath,
+    worktrees: [],
+  });
+  t.after(() => server.close());
+
+  const badJson = await postJson(`${url}/api/projects`, '{root:"oops"');
+  assert.equal(badJson.response.status, 400);
+  assert.equal(badJson.body.error, '请求体不是合法 JSON');
+
+  const missingRoot = await postJson(`${url}/api/projects`, JSON.stringify({}));
+  assert.equal(missingRoot.response.status, 400);
+  assert.equal(missingRoot.body.error, '缺少 root');
+
+  const invalidPath = await postJson(`${url}/api/projects`, JSON.stringify({ root: path.join(tmp, 'nope') }));
+  assert.equal(invalidPath.response.status, 400);
+  assert.match(invalidPath.body.error, /项目路径不存在或不是目录/);
+
+  const invalidEventParam = await fetch(`${url}/api/events?project=acme-notes&timeout=abc`);
+  assert.equal(invalidEventParam.status, 400);
+
+  const invalidSinceParam = await fetch(`${url}/api/events?project=acme-notes&since=1.5`);
+  assert.equal(invalidSinceParam.status, 400);
+
+  const exponentParam = await fetch(`${url}/api/events?project=acme-notes&timeout=1e3`);
+  assert.equal(exponentParam.status, 400);
+
+  const tooLarge = JSON.stringify({
+    root: path.join(tmp, 'tmp'),
+    data: 'x'.repeat(40000),
+  });
+  const largePayload = await postRaw(`${url}/api/projects`, tooLarge, {
+    'content-type': 'application/json',
+    'content-length': String(tooLarge.length),
+  });
+  assert.equal(largePayload.response.status, 413);
+  assert.equal(largePayload.body.error, '请求体过大');
+});
+
 test('本地服务在空登记表中自动提供内置样例项目', async (t) => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-server-sample-'));
   const registryPath = path.join(tmp, 'projects.json');
@@ -116,4 +180,10 @@ test('本地服务在空登记表中自动提供内置样例项目', async (t) =
   const state = await getJson(`${url}/api/state`);
   assert.equal(state.source.projectId, 'api-demo');
   assert.equal(state.main.taskCount, 1);
+});
+
+test('startServer 仅允许监听本机回环地址', () => {
+  assert.throws(() => {
+    startServer({ port: 0, host: '0.0.0.0', registryPath: path.join(os.tmpdir(), 'not-used') });
+  }, /仅允许在本机回环地址上监听服务/);
 });

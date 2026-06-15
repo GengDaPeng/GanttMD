@@ -1,7 +1,24 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawnSync, spawn } = require('node:child_process');
+
+const MAX_STATE_PAYLOAD_BYTES = 128 * 1024;
+
+function isLikelyGanttServerProcess(pid, expectedCommand) {
+  const targetPid = Number(pid);
+  if (!Number.isInteger(targetPid) || targetPid <= 0) return false;
+  try {
+    const result = spawnSync('ps', ['-p', String(targetPid), '-o', 'command='], { encoding: 'utf8' });
+    if (result.error || result.status !== 0) return false;
+    const command = (result.stdout || '').trim();
+    if (command.includes('ganttmd.js serve')) return true;
+    if (!expectedCommand) return false;
+    return command.includes(expectedCommand);
+  } catch (_error) {
+    return false;
+  }
+}
 
 function defaultStatePath() {
   return process.env.GANTTMD_SERVER_STATE || path.join(os.homedir(), '.ganttmd', 'server.json');
@@ -10,7 +27,12 @@ function defaultStatePath() {
 function readJson(filePath, fallback) {
   try {
     if (!fs.existsSync(filePath)) return fallback;
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const stat = fs.statSync(filePath);
+    if (stat.size > MAX_STATE_PAYLOAD_BYTES) return fallback;
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return fallback;
+    return parsed;
   } catch {
     return fallback;
   }
@@ -18,7 +40,10 @@ function readJson(filePath, fallback) {
 
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(value, null, 2) + '\n');
+  const serialized = JSON.stringify(value, null, 2) + '\n';
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(tempPath, serialized);
+  fs.renameSync(tempPath, filePath);
 }
 
 function isProcessAlive(pid) {
@@ -41,11 +66,13 @@ function readServerState(statePath = defaultStatePath()) {
     };
   }
   const running = state.status !== 'stopped' && isProcessAlive(state.pid);
+  const validManagedProcess = isLikelyGanttServerProcess(state.pid, state.command);
+  const normalizedRunning = running && validManagedProcess;
   return {
     ...state,
-    running,
+    running: normalizedRunning,
     statePath,
-    message: running ? 'GanttMD Local 正在运行' : 'GanttMD Local 未启动',
+    message: normalizedRunning ? 'GanttMD Local 正在运行' : 'GanttMD Local 未启动',
   };
 }
 
@@ -58,6 +85,10 @@ function sleepSync(ms) {
 
 function startServerProcess(options = {}) {
   const statePath = options.statePath || defaultStatePath();
+  const port = options.port || 7777;
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error('端口号必须在 1 到 65535 之间');
+  }
   const existing = readServerState(statePath);
   if (existing.running) {
     return {
@@ -66,9 +97,12 @@ function startServerProcess(options = {}) {
     };
   }
 
-  const port = options.port || 7777;
   const host = options.host || '127.0.0.1';
+  if (host !== '127.0.0.1' && host !== 'localhost') {
+    throw new Error('仅允许绑定本机回环地址');
+  }
   const cliPath = options.cliPath || path.join(__dirname, '..', 'bin', 'ganttmd.js');
+  const command = `${process.execPath} ${cliPath} serve --port ${port}`;
   const args = [cliPath, 'serve', '--port', String(port)];
   const env = {
     ...process.env,
@@ -87,6 +121,7 @@ function startServerProcess(options = {}) {
 
   const state = {
     status: 'running',
+    command,
     pid: child.pid,
     port,
     host,
@@ -114,6 +149,7 @@ function waitUntilStopped(pid, timeoutMs = 2000) {
 function stopServerProcess(options = {}) {
   const statePath = options.statePath || defaultStatePath();
   const state = readJson(statePath, null);
+  const pid = state && Number(state.pid);
   if (!state || !state.pid || !isProcessAlive(state.pid)) {
     const stopped = {
       ...(state || {}),
@@ -126,8 +162,34 @@ function stopServerProcess(options = {}) {
     return stopped;
   }
 
+  if (pid === process.pid) {
+    const stopped = {
+      ...(state || {}),
+      status: 'stopped',
+      running: false,
+      statePath,
+      stoppedAt: new Date().toISOString(),
+      message: '当前进程不能用于 stop，避免误杀',
+    };
+    writeJson(statePath, stopped);
+    return stopped;
+  }
+
+  if (!isLikelyGanttServerProcess(pid, state.command)) {
+    const stopped = {
+      ...(state || {}),
+      status: 'stopped',
+      running: false,
+      statePath,
+      stoppedAt: new Date().toISOString(),
+      message: '状态文件中的进程非 GanttMD 服务，已中止 stop',
+    };
+    writeJson(statePath, stopped);
+    return stopped;
+  }
+
   try {
-    process.kill(Number(state.pid), 'SIGTERM');
+    process.kill(pid, 'SIGTERM');
   } catch {
     // 进程可能已经退出，后面统一写入 stopped 状态。
   }
@@ -153,6 +215,14 @@ function stopServerProcess(options = {}) {
 
 function openUrl(url) {
   if (!url) return;
+  if (!/^https?:\/\//.test(url)) return;
+  if (/[\r\n]/.test(url)) return;
+  try {
+    const parsed = new URL(url);
+    if (!['127.0.0.1', 'localhost'].includes(parsed.hostname)) return;
+  } catch {
+    return;
+  }
   const platform = os.platform();
   if (platform === 'darwin') {
     const child = spawn('open', [url], { detached: true, stdio: 'ignore' });

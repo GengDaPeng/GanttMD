@@ -30,6 +30,29 @@ test('project registry 支持 add/list/remove 且不依赖项目 Git', () => {
   assert.equal(registry.projects.length, 0);
 });
 
+test('loadRegistry 会忽略损坏的项目记录', () => {
+  const registryPath = tempRegistryPath();
+  const invalid = {
+    projects: [
+      { id: 'ok', root: fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-project-')) },
+      { id: 'bad/id', root: '/tmp' },
+      { root: '/tmp' },
+    ],
+  };
+  fs.writeFileSync(registryPath, JSON.stringify(invalid));
+
+  const registry = Registry.loadRegistry(registryPath);
+  assert.equal(registry.projects.length, 1);
+  assert.equal(registry.projects[0].id, 'ok');
+});
+
+test('addProject 会拒绝不存在的目录路径', () => {
+  const registryPath = tempRegistryPath();
+  assert.throws(() => {
+    Registry.addProject('/tmp/ganttmd-should-not-exist', { id: 'bad' }, registryPath);
+  }, /项目路径不存在/);
+});
+
 test('内置样例只在空登记表中写入，不覆盖已有用户项目', () => {
   const registryPath = tempRegistryPath();
   const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-project-'));
@@ -47,4 +70,14 @@ test('内置样例只在空登记表中写入，不覆盖已有用户项目', ()
   assert.equal(registry.projects.length, 1);
   assert.equal(registry.projects[0].id, 'user-project');
   assert.equal(registry.projects[0].root, projectRoot);
+});
+
+test('loadRegistry 对超大 registry 文件采用降级策略', () => {
+  const registryPath = tempRegistryPath();
+  fs.writeFileSync(registryPath, JSON.stringify({
+    projects: new Array(100000).fill({ id: 'x'.repeat(200), root: '/tmp' }),
+  }));
+
+  const registry = Registry.loadRegistry(registryPath);
+  assert.equal(registry.projects.length, 0);
 });
