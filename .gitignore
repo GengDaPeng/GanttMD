@@ -3,6 +3,7 @@ node_modules/
 .ganttmd/.backup/
 
 # Spec Kit 生成的本机 Agent 集成文件，不作为项目真相源同步
+*.tgz
 .agents/
 .specify/
 .claude/
