@@ -22,9 +22,9 @@ ganttmd --help
 
 ## 快速开始
 
-```bash
-cd /path/to/your-project
+在目标项目根目录执行：
 
+```bash
 ganttmd init                # 创建 .ganttmd/ 骨架，不覆盖已有文件
 ganttmd validate            # 校验任务结构（0 warning 才继续）
 ganttmd project add .       # 登记到本机看板
@@ -47,6 +47,16 @@ your-project/
 ```
 
 > 项目只保存 `.ganttmd/` 数据，工具本体不提交到目标项目。
+
+### 新项目起步建议
+
+不要第一天就写太细。推荐起步规模：
+
+- 3 个里程碑，2-4 个任务文件，10-20 个任务。
+- 每个任务只写必要字段（id、title、status、dependencies）。
+- 等项目真实推进一轮后，再补 `next_action`、`acceptance`、`source_docs` 的细节。
+
+务必把 `docs/Agent协作规则模板.md` 复制到项目根目录 `AGENTS.md`——Agent 不会天然知道 GanttMD 的存在，必须通过 `AGENTS.md` 明确告诉它任务文件在哪、怎么领取、怎么完成。
 
 ## 任务文件示例
 
@@ -120,14 +130,9 @@ views:
 
 ## 文档
 
-- [Schema 规范](SCHEMA.md)
-- [新项目初始化指南](docs/新项目初始化指南.md)
-- [任务字段说明](docs/任务字段说明.md)
-- [Follow-up 清单机制](docs/Follow-up清单机制.md)
-- [AI Agent 协作边界](docs/人机协作使用路径与边界.md)
-- [AI 生成初始任务文件指南](docs/AI生成进度文档指南.md)
-- [校验检查流程图](docs/校验脚本检查流程图.md)
-- [安装、更新、卸载与迁移](docs/user/安装更新卸载与迁移.md)
+- [Schema 规范](SCHEMA.md) — 文件格式、字段约定、校验规则、人机协作边界
+- [Agent 协作规则模板](docs/Agent协作规则模板.md) — 复制到目标项目 `AGENTS.md`
+- [安装、更新、卸载与迁移](docs/user/安装更新卸载与迁移.md) — 工具生命周期管理
 
 ## 许可证
 

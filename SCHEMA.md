@@ -1,6 +1,8 @@
 # GanttMD Schema 规范
 
-本文档定义当前版本 `.ganttmd/` 数据目录的文件结构、字段约定和校验规则。GanttMD 的任务状态真相源只放在 `.ganttmd/`；需求正文、技术设计、接口清单、测试规范、PR 讨论等仍留在项目原有正式位置，通过 `source_docs`、`source_pr`、`source_rr`、`source_comment`、`source_url`、`source_commit` 引用。
+本文档定义 `.ganttmd/` 数据目录的文件结构、字段约定、校验规则和人机协作边界。
+
+GanttMD 的任务状态真相源只放在 `.ganttmd/`；需求正文、技术设计、接口清单、测试规范、PR 讨论等仍留在项目原有正式位置，通过 `source_docs`、`source_pr`、`source_rr`、`source_comment`、`source_url`、`source_commit` 引用。
 
 ## 1. 目录结构
 
@@ -73,6 +75,8 @@ validation:
 | `validation.review_stale_days` | number | `review` 状态多久未更新算滞留 |
 | `validation.archive_after_days` | number | `done/cancelled` 关闭多久后提示归档，默认 7 天 |
 
+里程碑建议控制在 3-5 个。不要把每个模块都写成里程碑。如果项目已有完整路线图，可以把暂时没有任务的里程碑也写入——页面会显示为 `0 任务 · 未拆解`。
+
 ## 3. 任务文件
 
 任务写在 `.ganttmd/tasks/*.md` 的 fenced YAML 代码块中。代码块外可以写人类补充说明，但工具只解析 `ganttmd-task` 块。
@@ -109,55 +113,73 @@ updated_at: 2026-05-25
 补充说明写在任务块外。
 ````
 
-### 任务字段
+### 3.1 任务字段
 
 | 字段 | 必需 | 说明 |
 |---|---:|---|
-| `id` | 是 | 全项目唯一任务 ID |
-| `title` | 是 | 任务标题 |
-| `kind` | 否 | `task`、`bugfix`、`ad_hoc`、`review`、`harness` |
-| `status` | 是 | 任务状态，见下表 |
+| `id` | 是 | 稳定任务编号，全项目唯一，不能随意改名 |
+| `title` | 是 | 人类可读任务标题 |
+| `kind` | 否 | `task`、`bugfix`、`ad_hoc`、`review`、`harness`；未填写按 `task` 理解 |
+| `status` | 是 | `todo`、`in_progress`、`review`、`done`、`cancelled` |
 | `dependencies` | 是 | 前置任务 ID 数组；无依赖写 `[]` |
 | `milestone` | 建议 | 对应 `config.yaml` 中的里程碑 ID |
 | `track` | 建议 | 主线，见 track 约定 |
 | `domain` | 建议 | 业务域或能力域，例如 `editor`、`sync`、`sharing` |
 | `priority` | 建议 | `P0`、`P1`、`P2`、`P3` |
-| `owner` / `agent` | 进行中必填 | `owner` 表示负责人，`agent` 表示当前执行者；二者可不同 |
+| `owner` | 进行中必填 | 负责人 |
+| `agent` | 进行中必填 | 当前执行者；`owner` 和 `agent` 可不同 |
 | `source_docs` | 活跃任务建议 | 需求、设计、接口、测试或证据依据路径，可带章节 |
-| `next_action` | 活跃任务建议 | 下一步动作，给接手 Agent 使用 |
-| `acceptance` | 活跃任务建议 | 完成边界，不要塞入长篇需求正文 |
+| `next_action` | 活跃任务建议 | 下一步具体动作，给接手 Agent 使用 |
+| `acceptance` | 活跃任务建议 | 完成边界，建议 2-4 条；不要塞入长篇需求正文 |
 | `evidence` | 完成态必填 | PR、commit、测试报告或文档证据 |
 | `verification` | 工程完成态必填 | 测试命令、CI、手工验证或未验证原因 |
-| `review_status` | review 必填 | 任务级复核状态，只允许 `pending`、`passed`、`deferred`；`done` 如填写必须为 `passed` |
-| `completed_branch` | 完成态建议 | 完成本任务的分支名，用于任务闭环后的历史追踪；不代表当前活跃 worktree |
+| `review_status` | review 必填 | 任务级复核状态，见 review_status 节 |
+| `completed_branch` | 完成态建议 | 完成本任务的分支名，用于闭环后的历史追踪 |
 | `blocked_reason` | 显式 blocked 必填 | 阻塞原因 |
 | `downstream_constraints` | 多下游建议 | 实现时不得破坏的下游约束 |
-| `created_at` / `updated_at` | 建议 | 创建和更新时间 |
-| `completed_date` / `closed_at` | 关闭态建议 | 完成或关闭日期，用于归档提醒 |
-| `cancel_reason` / `resolution` | cancelled 必填其一 | 取消原因或处理结论 |
-| `archived_at` / `archived_reason` | 归档时填写 | 归档日期和原因 |
+| `created_at` | 建议 | 创建时间 |
+| `updated_at` | 建议 | 最后更新日期 |
+| `completed_date` | 关闭态建议 | 完成日期，用于归档提醒 |
+| `closed_at` | 关闭态建议 | 终态关闭日期 |
+| `cancel_reason` | cancelled 必填其一 | 取消原因 |
+| `resolution` | cancelled 必填其一 | 处理结论 |
+| `archived_at` | 归档时填写 | 归档日期；归档后默认从活跃看板隐藏 |
+| `archived_reason` | 归档时填写 | 归档原因，如 `done_over_7_days` |
 
-### 任务状态
+### 3.2 状态
 
 | 状态 | 含义 | 关键规则 |
 |---|---|---|
 | `todo` | 已登记，未开工 | 依赖完成后可领取 |
 | `in_progress` | 已有 Agent 或人承接 | 必须有 `owner` 或 `agent` |
-| `review` | 已产出，等待复核、PR 或用户判断 | 必须有 `review_status`，不能提前写 `passed`，长期不更新会报警 |
-| `done` | 已真实闭环 | 必须有 `evidence`；工程任务还要有 `verification`；如填写 `review_status` 必须为 `passed` |
+| `review` | 已产出，等待复核 | 必须有 `review_status` |
+| `done` | 已真实闭环 | 必须有 `evidence`；工程任务还要有 `verification` |
 | `cancelled` | 明确不做 | 必须有 `cancel_reason` 或 `resolution` |
-| `blocked` | 显式阻塞 | 允许写入，但必须有 `blocked_reason` |
 
-实际页面还会派生阻塞态：即使源数据 `status` 不是 `blocked`，只要前置依赖未完成，页面也会把任务视为当前不可执行。
+`blocked` 默认不作为源状态写入任务。页面根据 `dependencies` 和 `blocked_reason` 自动推导阻塞展示。如果确实需要显式写 `status: blocked`，必须同时填写 `blocked_reason`。
 
-### review_status
+`done` 和 `cancelled` 任务不要直接删除。超过 7 天归档阈值后，validator 会提示"可归档"，可补 `archived_at` 和 `archived_reason`。归档不是源状态——不要把 `status` 改成 `archived`。
+
+### 3.3 kind
+
+| kind | 含义 |
+|---|---|
+| `task` | 常规计划内任务；未填写时按 task 理解 |
+| `bugfix` | 缺陷修复 |
+| `ad_hoc` | 计划外临时任务 |
+| `review` | 复核、审查或确认任务 |
+| `harness` | 工具、脚手架、AI 工作流或测试夹具任务 |
+
+计划外工作不要只留在聊天里。若需要进入任务治理，应登记为 `kind: ad_hoc` 或 `kind: bugfix`。
+
+### 3.4 review_status
 
 `review_status` 只记录任务级复核状态，不承接 PR 每轮评审意见。
 
-合法值：
+合法值（默认）：
 
-- `pending`：任务已有产出，等待最终复核、合并或用户判断。
-- `passed`：任务级复核通过，通常与 `status: done` 一起使用。
+- `pending`：任务已有产出，等待最终复核、合并或用户判断（执行 Agent 填写）。
+- `passed`：任务级复核通过，通常与 `status: done` 一起使用（主控或维护者填写）。
 - `deferred`：主控明确决定暂缓最终复核，通常应配合 follow-up 记录复查条件和时间。
 
 PR 中的 requested changes、修改意见和返工要求应保留在 PR review 或评论中，不写入 `review_status`；修完后仍回到 `review_status: pending` 等待复核。
@@ -167,7 +189,7 @@ PR 中的 requested changes、修改意见和返工要求应保留在 PR review 
 - `status: review` 时，`review_status` 不能是 `passed`；通过后应进入 `status: done`。
 - `status: done` 不强制填写 `review_status`，但如果填写，只能是 `passed`。
 
-默认配置不启用 `must_fix`，避免主控为了记录 PR 返修结论跨分支修改任务状态。若团队没有 PR review 流程，或确实希望把返修结论写入任务状态，可以在 `.ganttmd/config.yaml` 中显式扩展：
+若团队没有 PR review 流程，或确实希望把返修结论写入任务状态，可在 `.ganttmd/config.yaml` 中显式扩展：
 
 ```yaml
 ganttmd:
@@ -176,7 +198,9 @@ ganttmd:
 
 一旦项目自定义 `review_statuses`，校验器按项目配置判断合法值。
 
-### track 约定
+### 3.5 track 和 domain
+
+`track` 表达工作主线，`domain` 表达业务域或能力域。
 
 当前合法主线：
 
@@ -186,16 +210,16 @@ spec, backend, frontend, infra, quality, docs, ops
 
 旧别名 `quality_gate` 会被识别，但校验会提示改成 `quality`。
 
-`track` 只表达主线分工，`domain` 表达业务域或能力域。比如通知功能可以写：
+例如离线同步后端 API：
 
 ```yaml
 track: backend
-domain: notification
+domain: sync
 ```
 
-如果同一功能横跨多端，应拆成多个任务，通过 `domain: notification` 串起来，而不是把所有内容塞进一个“大通知任务”。
+如果同一功能横跨多端，应拆成多个任务，通过 `domain` 串起来，而不是把所有内容塞进一个"大通知任务"。
 
-### source_docs 规则
+### 3.6 source_docs
 
 `source_docs` 只引用正式依据，不是第二套进度系统。路径相对项目根目录，可带章节：
 
@@ -205,11 +229,46 @@ source_docs:
   - docs/architecture.md §同步模型
 ```
 
-任务状态、阻塞、完成证据和 follow-up 只写 `.ganttmd/`。正式需求、技术细节、接口字段和测试规范留在被引用文档中。
+不要写 `docs/技术方案.md` 这类笼统路径。不把任务说明本身写进 `source_docs`。
+
+### 3.7 next_action 和 acceptance
+
+`next_action` 写下一步具体动作，不写文档名。好的写法：`明确后端目录、模块边界和启动入口`。不好：`阅读 docs/技术方案.md`（读文档是准备动作）。
+
+`acceptance` 写 2-4 条任务级完成边界，不搬源文档的完整验收标准。
+
+### 3.8 evidence 和 verification
+
+`evidence` 写完成证据：
+
+```yaml
+evidence: [docs/后端工程骨架专项设计.md, commit:abcdef]
+```
+
+不同任务类型的证据要求：
+
+| 任务类型 | 必须证据 | 建议证据 |
+|---|---|---|
+| 代码实现 | PR 或 commit | verification、review_status |
+| 工程配置 | commit 或配置文件路径 | verification |
+| 规格/设计文档 | 正式文档章节 | review_status |
+| 调研/决策 | decision 记录 | source_docs |
+
+`verification` 可以写测试命令、CI、手工验证，也可以明确写未验证原因。
+
+### 3.9 任务正文
+
+任务块外可以写补充说明：背景说明、当前状态、外部阻塞、人类补充备注。不适合写：需要机器稳定解析的字段、任务状态、依赖列表。
 
 ## 4. Follow-up 清单
 
-`followups.md` 使用 `ganttmd-followup` 代码块。
+`followups.md` 使用 `ganttmd-followup` 代码块，用来记录"当前任务中发现，但不应直接混入当前任务范围"的后续事项。
+
+典型场景：后续复查风险、暂缓处理的改进、外部输入或设计确认、PR 审查留下的可追踪事项、已转正式任务的遗留项。
+
+没有写入 `.ganttmd/followups.md` 的事项，不视为进入项目跟踪。
+
+### Follow-up 示例
 
 ````markdown
 ```ganttmd-followup
@@ -238,9 +297,9 @@ next_review_at: 2026-06-01
 |---|---:|---|
 | `id` | 是 | 全项目唯一 follow-up ID |
 | `title` | 是 | 标题 |
-| `kind` | 是 | 类型，见下表 |
-| `status` | 是 | 状态，见下表 |
-| `severity` | 是 | `low`、`medium`、`high` 等风险级别 |
+| `kind` | 是 | `followup`、`decision`、`deferred`、`external_wait`、`risk` |
+| `status` | 是 | `open`、`accepted`、`converted`、`done`、`wontfix` |
+| `severity` | 是 | `low`、`medium`、`high` |
 | `source_type` | 是 | `task`、`pr_review`、`discussion`、`user`、`ci` 等 |
 | `source_task` | 视来源 | 来源任务 |
 | `source_pr` | PR 来源必填 | PR 编号 |
@@ -253,12 +312,13 @@ next_review_at: 2026-06-01
 | `accepted_by` / `accepted_at` / `decision` | accepted 必填 | 接受延期时的决策链 |
 | `converted_task` / `resolution` | converted 必填 | 转成正式任务后的任务 ID 和结论 |
 | `resolution` | done/wontfix 必填 | 关闭结论 |
+| `source_pr` | PR 来源必填 | 来源 PR 编号 |
 
-### Follow-up 类型
+来自 PR 审查的 follow-up 必须填写 `source_pr`，并在 `source_rr`、`source_comment`、`source_url` 中至少填写一个。
 
-```text
-followup, decision, deferred, external_wait, risk
-```
+### Follow-up 类型和状态
+
+**类型**：
 
 | 类型 | 含义 |
 |---|---|
@@ -268,13 +328,23 @@ followup, decision, deferred, external_wait, risk
 | `external_wait` | 等外部资料、设备、账号或环境 |
 | `risk` | 风险项，不一定立即转任务 |
 
-### Follow-up 状态
+**状态**：
 
-```text
-open, accepted, converted, done, wontfix
-```
+| 状态 | 含义 |
+|---|---|
+| `open` | 已登记，尚未清理 |
+| `accepted` | 确认后续要处理，但尚未转成正式任务 |
+| `converted` | 已转成 `.ganttmd/tasks/*.md` 正式任务 |
+| `done` | 已处理完成 |
+| `wontfix` | 明确不做，保留原因 |
 
-多 Agent 协作时，建议执行 Agent 只追加 `open` 条目，或在既有条目下追加证据/评论；关闭、删除、改为 `converted/done/wontfix` 由任务分发 Agent 或看板维护者统一处理。
+建议执行 Agent 只新增 `open`，其他状态由看板维护者统一处理。
+
+### 转成正式任务
+
+1. 在 `.ganttmd/tasks/*.md` 新增 `ganttmd-task`。
+2. 在 follow-up 中设置 `status: converted`。
+3. 填写 `converted_task` 和 `resolution`。
 
 ## 5. runs.md 与 checklist
 
@@ -334,8 +404,6 @@ items:
 | item 状态 | `todo`、`in_progress`、`blocked`、`done`、`skipped` |
 | `evidence` | 每项完成证据，可为空但完成后建议补齐 |
 
-页面会把 checklist 展示到任务抽屉和运行态面板中，帮助人类负责人看清“大任务做到了哪一步”。
-
 checklist 是执行过程记录，不是长期任务事实。父任务进入 `done` 或 `cancelled` 后，看板维护者应把 checklist 结果收口到 `evidence`、`verification`、follow-up 或新任务，然后删除 checklist；`ganttmd validate` 会输出 info 级收口提醒。
 
 ## 6. 归档规则
@@ -375,6 +443,7 @@ archived_reason: done_over_7_days
 - `accepted` follow-up 是否缺少决策链或复核时间。
 - `run` 是否缺少 active 必填字段、引用不存在任务或 current_task 不属于 tasks。
 - checklist 状态是否合法，是否引用不存在任务。
+- 父任务已 `done`/`cancelled` 但 checklist 未删除。
 
 输出分为：
 
@@ -389,7 +458,65 @@ JSON 输出：
 ganttmd validate --json
 ```
 
-## 8. 迁移和兼容
+## 8. 人机协作边界
+
+`.ganttmd/` 是任务状态数据，不是临时聊天记录。建议团队指定一个任务分发 Agent 或看板维护者负责结构性维护（创建、拆分、取消、关闭任务，调整依赖和里程碑，清理 follow-up）。
+
+执行 Agent 只处理当前任务范围：
+
+- 领取已存在任务，更新状态、`evidence`、`verification`。
+- 完成交付后可写 `status: review` 和 `review_status: pending`；`passed`/`deferred` 由主控或维护者填写。
+- 维护当前任务内的 checklist。
+- 追加 `status: open` 的 follow-up。
+- 不要修改与当前任务无关的任务状态。
+- 工作前必须读取任务列出的 `source_docs`。
+- PR 修改意见、requested changes 和返工要求保留在 PR review 或评论中，不写入 `review_status`。
+- "后续再做 / 暂不处理"等未闭环事项必须登记到 `.ganttmd/followups.md`。
+
+这个分工不是强制要求，单人项目可由开发者直接维护。
+
+`done` 应至少满足：有 `evidence`、工程类任务有 `verification`、需复核的任务有 `review_status`、剩余事项已登记为 follow-up 或新任务。
+
+## 9. 使用方项目接入
+
+接入 GanttMD 的项目，`.ganttmd/` 应作为项目根目录下的任务状态层，跟随 Git 管理。
+
+### 9.1 哪些内容放进 .ganttmd/
+
+- `config.yaml`：项目、里程碑和视图配置。
+- `tasks/*.md`：任务、状态、依赖、证据链和验收摘要。
+- `followups.md`：后续事项、决策事项、延期复核、外部等待和风险项。
+- `runs.md`：任务批次、分支承接关系和执行窗口。
+
+这些文件都应该提交到 Git——Agent 需要读取、人类需要审查、CI 可以校验。
+
+### 9.2 哪些内容不要放进 .ganttmd/
+
+- 产品需求正文、技术方案正文、数据模型正文。
+- 接口清单正文、测试规范正文。
+- PR 评论流水、长篇 AI 讨论记录。
+
+这些内容继续放在项目原来的 `docs/`、PR 或其他正式位置。`.ganttmd/` 通过 `source_docs`、`source_pr`、`source_rr`、`source_comment`、`source_url`、`source_commit` 引用它们。
+
+### 9.3 Agent 的读取路径
+
+```
+AGENTS.md
+.ganttmd/config.yaml
+相关的 .ganttmd/tasks/*.md 与 followups.md 条目
+当前任务列出的 source_docs
+```
+
+Agent 不应每次全量阅读所有任务文件。应先按任务 ID、状态、依赖或页面推荐定位相关任务，再读取必要的文件。
+
+### 9.4 最低成功标准
+
+- `ganttmd validate` 没有 warning。
+- `ganttmd doctor` 不提示 schema 落后或缺失。
+- 本地看板能读取任务，里程碑能显示，执行视角能看到下一步任务。
+- Follow-up 视图能显示清单，runs.md 能表达当前分支承接的任务批次。
+
+## 10. 迁移和兼容
 
 - 新项目使用 `.ganttmd/tasks/*.md`。
 - 旧项目中的 `.ganttmd/modules/*.md` 仍可被读取，但会逐步迁到 `tasks/`。
