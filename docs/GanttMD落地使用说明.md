@@ -24,7 +24,7 @@ AGENTS.md
   README.md               # 当前项目的 .ganttmd 操作边界说明
   config.yaml             # 项目、里程碑和视图配置
   followups.md            # 后续事项、决策事项、延期复查和外部等待
-  runs.md                 # 任务批次、分支和执行记录
+  runs.md                 # 兼容旧项目；新项目不建议提交高频运行态
   tasks/                  # 任务状态真相源
     backend.md
     frontend.md
@@ -39,7 +39,7 @@ AGENTS.md
 - `.ganttmd/config.yaml`：项目、里程碑和视图配置。
 - `.ganttmd/tasks/*.md`：任务状态真相源。
 - `.ganttmd/followups.md`：后续事项、决策事项、延期复查和外部等待。
-- `.ganttmd/runs.md`：任务批次、分支和执行状态记录。
+- `.ganttmd/runs.md`：旧版任务批次、分支和执行状态记录；新项目使用本地 runtime store。
 - `AGENTS.md`：告诉 Agent 如何读取和维护 GanttMD。
 
 ## 安装方式
@@ -139,13 +139,13 @@ Agent 的工作流：
 2. 读取 `.ganttmd/config.yaml`。
 3. 查看任务文件列表，并只读取与本次任务、推荐任务或相关依赖有关的 `.ganttmd/tasks/*.md`。
 4. 找到 `status: todo` 且依赖已完成的任务；不要求每次全量阅读所有历史任务文件。
-5. 领取前改为 `in_progress`，补 `agent` 或 `owner`。
+5. 领取分支或 worktree 时运行 `ganttmd run claim <task-id> <path> --branch <branch> --owner <agent>`，把运行态写入本地 runtime store，让看板自动显示分支正在承接的任务；业务分支不因此修改 `.ganttmd/`。
 6. 执行时读取当前任务的 `source_docs`，确认需求/设计依据。
 7. 完成后补 `evidence`、必要时补 `verification` 和 `review_status`。
 8. 如有后续事项，写入 `.ganttmd/followups.md`。
-9. 如任务在分支中连续推进，更新 `.ganttmd/runs.md`。
+9. 任务进入复核、合并或废弃时运行 `ganttmd run release <path> --branch <branch> --status review|merged|abandoned` 收口本地运行态。
 
-分支不是任务真相源。建议由任务分发 Agent 或看板维护者创建、拆分、关闭任务并清理 follow-up；执行 Agent 只领取已有任务、维护任务内 checklist、补充执行证据，并可追加 `status: open` 的 follow-up。
+分支不是任务真相源。高频运行态由本地 runtime store 承接，不进入业务 PR；`.ganttmd/runs.md` 只作为旧格式兼容。建议由任务分发 Agent 或看板维护者创建、拆分、关闭任务并清理 follow-up；执行 Agent 只领取已有任务、维护任务内 checklist、补充执行证据，并可追加 `status: open` 的 follow-up。
 
 ## 什么时候更新 GanttMD
 

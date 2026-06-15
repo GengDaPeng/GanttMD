@@ -6,6 +6,10 @@ views:
   enabled: [execution, milestone, track, module, risk, followup]
   default: execution
 
+validation:
+  review_stale_days: 3650
+  archive_after_days: 7
+
 milestones:
   - id: M1
     name: 产品骨架

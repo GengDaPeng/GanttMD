@@ -140,6 +140,52 @@ updated_at: 2026-05-23
   assert.equal(issues.filter((issue) => issue.field === 'review_status').length, 0);
 });
 
+test('项目配置可以调整 review stale 和归档提醒阈值', () => {
+  const root = createProject({
+    '.ganttmd/config.yaml': `project:
+  name: Validation Config
+
+validation:
+  review_stale_days: 30
+  archive_after_days: 30
+`,
+    '.ganttmd/tasks/main.md': `# 主任务
+
+\`\`\`ganttmd-task
+id: T-REVIEW
+title: 等待复核
+status: review
+dependencies: []
+track: docs
+source_docs: [docs/spec.md]
+next_action: 等待复核
+acceptance: [完成]
+review_status: pending
+updated_at: 2026-05-23
+\`\`\`
+
+\`\`\`ganttmd-task
+id: T-DONE
+title: 已完成
+status: done
+dependencies: []
+track: docs
+source_docs: [docs/spec.md]
+next_action: 已完成
+acceptance: [完成]
+evidence: [PR#1]
+completed_date: 2026-05-23
+\`\`\`
+`,
+    'docs/spec.md': '# spec',
+  });
+
+  const issues = validateProject(loadProject(root), { now: new Date('2026-06-14T00:00:00Z') });
+
+  assert.equal(issues.filter((issue) => issue.id === 'T-REVIEW' && issue.field === 'updated_at').length, 0);
+  assert.equal(issues.filter((issue) => issue.id === 'T-DONE' && issue.field === 'completed_date').length, 0);
+});
+
 test('校验器优先支持 tasks 目录并兼容 domain 字段', () => {
   const root = createProject({
     '.ganttmd/config.yaml': `project:

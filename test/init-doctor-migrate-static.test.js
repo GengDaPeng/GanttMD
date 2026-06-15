@@ -26,13 +26,13 @@ function writeTask(projectRoot, content) {
 test('initProject 创建最小 .ganttmd，但不覆盖已有文件', () => {
   const root = makeTempProject();
   const first = initProject(root);
-  assert.equal(first.created.length, 5);
+  assert.equal(first.created.length, 4);
   assert.ok(fs.existsSync(path.join(root, '.ganttmd', 'README.md')));
   assert.match(fs.readFileSync(path.join(root, '.ganttmd', 'README.md'), 'utf8'), /操作边界/);
   assert.ok(fs.existsSync(path.join(root, '.ganttmd', 'config.yaml')));
   assert.ok(fs.existsSync(path.join(root, '.ganttmd', 'tasks', 'main.md')));
   assert.ok(fs.existsSync(path.join(root, '.ganttmd', 'followups.md')));
-  assert.ok(fs.existsSync(path.join(root, '.ganttmd', 'runs.md')));
+  assert.equal(fs.existsSync(path.join(root, '.ganttmd', 'runs.md')), false);
 
   const taskPath = path.join(root, '.ganttmd', 'tasks', 'main.md');
   fs.writeFileSync(taskPath, '# 用户自己的任务\n');

@@ -23,7 +23,6 @@
   README.md
   config.yaml
   followups.md
-  runs.md
   tasks/
     product.md
     engineering.md
@@ -136,7 +135,8 @@ severity: medium
 1. .ganttmd/config.yaml
 2. .ganttmd/tasks/*.md
 3. .ganttmd/followups.md
-4. .ganttmd/runs.md
+
+不要为新项目生成 `.ganttmd/runs.md`。高频 worktree / 分支运行态由 `ganttmd run claim/release` 写入本机 runtime store；旧项目已有 `runs.md` 时可保留兼容。
 
 要求：
 - 任务必须有稳定 id、status、dependencies、milestone、track、domain、source_docs、next_action 和 acceptance。

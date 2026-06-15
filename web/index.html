@@ -850,7 +850,7 @@ function getWorktreeTaskOverlay(taskId) {
     if (!item.worktree?.root || item.worktree.root === mainRoot) continue;
     const task = (item.tasks || []).find(candidate => candidate.id === taskId);
     const checklist = (item.checklistSummary || []).find(candidate => candidate.taskId === taskId);
-    const activeRun = (item.runs || []).find(run => run.status === 'active' && (
+    const activeRun = (item.runs || []).find(run => run.status !== 'abandoned' && (
       run.current_task === taskId || (run.tasks || []).includes(taskId)
     ));
     if (!task && !checklist && !activeRun) continue;

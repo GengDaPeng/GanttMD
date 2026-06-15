@@ -37,7 +37,7 @@
 - 依赖未完成时，不要直接领取下游任务；先推进前置任务或登记 follow-up。
 - PR 修改意见、requested changes 和返工要求保留在 PR review 或评论中，不写入 `review_status`。
 - “后续再做 / 暂不处理 / 本轮不修”等未闭环事项必须登记到 `.ganttmd/followups.md`。
-- 多分支并行时，可用 `.ganttmd/runs.md` 记录任务批次、分支和当前任务。
+- 多分支并行时，领取后运行 `ganttmd run claim <task-id> <path> --branch <branch> --owner <agent>` 自动记录本机运行态；任务进入复核、合并或废弃时运行 `ganttmd run release <path> --branch <branch> --status review|merged|abandoned`。不要手写或提交高频运行态。
 - 大范围重排任务文件前，应先得到维护者确认。
 
 ## 提交前检查

@@ -1,13 +1,13 @@
 # Acme Notes 任务状态
 
-本目录是样例项目的任务状态数据。它只维护任务状态、依赖、阻塞、证据、follow-up 和执行批次；需求、架构和质量说明放在 `source-docs/`，并通过 `source_docs` 引用。
+本目录是样例项目的任务计划、低频状态和 follow-up 数据。高频 worktree / 分支运行态由本机 runtime store 承接；需求、架构和质量说明放在 `source-docs/`，并通过 `source_docs` 引用。
 
 ## 文件说明
 
 - `config.yaml`：项目、里程碑和视图配置。
 - `tasks/*.md`：正式任务、状态、依赖、证据链和验收摘要。
 - `followups.md`：后续事项、延期复核、外部等待和风险项。
-- `runs.md`：任务批次、分支和当前运行态。
+- `runs.md`：旧版任务批次、分支和当前运行态示例；新项目不建议提交高频运行态。
 - `README.md`：本目录的操作边界说明。
 
 ## 维护建议

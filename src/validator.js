@@ -29,14 +29,24 @@ function toCliIssue(ruleIssue) {
   };
 }
 
+function configNumber(value) {
+  if (value === undefined || value === null || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function validateProject(project, options = {}) {
   const issues = [];
   const taskById = new Map();
   const milestoneIds = new Set(project.config.milestones.map((m) => m.id).filter(Boolean));
   const context = {
     now: options.now || new Date(),
-    reviewStaleDays: options.reviewStaleDays != null ? options.reviewStaleDays : DEFAULT_REVIEW_STALE_DAYS,
-    archiveAfterDays: options.archiveAfterDays != null ? options.archiveAfterDays : DEFAULT_ARCHIVE_AFTER_DAYS,
+    reviewStaleDays: options.reviewStaleDays != null
+      ? options.reviewStaleDays
+      : (configNumber(project.config.validation.review_stale_days) ?? DEFAULT_REVIEW_STALE_DAYS),
+    archiveAfterDays: options.archiveAfterDays != null
+      ? options.archiveAfterDays
+      : (configNumber(project.config.validation.archive_after_days) ?? DEFAULT_ARCHIVE_AFTER_DAYS),
     reviewStatuses: Array.isArray(project.config.ganttmd.review_statuses) && project.config.ganttmd.review_statuses.length
       ? project.config.ganttmd.review_statuses
       : Rules.REVIEW_STATUSES,

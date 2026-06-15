@@ -3,14 +3,14 @@ const path = require('node:path');
 
 const README_CONTENT = `# GanttMD 项目任务状态
 
-本目录是项目任务状态唯一真相源。它只维护任务状态、依赖、阻塞、证据、follow-up 和 worktree 执行记录；需求、设计、接口、测试规范等正式正文仍放在项目原有 docs/ 中，并通过 source_docs 引用。
+本目录是项目任务计划、低频状态和 follow-up 的 Git 真相源。高频 worktree / 分支运行态由 GanttMD 本地 runtime store 承接，不随业务 PR 提交；需求、设计、接口、测试规范等正式正文仍放在项目原有 docs/ 中，并通过 source_docs 引用。
 
 ## 文件说明
 
 - config.yaml：项目、里程碑、视图和校验配置。
 - tasks/*.md：正式任务、状态、依赖、证据链和验收摘要。
 - followups.md：后续事项、用户裁决、延期复核、外部等待和风险项。
-- runs.md：worktree/分支领取任务、执行批次和当前运行态。
+- runs.md：旧版 worktree/分支执行批次记录；新项目不建议提交高频运行态。
 - README.md：本目录的操作边界说明。
 
 ## 操作边界
@@ -26,13 +26,14 @@ const README_CONTENT = `# GanttMD 项目任务状态
 普通 Agent 可以：
 
 - 领取主分支已有任务。
-- 更新当前任务的 status、owner/agent、evidence、verification、review_status。
+- 通过 ganttmd run claim/release 登记本机运行态。
+- 按项目规则补充当前任务的 evidence、verification 或 review_status；不要在业务分支抢写全局任务完成时间。
 - 维护当前任务内的 checklist。
 - 追加 status: open 的 follow-up。
 
 worktree/分支只能：
 
-- 通过 runs.md 记录领取和执行批次。
+- 通过本机 runtime store 记录领取和执行批次。
 - 维护当前任务内的 checklist。
 - 追加 status: open 的 follow-up。
 
@@ -106,10 +107,6 @@ acceptance: [项目至少登记一个真实任务]
 `, created);
 
   writeIfMissing(path.join(ganttRoot, 'followups.md'), `# Follow-up
-
-`, created);
-
-  writeIfMissing(path.join(ganttRoot, 'runs.md'), `# 执行批次
 
 `, created);
 

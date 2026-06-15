@@ -12,7 +12,8 @@ GanttMD 不替代需求文档、技术设计、接口清单或测试规范。它
 
 当前版本采用安装式本地工具：
 
-- 项目数据：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`、`.ganttmd/runs.md`
+- 项目数据：`.ganttmd/config.yaml`、`.ganttmd/tasks/*.md`、`.ganttmd/followups.md`；旧项目可继续保留 `.ganttmd/runs.md`
+- 本机运行态：`ganttmd run claim/release` 写入本地 runtime store，不进入业务 PR
 - 工具入口：`ganttmd` CLI，提供初始化、校验、doctor、迁移、静态导出和本地看板服务
 - 可视化：`ganttmd start` 后台启动单端口多项目看板，`ganttmd stop` 关闭服务
 - 写入方式：人或 Agent 直接编辑 Markdown；工具写文件必须是显式命令，默认 dry-run 或不覆盖
@@ -72,7 +73,7 @@ your-project/
     README.md
     config.yaml
     followups.md
-    runs.md
+    runs.md                 # 兼容旧项目；新项目不建议把高频运行态提交进 Git
     tasks/
       product.md
       engineering.md
@@ -158,10 +159,10 @@ Agent 不会天然知道 GanttMD 的存在，可以通过目标项目的 `AGENTS
 - 工作前先读取 `.ganttmd/config.yaml`，再按本次任务读取相关 `.ganttmd/tasks/*.md` 和 follow-up 条目。
 - 执行任务时读取当前任务的 `source_docs`；它是需求、设计或证据依据，不是第二套进度真相源。
 - 优先领取 `status: todo` 且依赖已完成的任务。
-- 领取时更新为 `in_progress`，并补 `agent` 或 `owner`。
+- 领取分支或 worktree 时，优先运行 `ganttmd run claim <task-id> <path> --branch <branch> --owner <agent>` 自动登记本机运行态；业务分支不再因为领取任务而修改 `.ganttmd/`。
 - 完成时补 `evidence`，必要时补 `verification`、`review_status` 和 `completed_branch`。
 - 遗留事项必须登记到 `.ganttmd/followups.md`，不能只写在聊天总结里。
-- 多分支并行时，可用 `.ganttmd/runs.md` 记录领取批次，并在任务内维护 checklist。
+- 多分支并行时，用 `ganttmd run claim/release` 维护本地 runtime store，并在任务内维护必要 checklist；`.ganttmd/runs.md` 只作为旧格式兼容。
 
 可直接使用 [Agent 协作规则模板](docs/Agent协作规则模板.md)。
 
@@ -209,6 +210,8 @@ ganttmd migrate [path] --apply          # 备份后显式迁移
 ganttmd project add <path>              # 登记到本机项目列表
 ganttmd project list                    # 查看本机已登记项目
 ganttmd project remove <id-or-path>     # 移除本机登记，不删除项目数据
+ganttmd run claim <task-id> [path]      # 在本地 runtime store 登记任务、分支和 worktree 的 active run
+ganttmd run release [path] --branch <branch> --status review|merged|abandoned
 ganttmd start [--port 7777] [--no-open] # 后台启动单端口多项目本地看板
 ganttmd status [--json]                 # 查看本地看板服务状态
 ganttmd stop [--json]                   # 关闭本地看板服务

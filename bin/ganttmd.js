@@ -8,6 +8,7 @@ const { doctorProject } = require('../src/doctor.js');
 const { planMigration, applyMigration } = require('../src/migrator.js');
 const { exportStatic } = require('../src/static-export.js');
 const ServiceControl = require('../src/service-control.js');
+const { claimRun, releaseRun } = require('../src/run-manager.js');
 
 function parseRootAndFlags(args) {
   return {
@@ -75,6 +76,8 @@ function printHelp() {
   ganttmd project add <path> [--id <id>] [--name <name>]
   ganttmd project list [--json]
   ganttmd project remove <id-or-path>
+  ganttmd run claim <task-id> [path] [--branch <branch>] [--owner <owner>] [--agent <agent>]  # 写入本地 runtime store
+  ganttmd run release [path] --branch <branch> [--status review|merged|abandoned] [--pr <PR#n>]  # 收口本地运行态
   ganttmd serve [--port 7777]
   ganttmd start [--port 7777] [--no-open]
   ganttmd status [--json]
@@ -88,6 +91,10 @@ function readOption(args, name) {
   const index = args.indexOf(name);
   if (index === -1) return '';
   return args[index + 1] || '';
+}
+
+function readPositional(args, startIndex = 0) {
+  return args.filter((arg, index) => index >= startIndex && !arg.startsWith('--') && !args[index - 1]?.startsWith('--'));
 }
 
 function runInit(args) {
@@ -227,6 +234,57 @@ function runProject(args) {
   return 1;
 }
 
+function runRun(args) {
+  const subcommand = args[0];
+  if (subcommand === 'claim') {
+    const positional = readPositional(args, 1);
+    const taskId = positional[0];
+    const root = positional[1] || process.cwd();
+    if (!taskId) {
+      console.error('缺少任务 ID：ganttmd run claim <task-id> [path]');
+      return 1;
+    }
+    const result = claimRun(root, {
+      taskId,
+      id: readOption(args, '--id') || undefined,
+      title: readOption(args, '--title') || undefined,
+      branch: readOption(args, '--branch') || undefined,
+      owner: readOption(args, '--owner') || undefined,
+      agent: readOption(args, '--agent') || undefined,
+      currentTask: readOption(args, '--current-task') || undefined,
+      intent: readOption(args, '--intent') || undefined,
+      note: readOption(args, '--note') || undefined,
+      now: readOption(args, '--date') || undefined,
+    });
+    console.log(`${result.created ? '已登记运行态' : '已更新运行态'}：${result.run.id} ${result.run.branch} -> ${result.run.current_task}`);
+    console.log(`runtime: ${result.storePath}`);
+    return 0;
+  }
+
+  if (subcommand === 'release') {
+    const positional = readPositional(args, 1);
+    const root = positional[0] || process.cwd();
+    const result = releaseRun(root, {
+      id: readOption(args, '--id') || undefined,
+      branch: readOption(args, '--branch') || undefined,
+      taskId: readOption(args, '--task') || undefined,
+      status: readOption(args, '--status') || undefined,
+      pr: readOption(args, '--pr') || undefined,
+      mergeCommit: readOption(args, '--merge-commit') || undefined,
+      note: readOption(args, '--note') || undefined,
+      now: readOption(args, '--date') || undefined,
+      endedAt: readOption(args, '--ended-at') || undefined,
+    });
+    console.log(`已更新运行态：${result.run.id} ${result.run.branch} -> ${result.run.status}`);
+    console.log(`runtime: ${result.storePath}`);
+    return 0;
+  }
+
+  console.error(`未知 run 子命令：${subcommand || ''}`);
+  printHelp();
+  return 1;
+}
+
 
 function printServiceStatus(status, options = {}) {
   if (options.json) {
@@ -348,6 +406,10 @@ async function main(argv) {
     return runProject(args.slice(1));
   }
 
+  if (command === 'run') {
+    return runRun(args.slice(1));
+  }
+
   if (command === 'serve') {
     return runServe(args.slice(1));
   }
@@ -373,6 +435,7 @@ module.exports = {
   runDoctor,
   runInit,
   runMigrate,
+  runRun,
   runStatic,
   runValidate,
 };

@@ -1,5 +1,6 @@
 const { loadProject } = require('./project-loader.js');
 const { validateProject } = require('./validator.js');
+const { runtimeRunsForRoot } = require('./runtime-store.js');
 const path = require('node:path');
 
 function taskStatusMap(project) {
@@ -77,6 +78,43 @@ function claimedTaskIds(project) {
   return ids;
 }
 
+function runClaimedTaskIds(runs) {
+  const ids = new Set();
+  for (const run of runs || []) {
+    for (const taskId of run.tasks || []) {
+      if (taskId) ids.add(taskId);
+    }
+    if (run.current_task) ids.add(run.current_task);
+  }
+  return ids;
+}
+
+function buildTaskView(task, statusOverride) {
+  return {
+    id: task.id,
+    title: task.title,
+    status: statusOverride || task.status,
+    owner: task.owner,
+    agent: task.agent,
+    track: task.track,
+    domain: task.domain,
+    milestone: task.milestone,
+    priority: task.priority,
+    sourceFile: task.source_file,
+  };
+}
+
+function runStatusByTask(runs) {
+  const map = new Map();
+  for (const run of runs || []) {
+    for (const taskId of run.tasks || []) {
+      if (taskId) map.set(taskId, run.status);
+    }
+    if (run.current_task) map.set(run.current_task, run.status);
+  }
+  return map;
+}
+
 function loadWorktreeProjects(worktrees) {
   return worktrees
     .filter((worktree) => worktree.hasGanttmd)
@@ -94,7 +132,7 @@ function checkWorktreePolicy(project, worktree, mainTaskIds) {
     issues.push({
       level: 'warn',
       id: task.id || '(missing task id)',
-      message: 'worktree 不得新增顶层 ganttmd-task；请在主分支创建任务，在 worktree 只用 runs.md 领取任务并维护 checklist',
+      message: 'worktree 不得新增顶层 ganttmd-task；请在主分支创建任务，在 worktree 使用本地 runtime store 领取任务并维护 checklist',
       sourceFile: task.source_file,
       field: 'ganttmd-task',
       worktree: worktree.root,
@@ -154,6 +192,7 @@ function buildRuntimeState(projectRoot, options = {}) {
   const worktreeProjects = loadedWorktreeProjects.filter((item) =>
     item.worktree?.root && path.resolve(item.worktree.root) !== mainRoot
   );
+  const mainRuntimeRuns = runtimeRunsForRoot(mainProject.root, { storePath: options.runtimeStorePath });
   const appearances = buildTaskAppearances(mainProject, worktreeProjects);
   const mainTaskIds = new Set(mainProject.tasks.map((task) => task.id).filter(Boolean));
   const health = [
@@ -186,27 +225,29 @@ function buildRuntimeState(projectRoot, options = {}) {
       checklistCount: mainProject.checklists.length,
     },
     worktrees,
-    runs: mainProject.runs,
+    runs: [...mainProject.runs, ...mainRuntimeRuns],
+    runtimeRuns: mainRuntimeRuns,
     tasks: mainProject.tasks,
     followups: mainProject.followups,
     checklists: checklistSummary(mainProject),
     worktreeProjects: worktreeProjects.map((item) => {
-      const claimedIds = claimedTaskIds(item.project);
+      const runtimeRuns = runtimeRunsForRoot(item.worktree.root, { storePath: options.runtimeStorePath });
+      const allRuns = [...item.project.runs, ...runtimeRuns];
+      const claimedIds = new Set([
+        ...claimedTaskIds(item.project),
+        ...runClaimedTaskIds(runtimeRuns),
+      ]);
+      const projectTaskById = new Map(item.project.tasks.map((task) => [task.id, task]));
+      const mainTaskById = new Map(mainProject.tasks.map((task) => [task.id, task]));
+      const runtimeStatus = runStatusByTask(runtimeRuns);
       return {
         worktree: item.worktree,
-        tasks: item.project.tasks.filter((task) => claimedIds.has(task.id)).map((task) => ({
-          id: task.id,
-          title: task.title,
-          status: task.status,
-          owner: task.owner,
-          agent: task.agent,
-          track: task.track,
-          domain: task.domain,
-          milestone: task.milestone,
-          priority: task.priority,
-          sourceFile: task.source_file,
-        })),
-        runs: item.project.runs,
+        tasks: Array.from(claimedIds)
+          .map((taskId) => projectTaskById.get(taskId) || mainTaskById.get(taskId))
+          .filter(Boolean)
+          .map((task) => buildTaskView(task, runtimeStatus.get(task.id))),
+        runs: allRuns,
+        runtimeRuns,
         taskStatus: Object.fromEntries(taskStatusMap(item.project)),
         checklistSummary: checklistSummary(item.project),
       };
@@ -222,6 +263,7 @@ module.exports = {
   checkWorktreePolicy,
   checklistSummary,
   claimedTaskIds,
+  runClaimedTaskIds,
   findTaskConflicts,
   loadWorktreeProjects,
   taskStatusMap,

@@ -24,7 +24,7 @@
 | `config.yaml` | 是 | 项目元信息、里程碑、视图配置和校验参数 |
 | `tasks/*.md` | 是 | 任务状态真相源，一个文件可放多个任务 |
 | `followups.md` | 建议 | follow-up、决策事项、延期项和外部等待项 |
-| `runs.md` | 建议 | 分支或执行批次记录 |
+| `runs.md` | 兼容 | 旧版分支或执行批次记录；新项目建议用本地 runtime store 承接高频运行态 |
 | `modules/*.md` | 兼容 | 旧版任务目录，新项目不推荐 |
 
 GanttMD 不再要求 `milestones/overview.md` 或 `views/timeline.json`。里程碑定义放在 `config.yaml`，页面和 CLI 运行时按 Markdown 数据实时聚合。
@@ -278,7 +278,16 @@ open, accepted, converted, done, wontfix
 
 ## 5. runs.md 与 checklist
 
-`runs.md` 用来表达分支或执行批次。它不替代 Git 事实；本地服务会同时读取任务数据，用于对照计划和执行状态。
+`runs.md` 是旧版分支或执行批次记录。它不替代 Git 事实；本地服务会继续兼容读取其中的 `ganttmd-run` 代码块。
+
+新项目的运行态首选写入本地 runtime store，而不是让 Agent 手写代码块或把高频运行态提交进业务 PR：
+
+```bash
+ganttmd run claim S-WEB-01 /path/to/worktree --branch codex/local-runtime-dashboard --owner codex
+ganttmd run release /path/to/worktree --branch codex/local-runtime-dashboard --status review
+```
+
+`claim` 会在本地 runtime store 创建或更新 `active` run；`release` 会把 run 收口为 `review`、`merged` 或 `abandoned`，并可追加 `--pr`、`--merge-commit` 作为交付证据。runtime store 是后台状态，不进入 Git；需要版本记录时，应由主控或后续 `audit sync` 生成 append-only 审计事件。
 
 ### Run 示例
 
