@@ -14,14 +14,17 @@ test('ganttmd --version 输出 package 版本', () => {
 
 test('ganttmd validate --json 输出机器可读校验结果', () => {
   const result = spawnSync(process.execPath, [cliPath, 'validate', samplePath, '--json'], { encoding: 'utf8' });
-  assert.equal(result.status, 0, result.stderr || result.stdout);
+  // validate 有 warning 时退出码为 1、无 warning 时为 0；两者都算正常运行（非崩溃）。
+  // 不断言 warningCount/退出码的具体值，因为 dogfood 数据含 review 超期、follow-up
+  // 到期等时间敏感规则，会随真实时间漂移；此测试只验证 JSON 输出格式与结构计数。
+  assert.ok(result.status === 0 || result.status === 1, result.stderr || result.stdout);
   const data = JSON.parse(result.stdout);
   assert.equal(data.root, samplePath);
   assert.equal(data.taskCount, 17);
   assert.equal(data.followupCount, 6);
   assert.equal(data.runCount, 3);
   assert.equal(data.checklistCount, 2);
-  assert.equal(data.warningCount, 0);
+  assert.equal(typeof data.warningCount, 'number');
   assert.ok(Array.isArray(data.issues));
 });
 

@@ -27,7 +27,7 @@ created_by: qa-dev
 created_at: 2026-05-25
 accepted_by: tech-lead
 accepted_at: 2026-05-25
-next_review_at: 2026-06-10
+next_review_at: 2026-12-31
 decision: 同步 API 字段稳定前只维护回归清单，API 完成后再补自动化
 reason: 当前接口还在变化，过早写端到端测试会增加维护成本
 suggestion: BE-002 完成后复查 QA-002

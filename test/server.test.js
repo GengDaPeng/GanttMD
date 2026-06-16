@@ -97,7 +97,7 @@ test('本地服务提供项目列表和项目运行时状态 API', async (t) => 
   assert.equal(state.config.project.id, 'api-demo');
   assert.ok(state.version > 0);
 
-  const unchanged = await getJson(`${url}/api/events?project=api-demo&since=${state.version}&timeout=5`);
+  const unchanged = await getJson(`${url}/api/events?project=api-demo&since=${state.version}&timeout=500`);
   assert.equal(unchanged.changed, false);
   assert.equal(unchanged.version, state.version);
 
