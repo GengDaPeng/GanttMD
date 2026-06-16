@@ -36,6 +36,34 @@ function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, '').replace('T', 'T').replace('Z', 'Z');
 }
 
+function isInsideRoot(rootPath, targetPath) {
+  const relative = path.relative(rootPath, targetPath);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function ensureManagedPath(ganttRoot, filePath) {
+  const absoluteRoot = path.resolve(ganttRoot);
+  const absoluteTarget = path.resolve(filePath);
+  if (!isInsideRoot(absoluteRoot, absoluteTarget)) {
+    throw new Error(`升级目标必须位于 .ganttmd 目录内，且不能是指向外部的符号链接：${filePath}`);
+  }
+
+  const relative = path.relative(absoluteRoot, absoluteTarget);
+  if (!relative) return;
+
+  let current = absoluteRoot;
+  for (const part of relative.split(path.sep).filter(Boolean)) {
+    current = path.join(current, part);
+    if (!fs.existsSync(current)) {
+      continue;
+    }
+    const stat = fs.lstatSync(current);
+    if (stat.isSymbolicLink()) {
+      throw new Error(`升级目标必须位于 .ganttmd 目录内，且不能是指向外部的符号链接：${filePath}`);
+    }
+  }
+}
+
 function makeBaseResult(ganttRoot) {
   return {
     ganttRoot,
@@ -133,8 +161,10 @@ function planUpgrade(projectRoot = process.cwd()) {
 
 function backupExistingFile(ganttRoot, backupRoot, filePath) {
   if (!fs.existsSync(filePath)) return;
+  ensureManagedPath(ganttRoot, filePath);
   const relative = path.relative(ganttRoot, filePath);
   const backupPath = path.join(backupRoot, relative);
+  ensureManagedPath(ganttRoot, backupPath);
   fs.mkdirSync(path.dirname(backupPath), { recursive: true });
   fs.copyFileSync(filePath, backupPath);
 }
@@ -154,6 +184,7 @@ function applyUpgrade(projectRoot = process.cwd()) {
 
   const backupRoot = path.join(plan.ganttRoot, '.backup', timestamp(), 'upgrade');
   for (const change of actionable) {
+    ensureManagedPath(plan.ganttRoot, change.file);
     ensureUnchanged(change);
     backupExistingFile(plan.ganttRoot, backupRoot, change.file);
     if (change.type === 'remove') {

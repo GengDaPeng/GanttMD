@@ -177,6 +177,23 @@ test('upgrade --apply 先备份再删除废弃文件，并更新托管 README', 
   assert.match(fs.readFileSync(path.join(root, '.ganttmd', 'config.yaml'), 'utf8'), /ganttmd:\n  schema_version: 1/);
 });
 
+test('upgrade --apply 遇到符号链接目标时拒绝写入并保留外部文件', () => {
+  const root = makeTempProject();
+  initProject(root);
+
+  const outside = path.join(os.tmpdir(), `ganttmd-outside-${crypto.randomUUID()}.yaml`);
+  fs.writeFileSync(outside, 'project:\n  id: outside\n  name: Outside\n');
+  fs.unlinkSync(path.join(root, '.ganttmd', 'config.yaml'));
+  fs.symlinkSync(outside, path.join(root, '.ganttmd', 'config.yaml'));
+  fs.writeFileSync(path.join(root, '.ganttmd', 'README.md'), LEGACY_README_CONTENT);
+
+  assert.throws(
+    () => applyUpgrade(root),
+    /升级目标必须位于 .ganttmd 目录内，且不能是指向外部的符号链接/
+  );
+  assert.equal(fs.readFileSync(outside, 'utf8'), 'project:\n  id: outside\n  name: Outside\n');
+});
+
 test('upgrade 对用户改过的废弃文件只报 warning，不自动删除', () => {
   const root = makeTempProject();
   initProject(root);
