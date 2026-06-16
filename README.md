@@ -20,15 +20,29 @@ ganttmd --version
 ganttmd --help
 ```
 
+本仓库本地开发时可直接安装当前工作树：
+
+```bash
+cd /path/to/GanttMD
+npm install -g .
+```
+
+如果只是验证本仓库当前实现，建议先跑一次：
+
+```bash
+npm test
+```
+
 ## 快速开始
 
 在目标项目根目录执行：
 
 ```bash
-ganttmd init                # 创建 .ganttmd/ 骨架，不覆盖已有文件
-ganttmd validate            # 校验任务结构（0 warning 才继续）
-ganttmd project add .       # 登记到本机看板
-ganttmd start               # 启动看板 → http://127.0.0.1:7777
+ganttmd init                              # 创建 .ganttmd/ 骨架，不覆盖已有文件
+ganttmd doctor                            # 先看 schema 和健康状态
+ganttmd validate                          # 校验任务结构（0 warning 才继续）
+ganttmd project add . --id demo --name Demo
+ganttmd start --no-open                   # 启动看板 → http://127.0.0.1:7777
 ```
 
 目标项目只提交 `.ganttmd/` 目录：
@@ -47,6 +61,16 @@ your-project/
 ```
 
 > 项目只保存 `.ganttmd/` 数据，工具本体不提交到目标项目。
+
+`ganttmd init` 当前会补齐这 5 个最小文件，但不会覆盖已有内容：
+
+- `.ganttmd/README.md`
+- `.ganttmd/config.yaml`
+- `.ganttmd/tasks/main.md`
+- `.ganttmd/followups.md`
+- `.ganttmd/runs.md`
+
+初始化后第一步不是继续堆样例，而是把 `tasks/main.md` 里的示例任务替换成项目真实任务，再执行 `doctor` 和 `validate`。
 
 ### 新项目起步建议
 
@@ -89,16 +113,29 @@ evidence: []
 | `ganttmd validate [path] [--json]` | 校验任务、follow-up、run 和 checklist |
 | `ganttmd doctor [path] [--json]` | 检查 schema 版本和项目健康 |
 | `ganttmd migrate [path] [--apply]` | 迁移 schema（默认 dry-run） |
-| `ganttmd project add <path>` | 登记项目到本机看板 |
+| `ganttmd upgrade [path] [--apply] [--json]` | 执行安全升级：补齐托管说明、schema，并受控清理已废弃旧文件 |
+| `ganttmd project add <path> [--id <id>] [--name <name>]` | 登记项目到本机看板 |
 | `ganttmd project list [--json]` | 查看已登记项目 |
 | `ganttmd project remove <id-or-path>` | 移除登记（不删项目数据） |
-| `ganttmd start [--port 7777]` | 后台启动看板服务 |
-| `ganttmd stop` | 关闭看板服务 |
+| `ganttmd start [--port 7777] [--no-open]` | 后台启动看板服务，可禁止自动打开浏览器 |
+| `ganttmd stop [--json]` | 关闭看板服务 |
 | `ganttmd status [--json]` | 查看服务状态 |
 | `ganttmd serve [--port 7777]` | 前台启动服务（调试用） |
 | `ganttmd static [path] [--out dir]` | 导出离线静态看板 |
 
 `validate --json` 和 `doctor --json` 的返回码可直接用于 CI 阻断。
+
+### 升级与迁移边界
+
+- `ganttmd doctor`、`validate`、`status`、`start/stop` 只读项目数据，不改 `.ganttmd/`。
+- `ganttmd upgrade` 是推荐入口：默认 dry-run，`--apply` 时才写盘。
+- 当前 `upgrade` 会做三类安全动作：补 `config.yaml` 的 `ganttmd.schema_version`、升级托管的 `.ganttmd/README.md`、删除命中白名单且内容仍是旧样板的废弃文件。
+- 当前废弃白名单示例包括：`.task-card.md`、`milestones/overview.md`、`views/timeline.json`。
+- 命中废弃白名单但内容已被用户改过的文件不会自动删除，只会报 warning。
+- `upgrade --apply` 写盘前会在 `.ganttmd/.backup/<timestamp>/upgrade/` 生成备份。
+- `ganttmd migrate` 仍保留为低层 schema 迁移命令；只处理 `config.yaml` 的 `schema_version`。
+
+详细操作见 [安装、更新、卸载与迁移](docs/user/安装更新卸载与迁移.md)。
 
 ## 看板视图
 

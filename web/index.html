@@ -2090,16 +2090,17 @@ function getAgentCommand(task) {
   const constraints = task.downstream_constraints?.length ? task.downstream_constraints.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. 无额外下游约束；按任务卡和正式规范执行。';
   const verification = task.verification_commands?.length ? task.verification_commands.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. ganttmd validate\n2. git diff --check\n3. 按任务类型运行对应测试 / 文档检查；无法执行时写明原因和替代验证。';
   const branchCommand = getBranchCommand(task);
+  const taskHeader = `${task.id}：${task.title || ''}`;
+  const cpText = state.criticalSet.has(task.id) ? '\n注意：本任务在关键路径上，延迟会直接影响里程碑交付。' : '';
   if (task._missingDeps?.length) {
     return `任务 ${task.id} 的依赖数据不完整。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行。本任务涉及 Git / 分支时，按 docs/工程方法与规范/Git工作流与提交规范.md §0 路由执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n必读事实源：\n${sources}\n\n处理要求：\n修正 dependencies 中不存在的任务：${task._missingDeps.join(', ')}。\n修正后重新判断它是否可执行，不要直接开始实现。`;
   }
   if (task.blocked_reason) {
-    return `不建议领取 ${task.id}：${task.title || ''}\n\n当前存在外部阻塞：\n${task.blocked_reason}。`;
+    return `不建议领取 ${taskHeader}\n\n当前存在外部阻塞：\n${task.blocked_reason}。`;
   }
   if (task._effective === 'blocked') {
-    return `不建议领取 ${task.id}：${task.title || ''}\n\n当前被 ${task._openDeps.length} 个前置任务阻塞：${task._openDeps.join(', ')}。`;
+    return `不建议领取 ${taskHeader}\n\n当前被 ${task._openDeps.length} 个前置任务阻塞：${task._openDeps.join(', ')}。`;
   }
-  const cpText = state.criticalSet.has(task.id) ? '\n注意：本任务在关键路径上，延迟会直接影响里程碑交付。' : '';
   if (task._effective === 'todo') {
     return `你接手任务 ${task.id}：${task.title || ''}。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行。本任务涉及 Git / 分支时，按 docs/工程方法与规范/Git工作流与提交规范.md §0 路由执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n## 任务目标\n${nextAction}\n\n## 执行范围\n${scope}\n\n## 产出物 / 结果落点\n${outputTarget}\n\n## 验收重点\n${acceptance}\n\n## 边界 / 禁止事项\n${constraints}\n\n## 验证命令\n${verification}\n\n## 分支 / worktree 要求\n在独立 worktree 创建任务分支：\n\`\`\`bash\n${branchCommand}\n\`\`\`\n不得在主工作区或 master 上开发，项目主控类任务例外时必须明确说明。\n\n必读事实源：\n${sources}\n\n交付要求：\n更新任务卡 status / evidence / verification / review_status，并按工作流规范 §6 / §8 / §9 完成验证、PR 证据和回写。${cpText}`;
   }
@@ -2111,14 +2112,13 @@ function getAgentCommand(task) {
   }
   if (task.status === 'done') {
     const downstream = state.children.get(task.id) || [];
-    return `复核已完成任务 ${task.id}。\n读取任务卡：${taskFile}\n读取来源文档：${sources}\n检查 evidence 是否覆盖以下验收标准：\n${acceptance}\n若已确认完成，下一步关注它的后续任务：${downstream.length ? downstream.join(', ') : '暂无后续任务'}。`;
+    return `复核已完成任务 ${task.id}。\n读取任务卡：${taskFile}\n读取来源文档：\n${sources}\n检查 PR body / evidence 是否覆盖以下验收标准：\n${acceptance}\n若已确认完成，下一步关注它的后续任务：${downstream.length ? downstream.join(', ') : '暂无后续任务'}。`;
   }
   if (task.status === 'cancelled') {
-    return `任务 ${task.id} 已取消。\n读取任务卡：${taskFile}\n读取来源文档：${sources}\n确认取消原因、剩余风险和是否需要登记 follow-up。`;
+    return `任务 ${task.id} 已取消。\n读取任务卡：${taskFile}\n读取来源文档：\n${sources}\n确认取消原因、剩余风险和是否需要登记 follow-up。`;
   }
-  return `读取任务卡：${taskFile}\n读取来源文档：${sources}\n补充任务 ${task.id} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
+  return `读取任务卡：${taskFile}\n读取来源文档：\n${sources}\n补充任务 ${task.id} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
 }
-
 function getHealthIssues() {
   const issues = [...getFollowupIssues()];
   for (const t of state.tasks) {

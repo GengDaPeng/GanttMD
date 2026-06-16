@@ -6,6 +6,7 @@ const { closeWatchers, startServer } = require('../src/server.js');
 const { initProject } = require('../src/project-init.js');
 const { doctorProject } = require('../src/doctor.js');
 const { planMigration, applyMigration } = require('../src/migrator.js');
+const { planUpgrade, applyUpgrade } = require('../src/upgrader.js');
 const { exportStatic } = require('../src/static-export.js');
 const ServiceControl = require('../src/service-control.js');
 
@@ -71,6 +72,7 @@ function printHelp() {
   ganttmd validate [path] [--json]
   ganttmd doctor [path] [--json]
   ganttmd migrate [path] [--apply] [--json]
+  ganttmd upgrade [path] [--apply] [--json]
   ganttmd static [path] [--out .ganttmd-dist]
   ganttmd project add <path> [--id <id>] [--name <name>]
   ganttmd project list [--json]
@@ -172,6 +174,61 @@ function runMigrate(args) {
   }
   if (shouldApply) {
     console.log(result.applied ? `已应用迁移，备份目录：${result.backupRoot}` : '无需迁移。');
+  }
+  return 0;
+}
+
+function printUpgradeResult(result, options = {}) {
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return 0;
+  }
+
+  console.log(`GanttMD 升级计划：${result.ganttRoot}`);
+  const sections = [
+    ['created', '创建'],
+    ['modified', '修改'],
+    ['removed', '删除'],
+  ];
+  let actionCount = 0;
+  for (const [field, label] of sections) {
+    for (const item of result[field]) {
+      actionCount++;
+      console.log(`- ${label} ${item.file}：${item.description}`);
+    }
+  }
+  for (const warning of result.warnings) {
+    console.log(`- 警告 ${warning.file}：${warning.message}`);
+  }
+  if (actionCount === 0 && result.warnings.length === 0) {
+    console.log('无需升级。');
+  } else if (actionCount === 0 && result.warnings.length > 0) {
+    console.log('当前没有可自动应用的升级项；如需处理，请先查看 warning。');
+  }
+  return 0;
+}
+
+function runUpgrade(args) {
+  const options = parseRootAndFlags(args);
+  const shouldApply = args.includes('--apply');
+  const result = shouldApply ? applyUpgrade(options.root) : planUpgrade(options.root);
+
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return 0;
+  }
+
+  printUpgradeResult(result);
+  const actionCount = result.created.length + result.modified.length + result.removed.length;
+  if (!shouldApply) {
+    if (actionCount > 0) {
+      console.log('这是 dry-run。确认后运行：ganttmd upgrade <path> --apply');
+    } else if (result.warnings.length > 0) {
+      console.log('这是 dry-run。当前只有 warning，没有自动写盘动作。');
+    }
+  }
+  if (shouldApply && result.applied) {
+    console.log(`已应用升级，备份目录：${result.backupRoot}`);
   }
   return 0;
 }
@@ -344,6 +401,10 @@ async function main(argv) {
 
   if (command === 'migrate') {
     return runMigrate(args.slice(1));
+  }
+
+  if (command === 'upgrade') {
+    return runUpgrade(args.slice(1));
   }
 
   if (command === 'static') {
