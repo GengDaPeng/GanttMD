@@ -4,9 +4,9 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { BUILTIN_AGENT_COMMAND_TEMPLATES, ejectRelativePath } = require('../src/agent-command-templates.js');
+const { BUILTIN_AGENT_COMMAND_TEMPLATES } = require('../src/agent-command-templates.js');
 const { planTemplateEject, applyTemplateEject } = require('../src/template-eject.js');
-const { loadProject } = require('../src/project-loader.js');
+const { loadProject, parseAgentCommandConfig } = require('../src/project-loader.js');
 
 const EXPECTED_KEYS = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'blocked', 'missing_deps', 'default'];
 
@@ -96,100 +96,90 @@ test('loadProject 在项目未自定义时注入全部内置模板', () => {
   }
 });
 
-test('template eject 计划：默认创建、不覆盖已存在', () => {
-  const { root, ganttRoot } = makeProject();
-  // 先放一个用户已有的 todo.md
-  const todoPath = path.join(ganttRoot, ejectRelativePath('todo'));
-  fs.mkdirSync(path.dirname(todoPath), { recursive: true });
-  fs.writeFileSync(todoPath, '用户已有内容');
+test('parseAgentCommandConfig 支持统一配置块和多行模板', () => {
+  const config = parseAgentCommandConfig(`ganttmd:
+  schema_version: 1
 
-  const plan = planTemplateEject(root);
-  const todo = plan.files.find((f) => f.key === 'todo');
-  const review = plan.files.find((f) => f.key === 'review');
-  assert.equal(todo.exists, true);
-  assert.equal(todo.willWrite, false, '已存在文件默认不覆盖');
-  assert.equal(review.exists, false);
-  assert.equal(review.willWrite, true);
-});
+agent_command:
+  execution_setup: 主控负责分支
+  delivery_requirements: PR body 写证据
+  templates:
+    default: |
+      默认 {{task.id}}
+      第二行
+    review:
+      body: |
+        复核 {{task.id}}
+    blocked:
+      body: |
+        阻塞 {{task.id}}
 
-test('template eject 应用：写文件、追加 config 映射、保留用户文件', () => {
-  const { root, ganttRoot } = makeProject();
-  const todoPath = path.join(ganttRoot, ejectRelativePath('todo'));
-  fs.mkdirSync(path.dirname(todoPath), { recursive: true });
-  fs.writeFileSync(todoPath, '用户已有内容');
-
-  const result = applyTemplateEject(root);
-
-  // todo 被跳过（用户文件保留），其它被创建
-  assert.ok(result.skipped.includes(ejectRelativePath('todo')));
-  assert.ok(result.written.includes(ejectRelativePath('review')));
-  assert.equal(fs.readFileSync(todoPath, 'utf8'), '用户已有内容', '用户已有模板未被覆盖');
-
-  // 各模板文件落地
-  for (const key of EXPECTED_KEYS) {
-    assert.ok(fs.existsSync(path.join(ganttRoot, ejectRelativePath(key))), `缺少 ${key}.md`);
-  }
-
-  // config 追加了映射（全部 8 个 key）
-  assert.equal(result.configUpdated, true);
-  const config = fs.readFileSync(path.join(ganttRoot, 'config.yaml'), 'utf8');
-  assert.match(config, /^agent_command_templates:\s*$/m);
-  for (const key of EXPECTED_KEYS) {
-    assert.match(config, new RegExp(`${key}: templates/agent/${key}\\.md`));
-  }
-
-  // 再 eject 一次：全部 key 已映射，config 不再改动，且不重复 section
-  const second = applyTemplateEject(root);
-  assert.equal(second.configUpdated, false);
-  const configAfter = fs.readFileSync(path.join(ganttRoot, 'config.yaml'), 'utf8');
-  assert.equal((configAfter.match(/^agent_command_templates:\s*$/gm) || []).length, 1);
-});
-
-test('template eject 对已有部分映射只补齐缺失 key（P2）', () => {
-  const { root, ganttRoot } = makeProject();
-  // config 已有部分映射：只配了 todo（指向用户自定义文件）
-  const configPath = path.join(ganttRoot, 'config.yaml');
-  fs.appendFileSync(configPath, `
-agent_command_templates:
-  todo: templates/agent/todo.md
+project:
+  id: demo
 `);
 
-  const result = applyTemplateEject(root);
-  assert.equal(result.configUpdated, true, '应追加缺失映射');
-
-  const config = fs.readFileSync(configPath, 'utf8');
-  // 只有一个 section，已有的 todo 保留，缺失的 review/done/blocked 等被补齐
-  assert.equal((config.match(/^agent_command_templates:\s*$/gm) || []).length, 1);
-  assert.equal((config.match(/^\s+todo: /gm) || []).length, 1, 'todo 不应重复');
-  for (const key of EXPECTED_KEYS) {
-    assert.match(config, new RegExp(`^\\s+${key}: templates/agent/${key}\\.md`, 'm'), `缺少 ${key} 映射`);
-  }
-
-  // 补齐后所有 key 都能被 loader 读到对应文件
-  const project = loadProject(root);
-  const templates = project.config.ganttmd.agent_command_templates;
-  for (const key of EXPECTED_KEYS) {
-    assert.notEqual(templates[key].builtin, true, `${key} 应来自文件而非内置注入`);
-  }
+  assert.equal(config.execution_setup, '主控负责分支');
+  assert.equal(config.delivery_requirements, 'PR body 写证据');
+  assert.equal(config.templates.default.body, '默认 {{task.id}}\n第二行');
+  assert.equal(config.templates.review.body, '复核 {{task.id}}');
+  assert.equal(config.templates.blocked.body, '阻塞 {{task.id}}');
 });
 
-test('template eject --force 拒绝写穿 symlink（P1）', () => {
+test('loadProject 支持 agent_command 主配置内联模板', () => {
   const { root, ganttRoot } = makeProject();
-  const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-outside-'));
-  const outsideFile = path.join(outsideDir, 'secret.md');
-  fs.writeFileSync(outsideFile, '外部敏感内容');
+  fs.appendFileSync(path.join(ganttRoot, 'config.yaml'), `
+agent_command:
+  execution_setup: 新执行安排
+  delivery_requirements: 新交付要求
+  templates:
+    default: |
+      统一默认 {{task.id}}
+    review:
+      body: |
+        内联复核 {{task.id}}
+    blocked:
+      body: |
+        内联阻塞 {{task.id}}
+`);
 
-  // 把 todo.md 做成指向外部的 symlink
-  const todoPath = path.join(ganttRoot, ejectRelativePath('todo'));
-  fs.mkdirSync(path.dirname(todoPath), { recursive: true });
-  fs.symlinkSync(outsideFile, todoPath);
+  const project = loadProject(root);
+  const ganttmd = project.config.ganttmd;
+  assert.equal(ganttmd.agent_command_execution_setup, '新执行安排');
+  assert.equal(ganttmd.agent_command_delivery_requirements, '新交付要求');
+  assert.equal(ganttmd.agent_command_templates.default.text, '统一默认 {{task.id}}');
+  assert.equal(ganttmd.agent_command_templates.default.inline, true);
+  assert.equal(ganttmd.agent_command_templates.review.text, '内联复核 {{task.id}}');
+  assert.equal(ganttmd.agent_command_templates.blocked.text, '内联阻塞 {{task.id}}');
+});
 
-  assert.throws(
-    () => applyTemplateEject(root, { force: true }),
-    /必须位于 .ganttmd 目录内，且不能是指向外部的符号链接/
-  );
-  // 外部文件未被写穿
-  assert.equal(fs.readFileSync(outsideFile, 'utf8'), '外部敏感内容');
+test('template eject 计划：追加统一 agent_command 配置块', () => {
+  const { root } = makeProject();
+  const plan = planTemplateEject(root);
+  assert.equal(plan.configExists, true);
+  assert.equal(plan.hasAgentCommand, false);
+  assert.equal(plan.willUpdateConfig, true);
+});
+
+test('template eject 应用：只更新 config.yaml，不创建模板文件', () => {
+  const { root, ganttRoot } = makeProject();
+  const result = applyTemplateEject(root);
+
+  assert.equal(result.configUpdated, true);
+  assert.ok(result.backupRoot, '应备份 config.yaml');
+  assert.equal(fs.existsSync(path.join(ganttRoot, 'templates')), false, '不应创建多模板文件目录');
+
+  const config = fs.readFileSync(path.join(ganttRoot, 'config.yaml'), 'utf8');
+  assert.match(config, /^agent_command:\s*$/m);
+  assert.match(config, /^\s+templates:\s*$/m);
+  for (const key of EXPECTED_KEYS) {
+    assert.match(config, new RegExp(`^\\s+${key}:\\s*$`, 'm'), `缺少 ${key} 内联模板`);
+  }
+
+  const project = loadProject(root);
+  assert.equal(project.config.ganttmd.agent_command_templates.todo.text.trim(), BUILTIN_AGENT_COMMAND_TEMPLATES.todo.trim());
+
+  const second = applyTemplateEject(root);
+  assert.equal(second.configUpdated, false, '已有 agent_command 时默认不重复追加');
 });
 
 test('template eject 拒绝 config.yaml 是外部 symlink（P1）', () => {
@@ -219,34 +209,5 @@ test('template eject 拒绝 .ganttmd 根目录是外部 symlink（P1）', () => 
     () => applyTemplateEject(root),
     /必须位于 .ganttmd 目录内，且不能是指向外部的符号链接/
   );
-  assert.equal(fs.existsSync(path.join(outsideRoot, 'templates', 'agent', 'todo.md')), false);
-});
-
-test('template eject --force 覆盖已存在文件并备份', () => {
-  const { root, ganttRoot } = makeProject();
-  const todoPath = path.join(ganttRoot, ejectRelativePath('todo'));
-  fs.mkdirSync(path.dirname(todoPath), { recursive: true });
-  fs.writeFileSync(todoPath, '旧内容');
-
-  const result = applyTemplateEject(root, { force: true });
-  assert.ok(result.written.includes(ejectRelativePath('todo')));
-  assert.equal(fs.readFileSync(todoPath, 'utf8').trim(), BUILTIN_AGENT_COMMAND_TEMPLATES.todo.trim());
-  assert.ok(result.backupRoot, '应有备份目录');
-  assert.ok(fs.existsSync(path.join(result.backupRoot, ejectRelativePath('todo'))), '备份缺少 todo.md');
-  assert.equal(fs.readFileSync(path.join(result.backupRoot, ejectRelativePath('todo')), 'utf8'), '旧内容');
-});
-
-test('eject 后用户编辑的模板覆盖内置，未编辑的保留导出副本', () => {
-  const { root, ganttRoot } = makeProject();
-  applyTemplateEject(root);
-
-  // 用户改 todo
-  fs.writeFileSync(path.join(ganttRoot, ejectRelativePath('todo')), '自定义 {{task.id}} 指令');
-
-  const project = loadProject(root);
-  const templates = project.config.ganttmd.agent_command_templates;
-  assert.equal(templates.todo.text.trim(), '自定义 {{task.id}} 指令');
-  assert.notEqual(templates.todo.builtin, true, 'todo 现在是文件来源');
-  // review 仍是导出的内置内容
-  assert.equal(templates.review.text.trim(), BUILTIN_AGENT_COMMAND_TEMPLATES.review.trim());
+  assert.equal(fs.readFileSync(path.join(outsideRoot, 'config.yaml'), 'utf8'), 'project:\n  id: outside\n');
 });

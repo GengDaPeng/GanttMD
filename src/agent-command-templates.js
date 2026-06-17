@@ -3,8 +3,8 @@
 // 这里定义看板「复制指令」按钮的内置默认模板。它有三个消费方，必须保持一致：
 //   1. src/project-loader.js：项目未自定义模板时，把这里的内置模板注入
 //      config.ganttmd.agent_command_templates，serve 模式下页面经 /api/state 拿到。
-//   2. bin/ganttmd.js 的 `ganttmd template eject`：把这里的模板导出到项目
-//      .ganttmd/templates/agent/*.md，供用户编辑覆盖。
+//   2. bin/ganttmd.js 的 `ganttmd template eject`：把这里的模板导出为
+//      .ganttmd/config.yaml 里的 agent_command 配置块，供用户编辑覆盖。
 //   3. web/index.html：渲染时优先用项目配置 / 注入的内置模板（renderAgentCommandTemplate）。
 //
 // 模板用 {{占位符}} 语法，占位符由 web/index.html renderAgentCommandTemplate 的
@@ -174,7 +174,7 @@ const DEFAULT_BODY = `读取任务卡：{{task.file}}
 {{task.source_docs}}
 补充任务 {{task.id}} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
 
-// key -> 模板文本。eject 时按这些 key 生成 .ganttmd/templates/agent/<key>.md。
+// key -> 模板文本。eject 时按这些 key 生成 config.yaml 的 agent_command.templates。
 const BUILTIN_AGENT_COMMAND_TEMPLATES = {
   todo: TODO_BODY,
   in_progress: IN_PROGRESS_BODY,
@@ -186,15 +186,6 @@ const BUILTIN_AGENT_COMMAND_TEMPLATES = {
   default: DEFAULT_BODY,
 };
 
-// eject 时写到 .ganttmd/templates/agent/ 下的相对路径（相对 .ganttmd/）。
-const EJECT_DIR = 'templates/agent';
-
-function ejectRelativePath(key) {
-  return `${EJECT_DIR}/${key}.md`;
-}
-
 module.exports = {
   BUILTIN_AGENT_COMMAND_TEMPLATES,
-  EJECT_DIR,
-  ejectRelativePath,
 };

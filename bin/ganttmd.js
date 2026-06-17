@@ -75,7 +75,7 @@ function printHelp() {
   ganttmd migrate [path] [--apply] [--json]
   ganttmd upgrade [path] [--apply] [--json]
   ganttmd static [path] [--out .ganttmd-dist]
-  ganttmd template eject [path] [--force] [--dry-run]
+  ganttmd template eject [path] [--dry-run]
   ganttmd project add <path> [--id <id>] [--name <name>]
   ganttmd project list [--json]
   ganttmd project remove <id-or-path>
@@ -252,44 +252,35 @@ function runTemplate(args) {
   }
 
   const root = args.find((arg, index) => index > 0 && !arg.startsWith('--')) || process.cwd();
-  const force = args.includes('--force');
   const dryRun = args.includes('--dry-run');
 
   if (dryRun) {
-    const plan = planTemplateEject(root, { force });
+    const plan = planTemplateEject(root);
     console.log(`GanttMD 指令模板导出计划：${plan.ganttRoot}`);
-    for (const file of plan.files) {
-      const action = file.willWrite ? (file.exists ? '覆盖' : '创建') : '跳过(已存在)';
-      console.log(`- ${action} ${file.rel}`);
-    }
-    if (plan.configExists && !plan.hasMapping) {
-      console.log('- 在 config.yaml 追加 agent_command_templates 映射');
-    } else if (plan.hasMapping) {
-      console.log('- config.yaml 已有 agent_command_templates 映射，保持不变');
+    if (!plan.configExists) {
+      console.log('- 未找到 config.yaml，无法自动写入 agent_command 配置块');
+    } else if (plan.willUpdateConfig) {
+      console.log('- 在 config.yaml 追加 agent_command 配置块');
+    } else if (plan.hasAgentCommand) {
+      console.log('- config.yaml 已有 agent_command 配置块，保持不变');
     }
     console.log('这是 dry-run。确认后运行：ganttmd template eject <path>');
     return 0;
   }
 
-  const result = applyTemplateEject(root, { force });
+  const result = applyTemplateEject(root);
   console.log(`GanttMD 指令模板导出：${result.ganttRoot}`);
-  if (result.written.length) {
-    console.log(`已写入模板：\n${result.written.map((f) => `  - ${f}`).join('\n')}`);
-  }
-  if (result.skipped.length) {
-    console.log(`已跳过(已存在，用 --force 覆盖)：\n${result.skipped.map((f) => `  - ${f}`).join('\n')}`);
-  }
   if (result.configUpdated) {
-    console.log('已在 config.yaml 追加 agent_command_templates 映射。');
-  } else if (result.hasMapping) {
-    console.log('config.yaml 已有 agent_command_templates 映射，未改动。');
+    console.log('已在 config.yaml 追加 agent_command 配置块。');
+  } else if (result.hasAgentCommand) {
+    console.log('config.yaml 已有 agent_command 配置块，未改动。');
   } else if (!result.configExists) {
-    console.log('未找到 config.yaml，请手动配置 agent_command_templates 映射。');
+    console.log('未找到 config.yaml，请手动配置 agent_command 配置块。');
   }
   if (result.backupRoot) {
     console.log(`备份目录：${result.backupRoot}`);
   }
-  console.log('现在可以编辑这些 .md 模板，刷新看板即生效。');
+  console.log('现在可以编辑 config.yaml 的 agent_command 配置块，刷新看板即生效。');
   return 0;
 }
 

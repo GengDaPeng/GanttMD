@@ -45,6 +45,113 @@ function parseScalar(value) {
   return trimmed;
 }
 
+function countIndent(line) {
+  const match = line.match(/^ */);
+  return match ? match[0].length : 0;
+}
+
+function collectBlockScalar(lines, startIndex, parentIndent) {
+  const body = [];
+  let index = startIndex + 1;
+  while (index < lines.length) {
+    const line = lines[index];
+    if (line.trim() === '') {
+      body.push('');
+      index += 1;
+      continue;
+    }
+    const indent = countIndent(line);
+    if (indent <= parentIndent) break;
+    body.push(line.slice(Math.min(indent, parentIndent + 2)));
+    index += 1;
+  }
+  return { text: body.join('\n').replace(/\s+$/, ''), nextIndex: index - 1 };
+}
+
+function parseAgentCommandConfig(text) {
+  const agentCommand = { templates: {} };
+  const lines = text.split(/\r?\n/);
+  let inSection = false;
+  let inTemplates = false;
+  let currentTemplate = '';
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    if (!inSection) {
+      if (/^agent_command:\s*$/.test(trimmed) && countIndent(line) === 0) {
+        inSection = true;
+      }
+      continue;
+    }
+
+    const indent = countIndent(line);
+    if (indent === 0) break;
+
+    if (indent === 2 && /^templates:\s*$/.test(trimmed)) {
+      inTemplates = true;
+      currentTemplate = '';
+      continue;
+    }
+
+    if (indent === 2 && !inTemplates) {
+      const match = trimmed.match(/^([a-zA-Z_]+):\s*(.*)$/);
+      if (!match) continue;
+      const key = match[1];
+      const value = match[2];
+      if (value === '|') {
+        const block = collectBlockScalar(lines, i, indent);
+        agentCommand[key] = block.text;
+        i = block.nextIndex;
+      } else {
+        agentCommand[key] = parseScalar(value);
+      }
+      continue;
+    }
+
+    if (!inTemplates) continue;
+
+    if (indent === 4) {
+      const match = trimmed.match(/^([a-zA-Z_]+):\s*(.*)$/);
+      if (!match) continue;
+      const key = match[1];
+      const value = match[2];
+      currentTemplate = key;
+      if (value === '|') {
+        const block = collectBlockScalar(lines, i, indent);
+        agentCommand.templates[key] = { body: block.text };
+        i = block.nextIndex;
+      } else if (value) {
+        agentCommand.templates[key] = { body: parseScalar(value) };
+      } else {
+        agentCommand.templates[key] = {};
+      }
+      continue;
+    }
+
+    if (indent === 6 && currentTemplate) {
+      const match = trimmed.match(/^([a-zA-Z_]+):\s*(.*)$/);
+      if (!match) continue;
+      const field = match[1];
+      const value = match[2];
+      if (!agentCommand.templates[currentTemplate] || typeof agentCommand.templates[currentTemplate] === 'string') {
+        agentCommand.templates[currentTemplate] = {};
+      }
+      if (value === '|') {
+        const block = collectBlockScalar(lines, i, indent);
+        agentCommand.templates[currentTemplate][field] = block.text;
+        i = block.nextIndex;
+      } else {
+        agentCommand.templates[currentTemplate][field] = parseScalar(value);
+      }
+    }
+  }
+
+  return agentCommand;
+}
+
 function parseKeyValueBlock(raw) {
   const data = {};
   for (const line of raw.split(/\r?\n/)) {
@@ -142,7 +249,7 @@ function parseChecklist(raw, sourceFile) {
 }
 
 function parseConfig(text) {
-  const config = { ganttmd: {}, project: {}, views: {}, milestones: [], agent_command_templates: {} };
+  const config = { ganttmd: {}, project: {}, views: {}, milestones: [], agent_command: parseAgentCommandConfig(text) };
   let section = '';
   let currentMilestone = null;
 
@@ -164,14 +271,6 @@ function parseConfig(text) {
       continue;
     }
 
-    if (section === 'agent_command_templates') {
-      const match = trimmed.match(/^([a-zA-Z_]+):\s*(.*)$/);
-      if (match) {
-        config.agent_command_templates[match[1]] = parseScalar(match[2]);
-      }
-      continue;
-    }
-
     if (section === 'milestones') {
       const itemMatch = trimmed.match(/^-\s+([a-zA-Z_]+):\s*(.*)$/);
       if (itemMatch) {
@@ -189,20 +288,14 @@ function parseConfig(text) {
   return config;
 }
 
-function readManagedTemplate(ganttRoot, configuredPath) {
-  if (!configuredPath) return;
-  const templatePath = path.resolve(ganttRoot, configuredPath);
-  const ganttRootWithSeparator = path.resolve(ganttRoot) + path.sep;
-  if (templatePath !== path.resolve(ganttRoot) && !templatePath.startsWith(ganttRootWithSeparator)) return;
-  if (!fs.existsSync(templatePath) || !fs.statSync(templatePath).isFile()) return;
-  return {
-    path: path.relative(ganttRoot, templatePath),
-    text: fs.readFileSync(templatePath, 'utf8'),
-  };
-}
-
 function loadAgentCommandTemplate(ganttRoot, config) {
   config.ganttmd.agent_command_templates = {};
+  if (config.agent_command.execution_setup) {
+    config.ganttmd.agent_command_execution_setup = config.agent_command.execution_setup;
+  }
+  if (config.agent_command.delivery_requirements) {
+    config.ganttmd.agent_command_delivery_requirements = config.agent_command.delivery_requirements;
+  }
 
   // 第 1 层：内置默认模板（单一真相源 src/agent-command-templates.js）。
   // 保证 serve 模式下页面经 /api/state 永远能拿到一套可用模板，且可被项目逐层覆盖；
@@ -211,18 +304,16 @@ function loadAgentCommandTemplate(ganttRoot, config) {
     config.ganttmd.agent_command_templates[key] = { text, builtin: true };
   }
 
-  // 第 2 层：项目级默认模板文件（.ganttmd/agent-command-template.md）覆盖 default。
-  const defaultTemplate = readManagedTemplate(ganttRoot, config.ganttmd.agent_command_template || 'agent-command-template.md');
-  if (defaultTemplate) {
-    config.ganttmd.agent_command_template_path = defaultTemplate.path;
-    config.ganttmd.agent_command_template_text = defaultTemplate.text;
-    config.ganttmd.agent_command_templates.default = defaultTemplate;
-  }
-
-  // 第 3 层：config.yaml 的 agent_command_templates 按状态指定的模板文件，逐 key 覆盖。
-  for (const [key, templatePath] of Object.entries(config.agent_command_templates || {})) {
-    const template = readManagedTemplate(ganttRoot, templatePath);
-    if (template) config.ganttmd.agent_command_templates[key] = template;
+  // 第 2 层：项目统一配置块 agent_command.templates。
+  // 本地项目只维护 .ganttmd/config.yaml，一个入口决定复制指令形态。
+  for (const [key, templateConfig] of Object.entries(config.agent_command.templates || {})) {
+    if (typeof templateConfig === 'string') {
+      config.ganttmd.agent_command_templates[key] = { text: templateConfig, inline: true };
+      continue;
+    }
+    if (templateConfig && templateConfig.body) {
+      config.ganttmd.agent_command_templates[key] = { text: templateConfig.body, inline: true };
+    }
   }
 }
 
@@ -295,7 +386,7 @@ module.exports = {
   parseChecklistItem,
   parseChecklist,
   parseConfig,
-  readManagedTemplate,
+  parseAgentCommandConfig,
   loadAgentCommandTemplate,
   loadProject,
 };

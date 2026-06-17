@@ -24,7 +24,6 @@ GanttMD 的任务状态真相源只放在 `.ganttmd/`；需求正文、技术设
 |---|---:|---|
 | `README.md` | 建议 | 当前项目的 .ganttmd 操作边界说明 |
 | `config.yaml` | 是 | 项目元信息、里程碑、视图配置和校验参数 |
-| `agent-command-template.md` | 可选 | 本地看板“复制指令”的项目级模板 |
 | `tasks/*.md` | 是 | 任务状态真相源，一个文件可放多个任务 |
 | `followups.md` | 建议 | follow-up、决策事项、延期项和外部等待项 |
 | `runs.md` | 建议 | 分支或执行批次记录 |
@@ -39,21 +38,34 @@ GanttMD 不再要求 `milestones/overview.md` 或 `views/timeline.json`。里程
 ```yaml
 ganttmd:
   schema_version: 1
-  # 可选。默认读取 .ganttmd/agent-command-template.md。
-  # 只能指向 .ganttmd/ 目录内的文件。
-  agent_command_template: agent-command-template.md
-  agent_command_execution_setup: 主控已完成领取、分支和运行态安排；分支代理只做任务产出。
-  agent_command_delivery_requirements: 在 PR body 交付验证证据、影响范围和候选 follow-up。
 
-agent_command_templates:
-  todo: templates/agent/todo.md
-  in_progress: templates/agent/in-progress.md
-  review: templates/agent/review.md
-  done: templates/agent/done.md
-  cancelled: templates/agent/cancelled.md
-  blocked: templates/agent/blocked.md
-  missing_deps: templates/agent/missing-deps.md
-  default: templates/agent/default.md
+agent_command:
+  execution_setup: 主控已完成领取、分支和运行态安排；分支代理只做任务产出。
+  delivery_requirements: 在 PR body 交付验证证据、影响范围和候选 follow-up。
+  templates:
+    default: |
+      你接手任务 {{task.id}}：{{task.title}}。
+
+      任务卡：
+      {{task.file}} 中的 {{task.id}}
+
+      任务目标：
+      {{task.next_action}}
+
+      验收重点：
+      {{task.acceptance}}
+    review:
+      body: |
+        复核任务 {{task.id}}：{{task.title}}。
+
+        验收重点：
+        {{task.acceptance}}
+    blocked:
+      body: |
+        不建议领取 {{task.id}}：{{task.title}}
+
+        阻塞原因：
+        {{task.blocked_reason}}
 
 project:
   name: 示例项目
@@ -529,37 +541,58 @@ Agent 不应每次全量阅读所有任务文件。应先按任务 ID、状态�
 
 ### 9.4 复制指令模板
 
-看板复制按钮默认使用内置模板。项目可以按三层配置覆盖：
+看板复制按钮默认使用内置模板。推荐在 `.ganttmd/config.yaml` 里用 `agent_command` 统一配置：
 
-1. `ganttmd.agent_command_template`：默认模板路径，默认读取 `.ganttmd/agent-command-template.md`。
-2. `agent_command_templates`：按任务状态覆盖模板，支持 `todo`、`in_progress`、`review`、`done`、`cancelled`、`blocked`、`missing_deps`、`default`。
-3. `ganttmd.agent_command_execution_setup` / `ganttmd.agent_command_delivery_requirements`：覆盖内置默认模板中的执行安排和交付要求文案。
+```yaml
+agent_command:
+  execution_setup: 主控已完成领取、分支和运行态安排；分支代理只做任务产出。
+  delivery_requirements: 在 PR body 交付验证证据、影响范围和候选 follow-up。
+  templates:
+    default: |
+      你接手任务 {{task.id}}：{{task.title}}。
 
-所有模板路径都必须是 `.ganttmd/` 内相对路径；指向目录、外部路径或不存在文件时会被忽略。
+      任务卡：
+      {{task.file}} 中的 {{task.id}}
+
+      任务目标：
+      {{task.next_action}}
+    review:
+      body: |
+        复核任务 {{task.id}}：{{task.title}}。
+
+        验收重点：
+        {{task.acceptance}}
+    blocked:
+      body: |
+        不建议领取 {{task.id}}：{{task.title}}
+
+        阻塞原因：
+        {{task.blocked_reason}}
+```
+
+`agent_command.templates` 支持 `todo`、`in_progress`、`review`、`done`、`cancelled`、`blocked`、`missing_deps`、`default`。没有写的状态继续使用 GanttMD 内置模板。
 
 #### 导出内置模板供编辑
 
-想改任务指令但不知道从哪下手时，用 `ganttmd template eject` 把内置模板导出成可编辑文件：
+想改任务指令但不知道从哪下手时，用 `ganttmd template eject` 把内置模板追加到 `config.yaml`：
 
 ```bash
-ganttmd template eject [path]            # 导出全部状态模板到 .ganttmd/templates/agent/*.md，并写入 config 映射
-ganttmd template eject [path] --dry-run  # 只看会创建/覆盖哪些文件，不写盘
-ganttmd template eject [path] --force    # 覆盖已存在的模板文件（覆盖前自动备份到 .ganttmd/.backup/）
+ganttmd template eject [path]            # 把全部状态模板追加成 agent_command 配置块
+ganttmd template eject [path] --dry-run  # 只看 config.yaml 写入计划，不写盘
 ```
 
 导出后：
 
-- 每个任务状态对应一个 `.ganttmd/templates/agent/<状态>.md` 文件，内容是内置模板的占位符版本。
-- `config.yaml` 自动追加 `agent_command_templates` 映射；已有映射会保留，缺失状态会补齐。
-- 编辑这些 `.md` 文件，刷新看板即生效；未编辑的文件保留内置内容。
-- 默认不覆盖已存在的模板文件，避免冲掉你已有的自定义。
+- `config.yaml` 追加一个 `agent_command` 配置块，包含所有状态模板。
+- 编辑 `agent_command.templates` 下的模板，刷新看板即生效。
+- 默认不重复追加已有 `agent_command` 配置块，避免冲掉你已有的自定义。
 
 选择优先级：
 
 - 缺失依赖任务优先使用 `missing_deps` 模板。
 - 阻塞任务优先使用 `blocked` 模板。
 - 其他任务优先使用与 `status` 同名的模板。
-- 没有状态模板时，使用 `ganttmd.agent_command_template` 的默认模板。
+- 没有状态模板时，使用 `agent_command.templates.default`。
 - 没有任何项目模板时，使用 GanttMD 内置模板。
 
 支持的占位符：

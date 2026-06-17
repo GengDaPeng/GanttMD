@@ -26,8 +26,8 @@ test('Agent 指令草案由任务字段生成可复制开工模板', () => {
   assert.ok(html.includes('PR body'), '指令草案必须要求在 PR body 交付证据');
   assert.ok(html.includes('候选 follow-up'), '指令草案必须要求候选 follow-up 进入 PR body');
   assert.ok(html.includes('看板状态、runs、followups 由项目主控合并后统一处理'), '指令草案不得要求分支代理回写状态源');
-  assert.ok(html.includes('templates.default'), '指令草案必须优先读取项目级默认模板配置');
-  assert.ok(html.includes('agent_command_templates'), '指令草案必须支持按状态配置模板');
+  assert.ok(html.includes('templates.default'), '指令草案必须读取项目统一配置中的默认模板');
+  assert.ok(html.includes('agent_command_templates'), '指令草案必须从 loader 注入的模板集合读取配置');
   assert.ok(html.includes('getAgentCommandTemplateKey'), '指令草案必须按任务状态选择模板');
   assert.ok(html.includes('agent_command_execution_setup'), '指令草案必须支持配置执行安排文案');
   assert.ok(html.includes('agent_command_delivery_requirements'), '指令草案必须支持配置交付要求文案');
