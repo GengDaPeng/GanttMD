@@ -2,10 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { resolveGanttRoot, readTextIfExists } = require('./project-loader.js');
-
-function timestamp() {
-  return new Date().toISOString().replace(/[:.]/g, '').replace('T', 'T').replace('Z', 'Z');
-}
+const { backupDirName } = require('./fs-safety.js');
 
 function hasSchemaVersion(configText) {
   return /^ganttmd:\s*\n(?:\s+[a-zA-Z_]+:\s*.*\n)*\s+schema_version:\s*\d+/m.test(configText);
@@ -41,7 +38,7 @@ function applyMigration(projectRoot = process.cwd()) {
   const plan = planMigration(projectRoot);
   if (plan.changes.length === 0) return { ...plan, applied: false, backupRoot: '' };
 
-  const backupRoot = path.join(plan.ganttRoot, '.backup', timestamp());
+  const backupRoot = path.join(plan.ganttRoot, '.backup', backupDirName());
   for (const change of plan.changes) {
     const current = readTextIfExists(change.file);
     if (change.previousContent !== undefined && current !== change.previousContent) {

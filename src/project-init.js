@@ -8,6 +8,7 @@ const LEGACY_README_CONTENT = `# GanttMD 项目任务状态
 ## 文件说明
 
 - config.yaml：项目、里程碑、视图和校验配置。
+- agent-command-template.md：可选，本地看板“复制指令”的项目级默认模板；也可在 config.yaml 的 agent_command_templates 按状态配置模板。
 - tasks/*.md：正式任务、状态、依赖、证据链和验收摘要。
 - followups.md：后续事项、用户裁决、延期复核、外部等待和风险项。
 - runs.md：worktree/分支领取任务、执行批次和当前运行态。
@@ -65,6 +66,7 @@ const README_CONTENT = `# GanttMD 项目任务状态
 ## 文件说明
 
 - config.yaml：项目、里程碑、视图和校验配置。
+- agent-command-template.md：可选，本地看板“复制指令”的项目级默认模板；也可在 config.yaml 的 agent_command_templates 按状态配置模板。
 - tasks/*.md：正式任务、状态、依赖、证据链和验收摘要。
 - followups.md：后续事项、用户裁决、延期复核、外部等待和风险项。
 - runs.md：运行态记录，不是长期任务正文；默认不要手工维护，项目启用 CLI 或自动化流程时应优先通过受控写入口更新。

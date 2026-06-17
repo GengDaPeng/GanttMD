@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { spawnSync, spawn } = require('node:child_process');
 
 const MAX_STATE_PAYLOAD_BYTES = 128 * 1024;
@@ -33,7 +34,10 @@ function readJson(filePath, fallback) {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return fallback;
     return parsed;
-  } catch {
+  } catch (error) {
+    if (process.env.GANTTMD_DEBUG) {
+      console.error(`[DEBUG] Failed to read ${filePath}:`, error.message);
+    }
     return fallback;
   }
 }
@@ -41,7 +45,7 @@ function readJson(filePath, fallback) {
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const serialized = JSON.stringify(value, null, 2) + '\n';
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.${crypto.randomUUID()}.tmp`;
   fs.writeFileSync(tempPath, serialized);
   fs.renameSync(tempPath, filePath);
 }

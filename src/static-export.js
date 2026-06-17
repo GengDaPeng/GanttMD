@@ -40,8 +40,12 @@ function resolveOutputDir(projectRoot, outDir) {
 
 function renderStaticHtml(state) {
   const html = fs.readFileSync(path.join(__dirname, '..', 'web', 'index.html'), 'utf8');
+  const rulesJs = fs.readFileSync(path.join(__dirname, 'rules.js'), 'utf8');
   const injection = `<script>window.GANTTMD_STATIC_STATE=${escapeScriptJson(state)};</script>\n`;
-  return html.replace('<script>', `${injection}<script>`);
+  const rulesInjection = `<script>${rulesJs}</script>\n`;
+  return html
+    .replace('<script src="/rules.js"></script>', rulesInjection)
+    .replace('<script>', `${injection}<script>`);
 }
 
 function exportStatic(projectRoot = process.cwd(), outDir = '.ganttmd-dist') {

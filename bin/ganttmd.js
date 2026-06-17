@@ -8,6 +8,7 @@ const { doctorProject } = require('../src/doctor.js');
 const { planMigration, applyMigration } = require('../src/migrator.js');
 const { planUpgrade, applyUpgrade } = require('../src/upgrader.js');
 const { exportStatic } = require('../src/static-export.js');
+const { planTemplateEject, applyTemplateEject } = require('../src/template-eject.js');
 const ServiceControl = require('../src/service-control.js');
 
 function parseRootAndFlags(args) {
@@ -74,6 +75,7 @@ function printHelp() {
   ganttmd migrate [path] [--apply] [--json]
   ganttmd upgrade [path] [--apply] [--json]
   ganttmd static [path] [--out .ganttmd-dist]
+  ganttmd template eject [path] [--force] [--dry-run]
   ganttmd project add <path> [--id <id>] [--name <name>]
   ganttmd project list [--json]
   ganttmd project remove <id-or-path>
@@ -238,6 +240,56 @@ function runStatic(args) {
   const outDir = readOption(args, '--out') || '.ganttmd-dist';
   const result = exportStatic(root, outDir);
   console.log(`已导出静态看板：${result.indexPath}`);
+  return 0;
+}
+
+function runTemplate(args) {
+  const subcommand = args[0];
+  if (subcommand !== 'eject') {
+    console.error(`未知 template 子命令：${subcommand || ''}`);
+    printHelp();
+    return 1;
+  }
+
+  const root = args.find((arg, index) => index > 0 && !arg.startsWith('--')) || process.cwd();
+  const force = args.includes('--force');
+  const dryRun = args.includes('--dry-run');
+
+  if (dryRun) {
+    const plan = planTemplateEject(root, { force });
+    console.log(`GanttMD 指令模板导出计划：${plan.ganttRoot}`);
+    for (const file of plan.files) {
+      const action = file.willWrite ? (file.exists ? '覆盖' : '创建') : '跳过(已存在)';
+      console.log(`- ${action} ${file.rel}`);
+    }
+    if (plan.configExists && !plan.hasMapping) {
+      console.log('- 在 config.yaml 追加 agent_command_templates 映射');
+    } else if (plan.hasMapping) {
+      console.log('- config.yaml 已有 agent_command_templates 映射，保持不变');
+    }
+    console.log('这是 dry-run。确认后运行：ganttmd template eject <path>');
+    return 0;
+  }
+
+  const result = applyTemplateEject(root, { force });
+  console.log(`GanttMD 指令模板导出：${result.ganttRoot}`);
+  if (result.written.length) {
+    console.log(`已写入模板：\n${result.written.map((f) => `  - ${f}`).join('\n')}`);
+  }
+  if (result.skipped.length) {
+    console.log(`已跳过(已存在，用 --force 覆盖)：\n${result.skipped.map((f) => `  - ${f}`).join('\n')}`);
+  }
+  if (result.configUpdated) {
+    console.log('已在 config.yaml 追加 agent_command_templates 映射。');
+  } else if (result.hasMapping) {
+    console.log('config.yaml 已有 agent_command_templates 映射，未改动。');
+  } else if (!result.configExists) {
+    console.log('未找到 config.yaml，请手动配置 agent_command_templates 映射。');
+  }
+  if (result.backupRoot) {
+    console.log(`备份目录：${result.backupRoot}`);
+  }
+  console.log('现在可以编辑这些 .md 模板，刷新看板即生效。');
   return 0;
 }
 
@@ -411,6 +463,10 @@ async function main(argv) {
     return runStatic(args.slice(1));
   }
 
+  if (command === 'template') {
+    return runTemplate(args.slice(1));
+  }
+
   if (command === 'project') {
     return runProject(args.slice(1));
   }
@@ -441,5 +497,6 @@ module.exports = {
   runInit,
   runMigrate,
   runStatic,
+  runTemplate,
   runValidate,
 };

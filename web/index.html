@@ -450,6 +450,7 @@ body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, 
   </div>
 </div>
 
+<script src="/rules.js"></script>
 <script>
 const projectListBtn = document.getElementById('projectListBtn');
 const mapBtn = document.getElementById('mapBtn');
@@ -458,7 +459,7 @@ const FOLLOWUP_STATUSES = ['open', 'accepted', 'converted', 'done', 'wontfix'];
 const FOLLOWUP_KINDS = ['followup', 'decision', 'deferred', 'external_wait', 'risk'];
 const TASK_STATUSES = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'blocked'];
 const TRACK_LABELS = { spec: '规格主线', backend: '后端工程', frontend: '前端工程', infra: '基础设施', quality_gate: '质量门' };
-const MODULE_LABELS = { safety_attendance: '安全考勤', student: '学生管理', class: '班级管理', teacher: '教师管理', approval: '审批中心', settings: '系统设置', org_permission: '组织权限', statistics: '统计审计', foundation: '工程基础', crosscutting: '横切事项' };
+const MODULE_LABELS = {};
 const BUILTIN_VIEWS = {
   execution: { id: 'execution', name: '执行视角', group: 'main', source: 'tasks', groupBy: 'execution_state', sortBy: 'recommended', fields: ['id', 'title', 'status', 'module', 'milestone', 'deps'], hint: '按 Agent 接手顺序组织任务，优先看可立即执行和被阻塞项' },
   milestone: { id: 'milestone', name: '里程碑视角', group: 'main', source: 'tasks', groupBy: 'milestone', sortBy: 'topo', fields: ['id', 'title', 'status', 'module', 'deps'], hint: '按里程碑组织任务，观察阶段推进和阶段内阻塞' },
@@ -770,23 +771,7 @@ function getTaskTrack(task) {
 }
 
 function getTaskBusinessModule(task) {
-  if (task.module) return task.module;
-  const id = task.id || '';
-  const title = task.title || '';
-  if (/^S-BE-0[1-6]$/.test(id)) return 'foundation';
-  if (id === 'S-QA-13' || id === 'S-QA-14' || id.includes('-GATE-')) return 'crosscutting';
-  if (id.includes('-ATT-') || id.includes('-FE-') || /考勤|安全到校/.test(title)) return 'safety_attendance';
-  if (id.includes('-STAT-')) return 'statistics';
-  if (id.includes('-DEV-')) return 'foundation';
-  if (/统计|审计/.test(title)) return 'statistics';
-  if (/学生/.test(title)) return 'student';
-  if (/班级/.test(title)) return 'class';
-  if (/教师/.test(title)) return 'teacher';
-  if (/审批/.test(title)) return 'approval';
-  if (/系统设置/.test(title)) return 'settings';
-  if (/组织|权限/.test(title)) return 'org_permission';
-  if (/后端|工程|跑道|CI|Redis|Prisma|数据库/.test(title)) return 'foundation';
-  return 'crosscutting';
+  return task.domain || task.module || '';
 }
 
 function trackLabel(track) {
@@ -794,7 +779,7 @@ function trackLabel(track) {
 }
 
 function moduleLabel(module) {
-  return MODULE_LABELS[module] || module || '未标业务模块';
+  return MODULE_LABELS[module] || module || '未标业务域';
 }
 
 function loadData(modules, config, followups) {
@@ -820,6 +805,9 @@ function loadData(modules, config, followups) {
     if (t._runtimeStatus && t._runtimeStatus !== t.status) t._effective = t._runtimeStatus;
   }
   for (const t of tasks) for (const dep of t.dependencies) if (children.has(dep)) children.get(dep).push(t.id);
+  for (const t of tasks) {
+    t._downstreamCount = (children.get(t.id) || []).length;
+  }
   const order = topoSort(tasks);
   state.modules = modules;
   state.config = config;
@@ -1962,7 +1950,7 @@ function getFollowupKind(item) {
   if (item.kind && FOLLOWUP_KINDS.includes(item.kind)) return item.kind;
   if (item.decision_owner === 'user' || /用户|裁决|拍板/.test(`${item.title || ''} ${item.reason || ''}`)) return 'decision';
   if (item.next_review_at || item.status === 'accepted') return 'deferred';
-  if (/外部|资料|设备|海康|等待|回复/.test(`${item.title || ''} ${item.reason || ''}`)) return 'external_wait';
+  if (/外部|资料|设备|等待|回复/.test(`${item.title || ''} ${item.reason || ''}`)) return 'external_wait';
   if (item.severity === 'high') return 'risk';
   return 'followup';
 }
@@ -2020,183 +2008,131 @@ function getAgentHandoff(task) {
   return '状态信息不足。';
 }
 
-function getBranchCommand(task) {
-  const type = inferBranchType(task);
-  const taskId = normalizeTaskId(task.id);
-  const topic = inferBranchTopic(task);
-  return `bash scripts/new-task.sh ${type} ${taskId || '-'} ${topic}`;
+const AGENT_COMMAND_TEMPLATE_PLACEHOLDERS = [
+  '{{task.id}}',
+  '{{task.title}}',
+  '{{task.status}}',
+  '{{task.file}}',
+  '{{task.next_action}}',
+  '{{task.execution_scope}}',
+  '{{task.output_target}}',
+  '{{task.acceptance}}',
+  '{{task.downstream_constraints}}',
+  '{{task.verification_commands}}',
+  '{{task.source_docs}}',
+  '{{task.blocked_reason}}',
+  '{{task.open_dependencies}}',
+  '{{task.missing_dependencies}}',
+  '{{task.downstream}}',
+  '{{execution_setup}}',
+  '{{delivery_requirements}}',
+  '{{critical_path_note}}',
+];
+
+function formatNumberedList(items, fallback) {
+  return items?.length ? items.map((item, index) => `${index + 1}. ${item}`).join('\n') : fallback;
 }
 
-function inferBranchType(task) {
-  const text = `${task.id || ''} ${task.title || ''} ${task.track || ''} ${task.domain || ''}`.toLowerCase();
-  if (task.track === 'frontend' || task.track === 'backend') return 'feature';
-  if (task.track === 'spec') return 'docs';
-  if (text.includes('fix') || text.includes('修复') || text.includes('缺陷')) return 'fix';
-  if (text.includes('refactor') || text.includes('重构')) return 'refactor';
-  if (text.includes('ci') || text.includes('脚本') || text.includes('门禁')) return 'chore';
-  if (task.track === 'quality' || task.track === 'ops' || task.track === 'infra') return 'chore';
-  return 'docs';
+function formatBulletList(items, fallback) {
+  return items?.length ? items.map(item => `- ${item}`).join('\n') : fallback;
 }
 
-function normalizeTaskId(id) {
-  const normalized = String(id || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-  return normalized || '-';
-}
-
-function inferBranchTopic(task) {
-  const text = `${task.title || ''} ${task.next_action || ''} ${task.domain || ''}`.toLowerCase();
-  const keywordTopics = [
-    { keys: ['本地代理', '真实后端联调', 'vite_access_mode'], topic: 'frontend-backend-proxy' },
-    { keys: ['scoperesolver', 'scope resolver', '查询端'], topic: 'scope-resolver-query' },
-    { keys: ['escalation', '升级 run', '升级扫描'], topic: 'escalation-run' },
-    { keys: ['物理落点', 'prisma'], topic: 'attendance-db-placement' },
-    { keys: ['通知意图'], topic: 'notification-intent' },
-    { keys: ['设备输入'], topic: 'device-input' },
-    { keys: ['验收清单'], topic: 'acceptance-checklist' },
-    { keys: ['部署', '运维'], topic: 'deployment-runbook' },
-  ];
-  const matched = keywordTopics.find(item => item.keys.some(key => text.includes(key)));
-  if (matched) return matched.topic;
-
-  const domainTopics = {
-    safety_attendance: 'attendance',
-    master_data: 'master-data',
-    auth_permission: 'auth-scope',
-    device_input: 'device-input',
-    notification: 'notification',
-    data_lifecycle: 'data-lifecycle',
-    local_dev: 'local-dev',
-    project_governance: 'project-governance',
-    crosscutting: 'crosscutting',
-    identity: 'identity',
+function renderAgentCommandTemplate(template, task, context) {
+  const values = {
+    'task.id': task.id || '',
+    'task.title': task.title || '',
+    'task.status': task.status || '',
+    'task.file': context.taskFile,
+    'task.next_action': context.nextAction,
+    'task.execution_scope': context.scope,
+    'task.output_target': context.outputTarget,
+    'task.acceptance': context.acceptance,
+    'task.downstream_constraints': context.constraints,
+    'task.verification_commands': context.verification,
+    'task.source_docs': context.sources,
+    'task.blocked_reason': task.blocked_reason || '',
+    'task.open_dependencies': context.openDependencies,
+    'task.missing_dependencies': context.missingDependencies,
+    'task.downstream': context.downstream,
+    execution_setup: context.executionSetup,
+    delivery_requirements: context.delivery,
+    critical_path_note: context.criticalPathNote,
   };
-  if (task.domain && domainTopics[task.domain]) return domainTopics[task.domain];
-  if (task.track === 'frontend') return 'frontend-task';
-  if (task.track === 'backend') return 'backend-task';
-  if (task.track === 'spec') return 'spec-task';
-  if (task.track === 'quality') return 'quality-task';
-  if (task.track === 'infra') return 'infra-task';
-  return 'task';
+  return String(template).replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (_, key) => values[key] ?? '');
+}
+
+function getAgentCommandTemplateKey(task) {
+  if (task._missingDeps?.length) return 'missing_deps';
+  if (task.blocked_reason || task._effective === 'blocked') return 'blocked';
+  if (['todo', 'in_progress', 'review', 'done', 'cancelled'].includes(task.status)) return task.status;
+  return 'default';
+}
+
+function getConfiguredAgentCommandTemplate(task) {
+  const templates = state.config?.ganttmd?.agent_command_templates || {};
+  const key = getAgentCommandTemplateKey(task);
+  if (templates[key]?.text) return templates[key].text;
+  if (key !== 'missing_deps' && key !== 'blocked' && templates.default?.text) return templates.default.text;
+  return '';
 }
 
 function getAgentCommand(task) {
   const taskFile = taskCardPath(task);
   const sourceDocs = getTaskSourceDocs(task);
-  const sources = sourceDocs.length ? sourceDocs.map(doc => `- ${doc}`).join('\n') : '- 任务卡已包含足够执行信息，按需再补正式依据文档';
+  const sources = formatBulletList(sourceDocs, '- 任务卡已包含足够执行信息，按需再补正式依据文档');
   const nextAction = task.next_action || '按任务描述推进下一步工作';
   const scope = task.execution_scope || '按任务卡、source_docs 和当前任务所属模块执行；不得扩大到无关模块。';
   const outputTarget = task.output_target || '代码类任务写清改动模块、测试证据和 PR 说明；文档类任务写清主改文档、同步文档和任务卡证据；复查 / 调研类任务写清结论落点、未决项和 follow-up。';
-  const acceptance = task.acceptance?.length ? task.acceptance.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. 补充本任务的验收标准\n2. 完成后补充 evidence';
-  const constraints = task.downstream_constraints?.length ? task.downstream_constraints.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. 无额外下游约束；按任务卡和正式规范执行。';
-  const verification = task.verification_commands?.length ? task.verification_commands.map((item, index) => `${index + 1}. ${item}`).join('\n') : '1. ganttmd validate\n2. git diff --check\n3. 按任务类型运行对应测试 / 文档检查；无法执行时写明原因和替代验证。';
-  const branchCommand = getBranchCommand(task);
-  const taskHeader = `${task.id}：${task.title || ''}`;
+  const acceptance = formatNumberedList(task.acceptance, '1. 补充本任务的验收标准\n2. 完成后补充 evidence');
+  const constraints = formatNumberedList(task.downstream_constraints, '1. 无额外下游约束；按任务卡和正式规范执行。');
+  const verification = formatNumberedList(task.verification_commands, '1. ganttmd validate\n2. git diff --check\n3. 按任务类型运行对应测试 / 文档检查；无法执行时写明原因和替代验证。');
+  const executionSetup = state.config?.ganttmd?.agent_command_execution_setup || '主控已完成领取、分支和运行态安排；分支代理只做任务产出，不自行创建 worktree 分支，不回写看板状态源。';
+  const delivery = state.config?.ganttmd?.agent_command_delivery_requirements || '在 PR body 交付验证证据、影响范围、未执行验证的原因，以及候选 follow-up。看板状态、runs、followups 由项目主控合并后统一处理。';
   const cpText = state.criticalSet.has(task.id) ? '\n注意：本任务在关键路径上，延迟会直接影响里程碑交付。' : '';
-  if (task._missingDeps?.length) {
-    return `任务 ${task.id} 的依赖数据不完整。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行。本任务涉及 Git / 分支时，按 docs/工程方法与规范/Git工作流与提交规范.md §0 路由执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n必读事实源：\n${sources}\n\n处理要求：\n修正 dependencies 中不存在的任务：${task._missingDeps.join(', ')}。\n修正后重新判断它是否可执行，不要直接开始实现。`;
-  }
-  if (task.blocked_reason) {
-    return `不建议领取 ${taskHeader}\n\n当前存在外部阻塞：\n${task.blocked_reason}。`;
-  }
-  if (task._effective === 'blocked') {
-    return `不建议领取 ${taskHeader}\n\n当前被 ${task._openDeps.length} 个前置任务阻塞：${task._openDeps.join(', ')}。`;
-  }
-  if (task._effective === 'todo') {
-    return `你接手任务 ${task.id}：${task.title || ''}。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行。本任务涉及 Git / 分支时，按 docs/工程方法与规范/Git工作流与提交规范.md §0 路由执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n## 任务目标\n${nextAction}\n\n## 执行范围\n${scope}\n\n## 产出物 / 结果落点\n${outputTarget}\n\n## 验收重点\n${acceptance}\n\n## 边界 / 禁止事项\n${constraints}\n\n## 验证命令\n${verification}\n\n## 分支 / worktree 要求\n在独立 worktree 创建任务分支：\n\`\`\`bash\n${branchCommand}\n\`\`\`\n不得在主工作区或 master 上开发，项目主控类任务例外时必须明确说明。\n\n必读事实源：\n${sources}\n\n交付要求：\n更新任务卡 status / evidence / verification / review_status，并按工作流规范 §6 / §8 / §9 完成验证、PR 证据和回写。${cpText}`;
-  }
-  if (task.status === 'in_progress') {
-    return `接续进行中任务 ${task.id}：${task.title || ''}。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行。本任务涉及 Git / 分支时，按 docs/工程方法与规范/Git工作流与提交规范.md §0 路由执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n## 任务目标\n${nextAction}\n\n## 执行范围\n${scope}\n\n## 产出物 / 结果落点\n${outputTarget}\n\n## 验收重点\n${acceptance}\n\n## 边界 / 禁止事项\n${constraints}\n\n## 验证命令\n${verification}\n\n## 分支 / worktree 要求\n核对当前 worktree / 分支 / owner / agent 与实际接手人是否一致；不一致先报告，不直接接续。\n\n必读事实源：\n${sources}\n\n接续要求：\n更新任务卡 status / evidence / verification / review_status，并按工作流规范 §6 / §8 / §9 完成验证、PR 证据和回写。${cpText}`;
-  }
-  if (task.status === 'review') {
-    return `复核任务 ${task.id}：${task.title || ''}。\n\n开工入口：\n先按 AGENTS.md 和 docs/工程方法与规范/AI solo 项目运行工作流规范.md §0 执行；复核按工作流规范 §7 执行。\n\n任务卡：\n${taskFile} 中的 ${task.id}。\n\n## 任务目标\n复核本任务产出是否满足验收重点，并确认交付证据完整。\n\n## 执行范围\n${scope}\n\n## 产出物 / 结果落点\n复核结论进入 PR Notes / 任务卡 review_status；必须修的问题退回实现或登记 follow-up。\n\n## 验收重点\n${acceptance}\n\n## 边界 / 禁止事项\n${constraints}\n\n## 验证命令\n${verification}\n\n## 分支 / worktree 要求\n复核不得直接替产出代理扩大实现范围；需要修复时先明确问题和落点。\n\n必读事实源：\n${sources}\n\n复核要求：\n检查 evidence、verification 和 review_status 是否完整。如复核通过，将 status 更新为 done；如必须修，登记修复任务或退回 in_progress。${cpText}`;
-  }
-  if (task.status === 'done') {
-    const downstream = state.children.get(task.id) || [];
-    return `复核已完成任务 ${task.id}。\n读取任务卡：${taskFile}\n读取来源文档：\n${sources}\n检查 PR body / evidence 是否覆盖以下验收标准：\n${acceptance}\n若已确认完成，下一步关注它的后续任务：${downstream.length ? downstream.join(', ') : '暂无后续任务'}。`;
-  }
-  if (task.status === 'cancelled') {
-    return `任务 ${task.id} 已取消。\n读取任务卡：${taskFile}\n读取来源文档：\n${sources}\n确认取消原因、剩余风险和是否需要登记 follow-up。`;
-  }
+  const downstream = state.children.get(task.id) || [];
+  const templateContext = {
+    taskFile,
+    sources,
+    nextAction,
+    scope,
+    outputTarget,
+    acceptance,
+    constraints,
+    verification,
+    executionSetup,
+    delivery,
+    criticalPathNote: cpText.trim(),
+    openDependencies: (task._openDeps || []).join(', '),
+    missingDependencies: (task._missingDeps || []).join(', '),
+    downstream: downstream.length ? downstream.join(', ') : '暂无后续任务',
+  };
+  const projectTemplate = getConfiguredAgentCommandTemplate(task);
+  if (projectTemplate) return renderAgentCommandTemplate(projectTemplate, task, templateContext);
   return `读取任务卡：${taskFile}\n读取来源文档：\n${sources}\n补充任务 ${task.id} 的 next_action、acceptance、owner/agent 等协作字段后再执行。`;
 }
 function getHealthIssues() {
   const issues = [...getFollowupIssues()];
+  const ctx = {
+    now: new Date(),
+    reviewStaleDays: state.config?.ganttmd?.review_stale_days || 7,
+    archiveAfterDays: state.config?.ganttmd?.archive_after_days || 7,
+    milestoneIds: new Set((state.config?.milestones || []).map(m => m.id)),
+    reviewStatuses: state.config?.ganttmd?.review_statuses,
+    sourceDocExists: null,
+  };
   for (const t of state.tasks) {
-    if (!TASK_STATUSES.includes(t.status)) {
-      issues.push({ level: 'warn', id: t.id, text: `任务 status 非法：${t.status || '(空)'}` });
-    }
-    if (t._missingDeps?.length) {
-      issues.push({ level: 'warn', id: t.id, text: `依赖指向不存在任务：${t._missingDeps.join(', ')}` });
-    }
-    if (t.status === 'blocked' && t._openDeps.length === 0 && !t.blocked_reason) {
-      issues.push({ level: 'warn', id: t.id, text: '标记为 blocked，但没有未完成前置依赖，也没有 blocked_reason。' });
-    }
-    if (t.status === 'in_progress' && !t.owner && !t.agent) {
-      issues.push({ level: '', id: t.id, text: '进行中任务缺少 owner/agent 字段，后续多 Agent 协作容易撞车。' });
-    }
-    if (t.status === 'review' && !t.review_status) {
-      issues.push({ level: 'warn', id: t.id, text: 'review 任务缺少 review_status，无法判断复核结论。' });
-    }
-    if (t.status === 'done' && !t.evidence?.length) {
-      issues.push({ level: 'warn', id: t.id, text: 'done 任务缺少 evidence，可能形成虚假闭环。' });
-    }
-    if (t.status === 'done' && ['backend', 'frontend', 'infra'].includes(t.track) && !t.verification) {
-      issues.push({ level: 'warn', id: t.id, text: `${t.track} 任务已完成但缺少 verification。` });
-    }
-    if (t.status === 'cancelled' && !t.cancel_reason && !t.resolution) {
-      issues.push({ level: 'warn', id: t.id, text: 'cancelled 任务缺少 cancel_reason 或 resolution。' });
-    }
-    if (!t.next_action) {
-      issues.push({ level: '', id: t.id, text: '缺少 next_action，Agent 接手时只能依赖通用模板。' });
-    }
-    if (!t.acceptance?.length) {
-      issues.push({ level: '', id: t.id, text: '缺少 acceptance，完成后不容易判断是否可验收。' });
-    }
-    const downstream = state.children.get(t.id) || [];
-    if (downstream.length >= 2 && !t.downstream_constraints?.length && t.status !== 'done') {
-      issues.push({ level: '', id: t.id, text: `有 ${downstream.length} 个下游任务但未填写 downstream_constraints，Agent 实现时可能做出对下游不兼容的设计决策。` });
-    }
+    const taskIssues = GanttMDRules.checkTask(t, ctx);
+    issues.push(...taskIssues);
   }
   return issues;
 }
 
 function getFollowupIssues() {
   const issues = [];
-  const commonRequired = ['id', 'title', 'status', 'source_type', 'created_by', 'created_at', 'reason', 'suggestion', 'severity'];
+  const ctx = { now: new Date() };
   for (const f of state.followups) {
-    const id = f.id || 'FUP-UNKNOWN';
-    const missing = commonRequired.filter(key => !f[key]);
-    if (missing.length) {
-      issues.push({ level: 'warn', id, text: `Follow-up 缺少字段：${missing.join(', ')}` });
-    }
-    if (getFollowupStatus(f) === 'invalid') {
-      issues.push({ level: 'warn', id, text: `Follow-up status 非法：${f.status || '(空)'}` });
-    }
-    if (f.kind && !FOLLOWUP_KINDS.includes(f.kind)) {
-      issues.push({ level: 'warn', id, text: `Follow-up kind 非法：${f.kind}` });
-    }
-    if (getFollowupKind(f) === 'decision' && !f.decision_owner) {
-      issues.push({ level: 'warn', id, text: '用户裁决类 Follow-up 缺少 decision_owner。' });
-    }
-    const fStatus = getFollowupStatus(f);
-    if (((getFollowupKind(f) === 'deferred' && ['open', 'accepted'].includes(fStatus)) || f.status === 'accepted') && !f.next_review_at) {
-      issues.push({ level: 'warn', id, text: '延期或 accepted Follow-up 缺少 next_review_at。' });
-    }
-    if (f.source_type === 'pr_review' && (!f.source_pr || !f.source_rr)) {
-      issues.push({ level: 'warn', id, text: 'PR 审查来源必须填写 source_pr 和 source_rr。' });
-    }
-    if (f.status === 'accepted') {
-      const acceptedMissing = ['accepted_by', 'accepted_at', 'next_review_at', 'decision'].filter(key => !f[key]);
-      if (acceptedMissing.length) {
-        issues.push({ level: 'warn', id, text: `accepted 缺少主控复核字段：${acceptedMissing.join(', ')}` });
-      }
-    }
-    if (f.status === 'converted' && (!f.converted_task || !f.resolution)) {
-      issues.push({ level: 'warn', id, text: 'converted 必须填写 converted_task 和 resolution。' });
-    }
-    if ((f.status === 'done' || f.status === 'wontfix') && !f.resolution) {
-      issues.push({ level: 'warn', id, text: `${f.status} 必须填写 resolution。` });
-    }
+    const followupIssues = GanttMDRules.checkFollowup(f, ctx);
+    issues.push(...followupIssues);
   }
   return issues;
 }

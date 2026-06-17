@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 
 const MAX_PROJECT_ID_LENGTH = 128;
 const MAX_NAME_LENGTH = 200;
@@ -21,7 +22,10 @@ function readJsonIfExists(filePath, fallback) {
     if (stat.size > MAX_REGISTRY_PAYLOAD_BYTES) return fallback;
     const raw = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(raw);
-  } catch (_error) {
+  } catch (error) {
+    if (process.env.GANTTMD_DEBUG) {
+      console.error(`[DEBUG] Failed to read ${filePath}:`, error.message);
+    }
     return fallback;
   }
 }
@@ -54,7 +58,7 @@ function normalizeProjectName(rawName, fallbackId) {
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const serialized = JSON.stringify(value, null, 2) + '\n';
-  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.${crypto.randomUUID()}.tmp`;
   fs.writeFileSync(tempPath, serialized);
   fs.renameSync(tempPath, filePath);
 }

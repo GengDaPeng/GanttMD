@@ -1,6 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+const { BUILTIN_AGENT_COMMAND_TEMPLATES } = require('./agent-command-templates.js');
+
 function resolveGanttRoot(projectRoot) {
   const absoluteRoot = path.resolve(projectRoot || process.cwd());
   if (path.basename(absoluteRoot) === '.ganttmd') {
@@ -140,7 +142,7 @@ function parseChecklist(raw, sourceFile) {
 }
 
 function parseConfig(text) {
-  const config = { ganttmd: {}, project: {}, views: {}, milestones: [] };
+  const config = { ganttmd: {}, project: {}, views: {}, milestones: [], agent_command_templates: {} };
   let section = '';
   let currentMilestone = null;
 
@@ -162,6 +164,14 @@ function parseConfig(text) {
       continue;
     }
 
+    if (section === 'agent_command_templates') {
+      const match = trimmed.match(/^([a-zA-Z_]+):\s*(.*)$/);
+      if (match) {
+        config.agent_command_templates[match[1]] = parseScalar(match[2]);
+      }
+      continue;
+    }
+
     if (section === 'milestones') {
       const itemMatch = trimmed.match(/^-\s+([a-zA-Z_]+):\s*(.*)$/);
       if (itemMatch) {
@@ -177,6 +187,43 @@ function parseConfig(text) {
   }
 
   return config;
+}
+
+function readManagedTemplate(ganttRoot, configuredPath) {
+  if (!configuredPath) return;
+  const templatePath = path.resolve(ganttRoot, configuredPath);
+  const ganttRootWithSeparator = path.resolve(ganttRoot) + path.sep;
+  if (templatePath !== path.resolve(ganttRoot) && !templatePath.startsWith(ganttRootWithSeparator)) return;
+  if (!fs.existsSync(templatePath) || !fs.statSync(templatePath).isFile()) return;
+  return {
+    path: path.relative(ganttRoot, templatePath),
+    text: fs.readFileSync(templatePath, 'utf8'),
+  };
+}
+
+function loadAgentCommandTemplate(ganttRoot, config) {
+  config.ganttmd.agent_command_templates = {};
+
+  // 第 1 层：内置默认模板（单一真相源 src/agent-command-templates.js）。
+  // 保证 serve 模式下页面经 /api/state 永远能拿到一套可用模板，且可被项目逐层覆盖；
+  // 页面不再依赖自身硬编码 fallback。
+  for (const [key, text] of Object.entries(BUILTIN_AGENT_COMMAND_TEMPLATES)) {
+    config.ganttmd.agent_command_templates[key] = { text, builtin: true };
+  }
+
+  // 第 2 层：项目级默认模板文件（.ganttmd/agent-command-template.md）覆盖 default。
+  const defaultTemplate = readManagedTemplate(ganttRoot, config.ganttmd.agent_command_template || 'agent-command-template.md');
+  if (defaultTemplate) {
+    config.ganttmd.agent_command_template_path = defaultTemplate.path;
+    config.ganttmd.agent_command_template_text = defaultTemplate.text;
+    config.ganttmd.agent_command_templates.default = defaultTemplate;
+  }
+
+  // 第 3 层：config.yaml 的 agent_command_templates 按状态指定的模板文件，逐 key 覆盖。
+  for (const [key, templatePath] of Object.entries(config.agent_command_templates || {})) {
+    const template = readManagedTemplate(ganttRoot, templatePath);
+    if (template) config.ganttmd.agent_command_templates[key] = template;
+  }
 }
 
 function loadProject(projectRoot = process.cwd()) {
@@ -217,13 +264,16 @@ function loadProject(projectRoot = process.cwd()) {
     }
   }
 
+  const config = parseConfig(readTextIfExists(path.join(ganttRoot, 'config.yaml')));
+  loadAgentCommandTemplate(ganttRoot, config);
+
   return {
     root,
     ganttRoot,
     hasGanttRoot: fs.existsSync(ganttRoot),
     hasConfig: fs.existsSync(path.join(ganttRoot, 'config.yaml')),
     taskFileCount: taskFiles.length,
-    config: parseConfig(readTextIfExists(path.join(ganttRoot, 'config.yaml'))),
+    config,
     tasks,
     followups,
     runs,
@@ -245,5 +295,7 @@ module.exports = {
   parseChecklistItem,
   parseChecklist,
   parseConfig,
+  readManagedTemplate,
+  loadAgentCommandTemplate,
   loadProject,
 };

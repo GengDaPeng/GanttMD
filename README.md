@@ -52,6 +52,7 @@ your-project/
   AGENTS.md
   .ganttmd/
     config.yaml
+    agent-command-template.md  # 可选：看板“复制指令”模板
     followups.md
     runs.md
     tasks/
@@ -69,6 +70,8 @@ your-project/
 - `.ganttmd/tasks/main.md`
 - `.ganttmd/followups.md`
 - `.ganttmd/runs.md`
+
+如果项目需要自定义看板里的“复制指令”，在 `.ganttmd/agent-command-template.md` 写默认模板即可；也可以在 `config.yaml` 的 `ganttmd.agent_command_template` 指向 `.ganttmd/` 内的其他 Markdown 文件。需要按任务状态细分时，配置顶层 `agent_command_templates`，支持 `todo`、`in_progress`、`review`、`done`、`cancelled`、`blocked`、`missing_deps`、`default`。
 
 初始化后第一步不是继续堆样例，而是把 `tasks/main.md` 里的示例任务替换成项目真实任务，再执行 `doctor` 和 `validate`。
 
@@ -122,8 +125,11 @@ evidence: []
 | `ganttmd status [--json]` | 查看服务状态 |
 | `ganttmd serve [--port 7777]` | 前台启动服务（调试用） |
 | `ganttmd static [path] [--out dir]` | 导出离线静态看板 |
+| `ganttmd template eject [path] [--force] [--dry-run]` | 导出内置 Agent 指令模板供编辑 |
 
 `validate --json` 和 `doctor --json` 的返回码可直接用于 CI 阻断。
+
+要自定义看板「复制指令」的文案，运行 `ganttmd template eject`，它会把内置模板导出到 `.ganttmd/templates/agent/*.md` 并写好 `config.yaml` 映射，编辑后刷新看板即生效。详见 [SCHEMA.md](SCHEMA.md) §9.4。
 
 ### 升级与迁移边界
 

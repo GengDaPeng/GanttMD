@@ -24,6 +24,7 @@ GanttMD 的任务状态真相源只放在 `.ganttmd/`；需求正文、技术设
 |---|---:|---|
 | `README.md` | 建议 | 当前项目的 .ganttmd 操作边界说明 |
 | `config.yaml` | 是 | 项目元信息、里程碑、视图配置和校验参数 |
+| `agent-command-template.md` | 可选 | 本地看板“复制指令”的项目级模板 |
 | `tasks/*.md` | 是 | 任务状态真相源，一个文件可放多个任务 |
 | `followups.md` | 建议 | follow-up、决策事项、延期项和外部等待项 |
 | `runs.md` | 建议 | 分支或执行批次记录 |
@@ -38,6 +39,21 @@ GanttMD 不再要求 `milestones/overview.md` 或 `views/timeline.json`。里程
 ```yaml
 ganttmd:
   schema_version: 1
+  # 可选。默认读取 .ganttmd/agent-command-template.md。
+  # 只能指向 .ganttmd/ 目录内的文件。
+  agent_command_template: agent-command-template.md
+  agent_command_execution_setup: 主控已完成领取、分支和运行态安排；分支代理只做任务产出。
+  agent_command_delivery_requirements: 在 PR body 交付验证证据、影响范围和候选 follow-up。
+
+agent_command_templates:
+  todo: templates/agent/todo.md
+  in_progress: templates/agent/in-progress.md
+  review: templates/agent/review.md
+  done: templates/agent/done.md
+  cancelled: templates/agent/cancelled.md
+  blocked: templates/agent/blocked.md
+  missing_deps: templates/agent/missing-deps.md
+  default: templates/agent/default.md
 
 project:
   name: 示例项目
@@ -511,7 +527,53 @@ AGENTS.md
 
 Agent 不应每次全量阅读所有任务文件。应先按任务 ID、状态、依赖或页面推荐定位相关任务，再读取必要的文件。
 
-### 9.4 最低成功标准
+### 9.4 复制指令模板
+
+看板复制按钮默认使用内置模板。项目可以按三层配置覆盖：
+
+1. `ganttmd.agent_command_template`：默认模板路径，默认读取 `.ganttmd/agent-command-template.md`。
+2. `agent_command_templates`：按任务状态覆盖模板，支持 `todo`、`in_progress`、`review`、`done`、`cancelled`、`blocked`、`missing_deps`、`default`。
+3. `ganttmd.agent_command_execution_setup` / `ganttmd.agent_command_delivery_requirements`：覆盖内置默认模板中的执行安排和交付要求文案。
+
+所有模板路径都必须是 `.ganttmd/` 内相对路径；指向目录、外部路径或不存在文件时会被忽略。
+
+#### 导出内置模板供编辑
+
+想改任务指令但不知道从哪下手时，用 `ganttmd template eject` 把内置模板导出成可编辑文件：
+
+```bash
+ganttmd template eject [path]            # 导出全部状态模板到 .ganttmd/templates/agent/*.md，并写入 config 映射
+ganttmd template eject [path] --dry-run  # 只看会创建/覆盖哪些文件，不写盘
+ganttmd template eject [path] --force    # 覆盖已存在的模板文件（覆盖前自动备份到 .ganttmd/.backup/）
+```
+
+导出后：
+
+- 每个任务状态对应一个 `.ganttmd/templates/agent/<状态>.md` 文件，内容是内置模板的占位符版本。
+- `config.yaml` 自动追加 `agent_command_templates` 映射；已有映射会保留，缺失状态会补齐。
+- 编辑这些 `.md` 文件，刷新看板即生效；未编辑的文件保留内置内容。
+- 默认不覆盖已存在的模板文件，避免冲掉你已有的自定义。
+
+选择优先级：
+
+- 缺失依赖任务优先使用 `missing_deps` 模板。
+- 阻塞任务优先使用 `blocked` 模板。
+- 其他任务优先使用与 `status` 同名的模板。
+- 没有状态模板时，使用 `ganttmd.agent_command_template` 的默认模板。
+- 没有任何项目模板时，使用 GanttMD 内置模板。
+
+支持的占位符：
+
+- `{{task.id}}`、`{{task.title}}`、`{{task.status}}`、`{{task.file}}`
+- `{{task.next_action}}`、`{{task.execution_scope}}`、`{{task.output_target}}`
+- `{{task.acceptance}}`、`{{task.downstream_constraints}}`、`{{task.verification_commands}}`
+- `{{task.source_docs}}`
+- `{{task.blocked_reason}}`、`{{task.open_dependencies}}`、`{{task.missing_dependencies}}`、`{{task.downstream}}`
+- `{{execution_setup}}`、`{{delivery_requirements}}`、`{{critical_path_note}}`
+
+未识别的占位符会渲染为空字符串。
+
+### 9.5 最低成功标准
 
 - `ganttmd validate` 没有 warning。
 - `ganttmd doctor` 不提示 schema 落后或缺失。

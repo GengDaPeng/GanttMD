@@ -4,6 +4,7 @@ const path = require('node:path');
 const { resolveGanttRoot, readTextIfExists } = require('./project-loader.js');
 const { hasSchemaVersion } = require('./migrator.js');
 const { README_CONTENT, LEGACY_README_CONTENT } = require('./project-init.js');
+const { ensureManagedPath: ensureManagedPathSafe } = require('./fs-safety.js');
 
 const DEPRECATED_FILES = [
   {
@@ -36,32 +37,9 @@ function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, '').replace('T', 'T').replace('Z', 'Z');
 }
 
-function isInsideRoot(rootPath, targetPath) {
-  const relative = path.relative(rootPath, targetPath);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
+// 共用 fs-safety 的护栏，保留 upgrade 原有错误文案。
 function ensureManagedPath(ganttRoot, filePath) {
-  const absoluteRoot = path.resolve(ganttRoot);
-  const absoluteTarget = path.resolve(filePath);
-  if (!isInsideRoot(absoluteRoot, absoluteTarget)) {
-    throw new Error(`升级目标必须位于 .ganttmd 目录内，且不能是指向外部的符号链接：${filePath}`);
-  }
-
-  const relative = path.relative(absoluteRoot, absoluteTarget);
-  if (!relative) return;
-
-  let current = absoluteRoot;
-  for (const part of relative.split(path.sep).filter(Boolean)) {
-    current = path.join(current, part);
-    if (!fs.existsSync(current)) {
-      continue;
-    }
-    const stat = fs.lstatSync(current);
-    if (stat.isSymbolicLink()) {
-      throw new Error(`升级目标必须位于 .ganttmd 目录内，且不能是指向外部的符号链接：${filePath}`);
-    }
-  }
+  ensureManagedPathSafe(ganttRoot, filePath, '升级目标');
 }
 
 function makeBaseResult(ganttRoot) {

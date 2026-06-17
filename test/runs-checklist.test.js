@@ -72,6 +72,44 @@ current_task: T-1
   assert.equal(validateProject(project).filter((issue) => issue.level === 'warn').length, 0);
 });
 
+test('loader 读取项目级 Agent 指令模板', () => {
+  const root = createProject({
+    '.ganttmd/config.yaml': `project:
+  name: Template Project
+ganttmd:
+  agent_command_execution_setup: 主控安排执行
+  agent_command_delivery_requirements: PR body 交付
+agent_command_templates:
+  todo: templates/todo.md
+  blocked: templates/blocked.md
+`,
+    '.ganttmd/agent-command-template.md': '接手 {{task.id}}：{{task.title}}\n\n{{task.acceptance}}\n',
+    '.ganttmd/templates/todo.md': 'TODO {{task.id}}\n',
+    '.ganttmd/templates/blocked.md': 'BLOCKED {{task.blocked_reason}}\n',
+    '.ganttmd/tasks/main.md': `# Tasks
+
+\`\`\`ganttmd-task
+id: T-1
+title: 模板任务
+status: todo
+dependencies: []
+track: spec
+acceptance: [验收一, 验收二]
+\`\`\`
+`,
+  });
+
+  const project = loadProject(root);
+
+  assert.equal(project.config.ganttmd.agent_command_template_text, '接手 {{task.id}}：{{task.title}}\n\n{{task.acceptance}}\n');
+  assert.equal(project.config.ganttmd.agent_command_template_path, 'agent-command-template.md');
+  assert.equal(project.config.ganttmd.agent_command_execution_setup, '主控安排执行');
+  assert.equal(project.config.ganttmd.agent_command_delivery_requirements, 'PR body 交付');
+  assert.equal(project.config.ganttmd.agent_command_templates.todo.text, 'TODO {{task.id}}\n');
+  assert.equal(project.config.ganttmd.agent_command_templates.todo.path, 'templates/todo.md');
+  assert.equal(project.config.ganttmd.agent_command_templates.blocked.text, 'BLOCKED {{task.blocked_reason}}\n');
+});
+
 test('校验器能发现 run 和 checklist 的结构问题', () => {
   const root = createProject({
     '.ganttmd/config.yaml': `project:

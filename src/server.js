@@ -145,7 +145,10 @@ function computeGanttVersion(projectRoot) {
 
   try {
     walk(ganttRoot);
-  } catch {
+  } catch (error) {
+    if (process.env.GANTTMD_DEBUG) {
+      console.error(`[DEBUG] Failed to compute version for ${projectRoot}:`, error.message);
+    }
     return Date.now();
   }
   return Math.floor(version);
@@ -217,6 +220,17 @@ function createRequestHandler(options = {}) {
     const url = new URL(req.url, 'http://localhost');
 
     try {
+      if (req.method === 'GET' && url.pathname === '/rules.js') {
+        const rulesPath = path.join(__dirname, 'rules.js');
+        const content = fs.readFileSync(rulesPath, 'utf8');
+        res.writeHead(200, {
+          'content-type': 'application/javascript; charset=utf-8',
+          'cache-control': 'public, max-age=3600',
+        });
+        res.end(content);
+        return;
+      }
+
       if (req.method === 'GET' && url.pathname === '/') {
         sendHtml(res, readWebIndex());
         return;
