@@ -43,6 +43,7 @@ function sendHtml(res, html) {
     'x-frame-options': 'DENY',
     'referrer-policy': 'no-referrer',
     'content-type': 'text/html; charset=utf-8',
+    'cache-control': 'no-store',
   });
   res.end(html);
 }
@@ -225,7 +226,7 @@ function createRequestHandler(options = {}) {
         const content = fs.readFileSync(rulesPath, 'utf8');
         res.writeHead(200, {
           'content-type': 'application/javascript; charset=utf-8',
-          'cache-control': 'public, max-age=3600',
+          'cache-control': 'no-store',
         });
         res.end(content);
         return;
@@ -272,6 +273,16 @@ function createRequestHandler(options = {}) {
         } catch (error) {
           sendJson(res, 400, { error: error.message });
         }
+        return;
+      }
+
+      if (req.method === 'DELETE' && url.pathname.startsWith('/api/projects/')) {
+        const id = decodeURIComponent(url.pathname.slice('/api/projects/'.length));
+        if (!id) {
+          sendJson(res, 400, { error: '缺少项目 ID' });
+          return;
+        }
+        sendJson(res, 200, Registry.removeProject(id, registryPath));
         return;
       }
 

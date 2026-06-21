@@ -42,6 +42,11 @@ async function getText(url) {
   return response.text();
 }
 
+async function deleteJson(url) {
+  const response = await fetch(url, { method: 'DELETE' });
+  return { response, body: await response.json() };
+}
+
 async function postJson(url, body) {
   const response = await fetch(url, {
     method: 'POST',
@@ -86,6 +91,14 @@ test('本地服务提供项目列表和项目运行时状态 API', async (t) => 
   assert.match(html, /GanttMD Local/);
   assert.doesNotMatch(html, /GanttMD V6/);
 
+  const htmlResponse = await fetch(`${url}/project/api-demo`);
+  assert.equal(htmlResponse.status, 200);
+  assert.equal(htmlResponse.headers.get('cache-control'), 'no-store');
+
+  const rulesResponse = await fetch(`${url}/rules.js`);
+  assert.equal(rulesResponse.status, 200);
+  assert.equal(rulesResponse.headers.get('cache-control'), 'no-store');
+
   const projects = await getJson(`${url}/api/projects`);
   assert.equal(projects.projects.length, 1);
   assert.equal(projects.projects[0].id, 'api-demo');
@@ -106,6 +119,29 @@ test('本地服务提供项目列表和项目运行时状态 API', async (t) => 
   const changed = await getJson(`${url}/api/events?project=api-demo&since=${state.version}`);
   assert.equal(changed.changed, true);
   assert.ok(changed.version > state.version);
+});
+
+test('服务 API 删除项目登记但不删除用户项目目录', async (t) => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-server-delete-'));
+  const registryPath = path.join(tmp, 'projects.json');
+  const projectRoot = path.join(tmp, 'project');
+  writeProject(projectRoot);
+  Registry.addProject(projectRoot, { id: 'api-demo', name: 'API Demo' }, registryPath);
+
+  const { server, url } = await startServer({
+    port: 0,
+    registryPath,
+    worktrees: [],
+  });
+  t.after(() => server.close());
+
+  const removed = await deleteJson(`${url}/api/projects/api-demo`);
+  assert.equal(removed.response.status, 200);
+  assert.deepEqual(removed.body.projects, []);
+  assert.equal(fs.existsSync(path.join(projectRoot, '.ganttmd', 'config.yaml')), true);
+
+  const projects = await getJson(`${url}/api/projects`);
+  assert.equal(projects.projects.length, 0);
 });
 
 test('服务 API 对 /api/projects 进行安全输入校验', async (t) => {

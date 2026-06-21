@@ -9,7 +9,7 @@ const LEGACY_README_CONTENT = `# GanttMD 项目任务状态
 
 - config.yaml：项目、里程碑、视图、校验和 agent_command 复制指令模板配置。
 - tasks/*.md：正式任务、状态、依赖、证据链和验收摘要。
-- followups.md：后续事项、用户裁决、延期复核、外部等待和风险项。
+- followups.md：后续事项、用户裁决、延期复核、风险项和关闭结论。
 - runs.md：worktree/分支领取任务、执行批次和当前运行态。
 - README.md：本目录的操作边界说明。
 
@@ -66,7 +66,7 @@ const README_CONTENT = `# GanttMD 项目任务状态
 
 - config.yaml：项目、里程碑、视图、校验和 agent_command 复制指令模板配置。
 - tasks/*.md：正式任务、状态、依赖、证据链和验收摘要。
-- followups.md：后续事项、用户裁决、延期复核、外部等待和风险项。
+- followups.md：后续事项、用户裁决、延期复核、风险项和关闭结论。
 - runs.md：运行态记录，不是长期任务正文；默认不要手工维护，项目启用 CLI 或自动化流程时应优先通过受控写入口更新。
 - README.md：本目录的操作边界说明。
 

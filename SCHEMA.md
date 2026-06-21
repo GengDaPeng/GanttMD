@@ -25,7 +25,7 @@ GanttMD 的任务状态真相源只放在 `.ganttmd/`；需求正文、技术设
 | `README.md` | 建议 | 当前项目的 .ganttmd 操作边界说明 |
 | `config.yaml` | 是 | 项目元信息、里程碑、视图配置和校验参数 |
 | `tasks/*.md` | 是 | 任务状态真相源，一个文件可放多个任务 |
-| `followups.md` | 建议 | follow-up、决策事项、延期项和外部等待项 |
+| `followups.md` | 建议 | follow-up、决策事项、延期项、风险项和关闭结论 |
 | `runs.md` | 建议 | 分支或执行批次记录 |
 | `modules/*.md` | 兼容 | 旧版任务目录，新项目不推荐 |
 
@@ -292,7 +292,7 @@ evidence: [docs/后端工程骨架专项设计.md, commit:abcdef]
 
 `followups.md` 使用 `ganttmd-followup` 代码块，用来记录"当前任务中发现，但不应直接混入当前任务范围"的后续事项。
 
-典型场景：后续复查风险、暂缓处理的改进、外部输入或设计确认、PR 审查留下的可追踪事项、已转正式任务的遗留项。
+典型场景：后续复查风险、暂缓处理的改进、设计确认、PR 审查留下的可追踪事项、已转正式任务的遗留项，以及裁决后无需转任务的关闭结论。
 
 没有写入 `.ganttmd/followups.md` 的事项，不视为进入项目跟踪。
 
@@ -325,7 +325,7 @@ next_review_at: 2026-06-01
 |---|---:|---|
 | `id` | 是 | 全项目唯一 follow-up ID |
 | `title` | 是 | 标题 |
-| `kind` | 是 | `followup`、`decision`、`deferred`、`external_wait`、`risk` |
+| `kind` | 是 | `followup`、`decision`、`deferred`、`risk`；历史数据中的 `external_wait` 仅兼容读取，不再作为推荐类型 |
 | `status` | 是 | `open`、`accepted`、`converted`、`done`、`wontfix` |
 | `severity` | 是 | `low`、`medium`、`high` |
 | `source_type` | 是 | `task`、`pr_review`、`discussion`、`user`、`ci` 等 |
@@ -336,7 +336,7 @@ next_review_at: 2026-06-01
 | `created_at` | 是 | 登记日期 |
 | `reason` | 是 | 为什么需要登记 |
 | `suggestion` | 是 | 建议处理方式 |
-| `next_review_at` | 延期/外部等待必填 | 下次复核日期 |
+| `next_review_at` | 延期必填 | 下次复核日期 |
 | `accepted_by` / `accepted_at` / `decision` | accepted 必填 | 接受延期时的决策链 |
 | `converted_task` / `resolution` | converted 必填 | 转成正式任务后的任务 ID 和结论 |
 | `resolution` | done/wontfix 必填 | 关闭结论 |
@@ -350,11 +350,12 @@ next_review_at: 2026-06-01
 
 | 类型 | 含义 |
 |---|---|
-| `followup` | 普通后续事项 |
+| `followup` | 待处理后续事项 |
 | `decision` | 等待明确决策 |
 | `deferred` | 已接受延期但需要复查 |
-| `external_wait` | 等外部资料、设备、账号或环境 |
 | `risk` | 风险项，不一定立即转任务 |
+
+历史数据中的 `external_wait` 仍可被读取以保证兼容，但看板不再提供“等待外部资料”独立标签。新增事项应按实际治理动作归入 `followup`、`decision`、`deferred` 或 `risk`。
 
 **状态**：
 
@@ -368,11 +369,25 @@ next_review_at: 2026-06-01
 
 建议执行 Agent 只新增 `open`，其他状态由看板维护者统一处理。
 
+看板 Follow-up 视图使用多选标签组织清单：
+
+- `全部`：显示所有 follow-up。
+- `待处理`：显示尚未转正式任务、尚未关闭的 `open` / `accepted` follow-up。
+- `等待用户裁决`、`延期复查`、`高风险事项`：待处理集合中的重点子类。
+- `已转正式任务`：显示 `status: converted` 或填写了 `converted_task`，且关联正式任务尚未完成的 follow-up。
+- `已关闭`：显示裁决后不转正式任务、以 `done` / `wontfix` 或关闭证据收口的 follow-up；也包含已转正式任务且关联正式任务已经 `done` 的 follow-up。
+
+已转正式任务卡片会把两个概念分开显示：`已转正式任务` 是 follow-up 阶段标签；关联正式任务的当前状态（例如 `已完成`、`可执行`、`被阻塞`）显示在卡片右上角，与风险等级并列。关联正式任务进入 `done` 后，该 follow-up 在看板分组上归入“已完成”。
+
 ### 转成正式任务
 
 1. 在 `.ganttmd/tasks/*.md` 新增 `ganttmd-task`。
 2. 在 follow-up 中设置 `status: converted`。
 3. 填写 `converted_task` 和 `resolution`。
+
+### 关闭而不转任务
+
+如果 follow-up 经裁决后不需要进入正式任务，应设置为 `status: done` 或 `status: wontfix`，并填写 `resolution`。这类事项会进入看板的“已关闭”标签，用于保留裁决依据和关闭原因。已转正式任务的 follow-up 不需要在关联任务完成后改写原始 follow-up 状态；看板会根据 `converted_task` 指向任务的 `done` 状态归入已完成分组。
 
 ## 5. runs.md 与 checklist
 
@@ -515,7 +530,7 @@ ganttmd validate --json
 
 - `config.yaml`：项目、里程碑和视图配置。
 - `tasks/*.md`：任务、状态、依赖、证据链和验收摘要。
-- `followups.md`：后续事项、决策事项、延期复核、外部等待和风险项。
+- `followups.md`：后续事项、决策事项、延期复核、风险项和关闭结论。
 - `runs.md`：任务批次、分支承接关系和执行窗口。
 
 这些文件都应该提交到 Git——Agent 需要读取、人类需要审查、CI 可以校验。
@@ -611,7 +626,7 @@ ganttmd template eject [path] --dry-run  # 只看 config.yaml 写入计划，不
 - `ganttmd validate` 没有 warning。
 - `ganttmd doctor` 不提示 schema 落后或缺失。
 - 本地看板能读取任务，里程碑能显示，执行视角能看到下一步任务。
-- Follow-up 视图能显示清单，runs.md 能表达当前分支承接的任务批次。
+- Follow-up 视图能显示 `全部`、`待处理`、`已转正式任务`、`已关闭` 等标签；已转正式任务卡片能显示关联正式任务状态，且关联任务完成后进入已完成分组；runs.md 能表达当前分支承接的任务批次。
 
 ## 10. 迁移和兼容
 
