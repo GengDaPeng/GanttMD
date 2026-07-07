@@ -549,6 +549,7 @@ module.exports = {
   main,
   parseRootAndFlags,
   printValidateResult,
+  runArchive,
   runDoctor,
   runInit,
   runMigrate,

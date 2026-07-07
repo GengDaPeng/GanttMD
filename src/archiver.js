@@ -75,6 +75,7 @@ function planArchive(projectRoot = process.cwd(), options = {}) {
     for (const task of tasks) {
       nextContent = insertArchiveFields(nextContent, task.id, dateStr, threshold);
     }
+    if (nextContent === previousContent) continue; // ponytail: 空变更跳过，避免虚报归档与无意义备份
     changes.push({ file: abs, taskIds: tasks.map((t) => t.id), previousContent, nextContent });
   }
   return { ganttRoot, configured: true, threshold, changes };
