@@ -188,6 +188,15 @@ updated_at: 2026-05-25
 
 `done` 和 `cancelled` 任务不要直接删除。超过 7 天归档阈值后，validator 会提示"可归档"，可补 `archived_at` 和 `archived_reason`。归档不是源状态——不要把 `status` 改成 `archived`。
 
+### validation 配置
+
+`.ganttmd/config.yaml` 的 `validation` 段控制校验与归档行为（均可选）：
+
+- `source_docs_missing_exempt_statuses`：字符串数组，默认 `[]`。列出「source_docs 断链不计入 warning」的任务状态；仅当任务已 `archived_at` 或已过 `archive_after_days` 阈值时豁免生效（最近关闭仍严格）。名单含活跃态会输出软护栏提示。
+- `archive_after_days`：整数，默认 `7`。「可归档」提示与上面豁免的时间门槛。
+- `auto_archive_after_days`：整数，未配置则 `ganttmd archive` 不归档任何任务。超过该天数的 `done`/`cancelled` 任务会被 `archive` 命令原地写 `archived_at`。
+- `warning_detail_limit`：整数，默认 `10`。`validate` 文本输出中同类 warning 超过该条数则折叠，`--verbose` 展开。
+
 ### 3.3 kind
 
 | kind | 含义 |
