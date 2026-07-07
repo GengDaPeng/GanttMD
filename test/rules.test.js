@@ -326,3 +326,51 @@ test('CLI 和本地服务通过同一份规则模块生成健康检查', () => {
   assert.ok(runtimeState.includes("require('./validator.js')"), 'runtime-state.js 必须复用 validator.js');
   assert.ok(runtimeState.includes('validateProject'), 'runtime-state.js 必须通过 validator.js 生成健康检查');
 });
+
+test('source_docs 断链按状态+归档门槛分层豁免', () => {
+  const now = new Date('2026-07-07T00:00:00Z');
+  function run(overrides, exemptStatuses) {
+    const ctx = Rules.defaultContext({
+      now,
+      archiveAfterDays: 7,
+      sourceDocExists: () => false, // 一律视为断链
+      sourceDocsMissingExemptStatuses: exemptStatuses,
+    });
+    const task = Object.assign({
+      id: 'T', title: 't', kind: 'task', track: 'backend', milestone: '',
+      dependencies: [], source_docs: ['docs/missing.md'], next_action: 'x',
+      acceptance: ['a'], evidence: ['e'], verification: 'v',
+      _openDeps: [], _missingDeps: [], _downstreamCount: 0,
+    }, overrides);
+    return Rules.checkTask(task, ctx).filter((i) => i.field === 'source_docs');
+  }
+  const has = (issues) => issues.some((i) => i.text.indexOf('来源文档不存在') === 0);
+
+  // 规则1：active 任务始终严格
+  assert.ok(has(run({ status: 'in_progress' }, ['done', 'cancelled'])));
+  // 规则2：done + archived_at 命中 → 豁免
+  assert.ok(!has(run({ status: 'done', completed_date: '2026-07-06', archived_at: '2026-07-06' }, ['done'])));
+  // 规则3：done + 超阈值未归档 → 豁免
+  assert.ok(!has(run({ status: 'done', completed_date: '2026-06-01' }, ['done'])));
+  // 最近关闭：done + 未归档未超阈值 → 仍严格
+  assert.ok(has(run({ status: 'done', completed_date: '2026-07-06' }, ['done'])));
+  // 默认空名单：done + archived + 断链 → 仍 warn（opt-in 未开启）
+  assert.ok(has(run({ status: 'done', completed_date: '2026-06-01', archived_at: '2026-06-01' }, [])));
+});
+
+test('规则3 豁免时仍保留可归档 info', () => {
+  const now = new Date('2026-07-07T00:00:00Z');
+  const ctx = Rules.defaultContext({
+    now, archiveAfterDays: 7, sourceDocExists: () => false,
+    sourceDocsMissingExemptStatuses: ['done'],
+  });
+  const task = {
+    id: 'T', title: 't', status: 'done', kind: 'task', track: 'backend', milestone: '',
+    dependencies: [], source_docs: ['docs/missing.md'], completed_date: '2026-06-01',
+    next_action: '', acceptance: [], evidence: ['e'], verification: 'v',
+    _openDeps: [], _missingDeps: [], _downstreamCount: 0,
+  };
+  const issues = Rules.checkTask(task, ctx);
+  assert.ok(issues.some((i) => i.text.indexOf('可归档') !== -1));
+  assert.ok(!issues.some((i) => i.text.indexOf('来源文档不存在') === 0));
+});

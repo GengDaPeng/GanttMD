@@ -156,8 +156,15 @@
       }
     }
 
+    const exemptStatuses = Array.isArray(ctx.sourceDocsMissingExemptStatuses)
+      ? ctx.sourceDocsMissingExemptStatuses
+      : [];
+    const sourceDocsExempt = exemptStatuses.indexOf(task.status) !== -1
+      && (!!task.archived_at
+          || (archiveDate != null && daysBetween(archiveDate, ctx.now) > archiveAfterDays));
+
     const srcDocs = toArray(task.source_docs);
-    if (typeof ctx.sourceDocExists === 'function') {
+    if (typeof ctx.sourceDocExists === 'function' && !sourceDocsExempt) {
       for (let i = 0; i < srcDocs.length; i++) {
         const p = String(srcDocs[i]).split('§')[0].trim();
         if (!p || p.indexOf('PR#') === 0 || p.indexOf('commit:') === 0) continue;
@@ -349,6 +356,7 @@
       archiveAfterDays: DEFAULT_ARCHIVE_AFTER_DAYS,
       milestoneIds: null,
       sourceDocExists: null,
+      sourceDocsMissingExemptStatuses: [],
       reviewStatuses: REVIEW_STATUSES,
     };
     if (overrides) {
