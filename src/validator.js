@@ -33,18 +33,35 @@ function validateProject(project, options = {}) {
   const issues = [];
   const taskById = new Map();
   const milestoneIds = new Set(project.config.milestones.map((m) => m.id).filter(Boolean));
+  const validation = project.config.validation || {};
+  const configArchiveDays = Number(validation.archive_after_days);
   const context = {
     now: options.now || new Date(),
     reviewStaleDays: options.reviewStaleDays != null ? options.reviewStaleDays : DEFAULT_REVIEW_STALE_DAYS,
-    archiveAfterDays: options.archiveAfterDays != null ? options.archiveAfterDays : DEFAULT_ARCHIVE_AFTER_DAYS,
+    archiveAfterDays: options.archiveAfterDays != null
+      ? options.archiveAfterDays
+      : (Number.isFinite(configArchiveDays) && configArchiveDays >= 0 ? configArchiveDays : DEFAULT_ARCHIVE_AFTER_DAYS),
     reviewStatuses: Array.isArray(project.config.ganttmd.review_statuses) && project.config.ganttmd.review_statuses.length
       ? project.config.ganttmd.review_statuses
       : Rules.REVIEW_STATUSES,
     milestoneIds: milestoneIds,
     sourceDocExists: (relPath) => fs.existsSync(path.resolve(project.root, relPath)),
+    sourceDocsMissingExemptStatuses: Array.isArray(validation.source_docs_missing_exempt_statuses)
+      ? validation.source_docs_missing_exempt_statuses
+      : [],
     taskIds: null,
     taskById: null,
   };
+
+  const ACTIVE_STATUSES = ['todo', 'in_progress', 'review', 'blocked'];
+  const exemptActive = context.sourceDocsMissingExemptStatuses.filter((s) => ACTIVE_STATUSES.indexOf(s) !== -1);
+  if (exemptActive.length > 0) {
+    issues.push({
+      level: 'info', id: '(project)',
+      message: `validation.source_docs_missing_exempt_statuses 豁免了活跃态 ${exemptActive.join(', ')}，会削弱当前看板校验`,
+      sourceFile: '', field: 'config',
+    });
+  }
 
   if (!project.hasGanttRoot) {
     issues.push({ level: 'warn', id: '(project)', message: '未找到 .ganttmd 目录', sourceFile: '', field: 'ganttRoot' });

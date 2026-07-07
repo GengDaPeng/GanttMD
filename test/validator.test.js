@@ -384,3 +384,52 @@ closed_at: 2026-05-02
   assert(issues.some((issue) => issue.level === 'info' && issue.id === 'F' && issue.message.includes('可归档')));
   assert(issues.some((issue) => issue.level === 'info' && issue.id === 'G' && issue.message.includes('可归档')));
 });
+
+test('validation 配置驱动 source_docs 豁免与 archive_after_days', () => {
+  const root = createProject({
+    '.ganttmd/config.yaml': `validation:
+  source_docs_missing_exempt_statuses: [done]
+  archive_after_days: 3
+`,
+    '.ganttmd/tasks/main.md': `\`\`\`ganttmd-task
+id: OLD
+title: 旧任务
+status: done
+track: backend
+completed_date: 2026-07-01
+dependencies: []
+source_docs: [docs/missing.md]
+evidence: [e]
+verification: v
+\`\`\`
+`,
+  });
+  const project = loadProject(root);
+  const issues = validateProject(project, { now: new Date('2026-07-07T00:00:00Z') });
+  // 关闭 6 天 > archive_after_days 3 且命中名单 → 断链豁免
+  assert.ok(!issues.some((i) => i.id === 'OLD' && String(i.message).indexOf('来源文档不存在') === 0));
+});
+
+test('名单含活跃态时输出软护栏 info', () => {
+  const root = createProject({
+    '.ganttmd/config.yaml': `validation:
+  source_docs_missing_exempt_statuses: [in_progress]
+`,
+    '.ganttmd/tasks/main.md': `\`\`\`ganttmd-task
+id: A
+title: t
+status: todo
+track: backend
+milestone: M1
+dependencies: []
+source_docs: [docs/spec.md]
+next_action: x
+acceptance: [a]
+\`\`\`
+`,
+  });
+  const project = loadProject(root);
+  const issues = validateProject(project, { now: new Date('2026-07-07T00:00:00Z') });
+  assert.ok(issues.some((i) => i.id === '(project)'
+    && String(i.message).indexOf('豁免了活跃态') !== -1));
+});
