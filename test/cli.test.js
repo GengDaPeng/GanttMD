@@ -126,3 +126,63 @@ acceptance: [a]
   const data = JSON.parse(json.stdout);
   assert.equal(data.issues.filter((i) => String(i.message).indexOf('来源文档不存在') === 0).length, 12);
 });
+
+test('validate 多分组独立性：一组超限折叠，另一组不超限全部打印', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-multi-fold-'));
+  fs.mkdirSync(path.join(tmp, '.ganttmd', 'tasks'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, '.ganttmd', 'config.yaml'), 'project:\n  name: MultiGroup\n');
+
+  // 创建一个存在的文件供第二组使用
+  const docsDir = path.join(tmp, 'docs');
+  fs.mkdirSync(docsDir, { recursive: true });
+  fs.writeFileSync(path.join(docsDir, 'exists.md'), '# Exists\n');
+
+  let md = '';
+
+  // 第一组：12 条 source_docs warning（超过默认 limit 10）
+  for (let i = 0; i < 12; i++) {
+    md += `\`\`\`ganttmd-task
+id: G1T${i}
+title: Group1Task${i}
+status: todo
+track: backend
+milestone: M1
+dependencies: []
+source_docs: [docs/missing-${i}.md]
+next_action: x
+acceptance: [a]
+\`\`\`
+
+`;
+  }
+
+  // 第二组：3 条 blocked_reason warning（不超限）
+  for (let i = 0; i < 3; i++) {
+    md += `\`\`\`ganttmd-task
+id: G2T${i}
+title: Group2Task${i}
+status: blocked
+track: backend
+milestone: M1
+dependencies: []
+source_docs: [docs/exists.md]
+next_action: x
+acceptance: [a]
+\`\`\`
+
+`;
+  }
+
+  fs.writeFileSync(path.join(tmp, '.ganttmd', 'tasks', 'main.md'), md);
+
+  const result = spawnSync(process.execPath, [cliPath, 'validate', tmp], { encoding: 'utf8' });
+
+  // 断言 1：超限组出现折叠汇总行
+  assert.ok(result.stdout.indexOf('已折叠') !== -1, `Expected folding summary, got:\n${result.stdout}`);
+
+  // 断言 2：不超限组的 3 条 blocked_reason warning 全部打印
+  const blockedReasonMatches = (result.stdout.match(/blocked_reason/g) || []).length;
+  assert.ok(blockedReasonMatches >= 3, `Expected at least 3 blocked_reason warnings in output, got ${blockedReasonMatches}:\n${result.stdout}`);
+});
