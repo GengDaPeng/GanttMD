@@ -24,6 +24,12 @@ function levelLabel(level) {
   return level;
 }
 
+function printIssueLine(item) {
+  const location = item.sourceFile ? ` ${item.sourceFile}` : '';
+  const field = item.field ? ` [${item.field}]` : '';
+  console.log(`- ${levelLabel(item.level)} ${item.id}${field}${location}：${item.message}`);
+}
+
 function printValidateResult(project, issues, options) {
   const warnings = issues.filter((item) => item.level === 'warn');
 
@@ -47,11 +53,26 @@ function printValidateResult(project, issues, options) {
 
   if (issues.length === 0) {
     console.log('未发现结构问题。');
+  } else if (options.verbose) {
+    for (const item of issues) printIssueLine(item);
   } else {
+    const limit = options.detailLimit || 10;
+    const total = {};
     for (const item of issues) {
-      const location = item.sourceFile ? ` ${item.sourceFile}` : '';
-      const field = item.field ? ` [${item.field}]` : '';
-      console.log(`- ${levelLabel(item.level)} ${item.id}${field}${location}：${item.message}`);
+      const k = item.level + '|' + (item.field || '');
+      total[k] = (total[k] || 0) + 1;
+    }
+    const shown = {};
+    for (const item of issues) {
+      const k = item.level + '|' + (item.field || '');
+      if (total[k] <= limit) { printIssueLine(item); continue; }
+      shown[k] = (shown[k] || 0) + 1;
+      if (shown[k] <= limit) {
+        printIssueLine(item);
+      } else if (shown[k] === limit + 1) {
+        const fieldLabel = item.field ? ` [${item.field}]` : '';
+        console.log(`  …… 本组（${levelLabel(item.level)}${fieldLabel}）共 ${total[k]} 条，其余 ${total[k] - limit} 条已折叠，加 --verbose 查看全部`);
+      }
     }
   }
 
@@ -60,7 +81,10 @@ function printValidateResult(project, issues, options) {
 
 function runValidate(args) {
   const options = parseRootAndFlags(args);
+  options.verbose = args.includes('--verbose') || args.includes('--full');
   const project = loadProject(options.root);
+  const rawLimit = Number(project.config.validation && project.config.validation.warning_detail_limit);
+  options.detailLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 10;
   const issues = validateProject(project);
   return printValidateResult(project, issues, options);
 }
@@ -70,7 +94,7 @@ function printHelp() {
 
 用法：
   ganttmd init [path]
-  ganttmd validate [path] [--json]
+  ganttmd validate [path] [--json] [--verbose]
   ganttmd doctor [path] [--json]
   ganttmd migrate [path] [--apply] [--json]
   ganttmd upgrade [path] [--apply] [--json]

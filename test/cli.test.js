@@ -90,3 +90,39 @@ test('ganttmd start/status/stop 管理后台本地服务', {
   assert.equal(stopped.status, 0, stopped.stderr || stopped.stdout);
   assert.equal(JSON.parse(stopped.stdout).running, false);
 });
+
+test('validate 文本输出折叠同类大量 warning，--verbose 展开', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-fold-'));
+  fs.mkdirSync(path.join(tmp, '.ganttmd', 'tasks'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, '.ganttmd', 'config.yaml'), 'project:\n  name: Fold\n');
+  let md = '';
+  for (let i = 0; i < 12; i++) {
+    md += `\`\`\`ganttmd-task
+id: T${i}
+title: t${i}
+status: todo
+track: backend
+milestone: M1
+dependencies: []
+source_docs: [docs/missing-${i}.md]
+next_action: x
+acceptance: [a]
+\`\`\`
+
+`;
+  }
+  fs.writeFileSync(path.join(tmp, '.ganttmd', 'tasks', 'main.md'), md);
+
+  const folded = spawnSync(process.execPath, [cliPath, 'validate', tmp], { encoding: 'utf8' });
+  assert.ok(folded.stdout.indexOf('已折叠') !== -1, folded.stdout);
+
+  const verbose = spawnSync(process.execPath, [cliPath, 'validate', tmp, '--verbose'], { encoding: 'utf8' });
+  assert.ok(verbose.stdout.indexOf('已折叠') === -1, verbose.stdout);
+  assert.equal((verbose.stdout.match(/来源文档不存在/g) || []).length, 12);
+
+  const json = spawnSync(process.execPath, [cliPath, 'validate', tmp, '--json'], { encoding: 'utf8' });
+  const data = JSON.parse(json.stdout);
+  assert.equal(data.issues.filter((i) => String(i.message).indexOf('来源文档不存在') === 0).length, 12);
+});
