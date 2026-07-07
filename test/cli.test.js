@@ -186,3 +186,33 @@ acceptance: [a]
   const blockedReasonMatches = (result.stdout.match(/blocked_reason/g) || []).length;
   assert.ok(blockedReasonMatches >= 3, `Expected at least 3 blocked_reason warnings in output, got ${blockedReasonMatches}:\n${result.stdout}`);
 });
+
+test('ganttmd archive 未配置阈值时跳过，配置后 dry-run 列出、--apply 写入', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ganttmd-arch-cli-'));
+  fs.mkdirSync(path.join(tmp, '.ganttmd', 'tasks'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, '.ganttmd', 'config.yaml'), 'validation:\n  auto_archive_after_days: 3\n');
+  fs.writeFileSync(path.join(tmp, '.ganttmd', 'tasks', 'main.md'), `\`\`\`ganttmd-task
+id: A
+title: A
+status: done
+track: backend
+completed_date: 2020-01-01
+dependencies: []
+source_docs: [docs/x.md]
+evidence: [e]
+verification: v
+\`\`\`
+`);
+
+  const dry = spawnSync(process.execPath, [cliPath, 'archive', tmp], { encoding: 'utf8' });
+  assert.equal(dry.status, 0, dry.stderr);
+  assert.ok(dry.stdout.indexOf('dry-run') !== -1, dry.stdout);
+  // dry-run 不写文件
+  assert.ok(fs.readFileSync(path.join(tmp, '.ganttmd/tasks/main.md'), 'utf8').indexOf('archived_at') === -1);
+
+  const applied = spawnSync(process.execPath, [cliPath, 'archive', tmp, '--apply'], { encoding: 'utf8' });
+  assert.equal(applied.status, 0, applied.stderr);
+  assert.ok(fs.readFileSync(path.join(tmp, '.ganttmd/tasks/main.md'), 'utf8').indexOf('archived_at') !== -1);
+});

@@ -6,6 +6,7 @@ const { closeWatchers, startServer } = require('../src/server.js');
 const { initProject } = require('../src/project-init.js');
 const { doctorProject } = require('../src/doctor.js');
 const { planMigration, applyMigration } = require('../src/migrator.js');
+const { planArchive, applyArchive } = require('../src/archiver.js');
 const { planUpgrade, applyUpgrade } = require('../src/upgrader.js');
 const { exportStatic } = require('../src/static-export.js');
 const { planTemplateEject, applyTemplateEject } = require('../src/template-eject.js');
@@ -97,6 +98,7 @@ function printHelp() {
   ganttmd validate [path] [--json] [--verbose]
   ganttmd doctor [path] [--json]
   ganttmd migrate [path] [--apply] [--json]
+  ganttmd archive [path] [--apply] [--json]
   ganttmd upgrade [path] [--apply] [--json]
   ganttmd static [path] [--out .ganttmd-dist]
   ganttmd template eject [path] [--dry-run]
@@ -200,6 +202,41 @@ function runMigrate(args) {
   }
   if (shouldApply) {
     console.log(result.applied ? `已应用迁移，备份目录：${result.backupRoot}` : '无需迁移。');
+  }
+  return 0;
+}
+
+function printArchivePlan(plan) {
+  console.log(`GanttMD 归档计划：${plan.ganttRoot}`);
+  if (!plan.configured) {
+    console.log('未配置 validation.auto_archive_after_days，跳过自动归档。');
+    return;
+  }
+  if (plan.changes.length === 0) {
+    console.log('没有需要归档的任务。');
+    return;
+  }
+  for (const change of plan.changes) {
+    console.log(`- 归档 ${change.file}：${change.taskIds.join(', ')}`);
+  }
+}
+
+function runArchive(args) {
+  const options = parseRootAndFlags(args);
+  const shouldApply = args.includes('--apply');
+  const result = shouldApply ? applyArchive(options.root) : planArchive(options.root);
+
+  if (options.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return 0;
+  }
+
+  printArchivePlan(result);
+  if (!shouldApply && result.configured && result.changes.length > 0) {
+    console.log('这是 dry-run。确认后运行：ganttmd archive <path> --apply');
+  }
+  if (shouldApply && result.configured) {
+    console.log(result.applied ? `已归档，备份目录：${result.backupRoot}` : '没有需要归档的任务。');
   }
   return 0;
 }
@@ -468,6 +505,10 @@ async function main(argv) {
 
   if (command === 'migrate') {
     return runMigrate(args.slice(1));
+  }
+
+  if (command === 'archive') {
+    return runArchive(args.slice(1));
   }
 
   if (command === 'upgrade') {
