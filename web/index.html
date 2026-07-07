@@ -2135,27 +2135,6 @@ function getAgentHandoff(task) {
   return '状态信息不足。';
 }
 
-const AGENT_COMMAND_TEMPLATE_PLACEHOLDERS = [
-  '{{task.id}}',
-  '{{task.title}}',
-  '{{task.status}}',
-  '{{task.file}}',
-  '{{task.next_action}}',
-  '{{task.execution_scope}}',
-  '{{task.output_target}}',
-  '{{task.acceptance}}',
-  '{{task.downstream_constraints}}',
-  '{{task.verification_commands}}',
-  '{{task.source_docs}}',
-  '{{task.blocked_reason}}',
-  '{{task.open_dependencies}}',
-  '{{task.missing_dependencies}}',
-  '{{task.downstream}}',
-  '{{execution_setup}}',
-  '{{delivery_requirements}}',
-  '{{critical_path_note}}',
-];
-
 function formatNumberedList(items, fallback) {
   return items?.length ? items.map((item, index) => `${index + 1}. ${item}`).join('\n') : fallback;
 }
@@ -2170,6 +2149,8 @@ function renderAgentCommandTemplate(template, task, context) {
     'task.title': task.title || '',
     'task.status': task.status || '',
     'task.file': context.taskFile,
+    'task.purpose': task.purpose || '',
+    'task.user_visible_outcome': task.user_visible_outcome || '',
     'task.next_action': context.nextAction,
     'task.execution_scope': context.scope,
     'task.output_target': context.outputTarget,
@@ -2185,7 +2166,20 @@ function renderAgentCommandTemplate(template, task, context) {
     delivery_requirements: context.delivery,
     critical_path_note: context.criticalPathNote,
   };
-  return String(template).replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (_, key) => values[key] ?? '');
+  return String(template).replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (match, key) => {
+    if (key in values) return values[key] ?? '';
+    // 动态回退：{{task.X}} 取任务卡上真实存在的 X 字段，兼容各项目自定义的模板字段，无需在页面登记。
+    if (key.startsWith('task.')) {
+      const field = key.slice(5);
+      if (field && !field.includes('.') && Object.prototype.hasOwnProperty.call(task, field)) {
+        const v = task[field];
+        return Array.isArray(v) ? v.join('\n') : (v == null ? '' : String(v));
+      }
+    }
+    // 任务卡也没有的字段（多半是拼错）不静默变空：保留原样并告警，避免项目误以为字段生效。
+    console.warn(`agent_command 模板包含未知占位符：${match}（任务卡无此字段，未替换）`);
+    return match;
+  });
 }
 
 function getAgentCommandTemplateKey(task) {

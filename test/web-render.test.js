@@ -32,7 +32,7 @@ test('Agent 指令草案由任务字段生成可复制开工模板', () => {
   assert.ok(html.includes('agent_command_execution_setup'), '指令草案必须支持配置执行安排文案');
   assert.ok(html.includes('agent_command_delivery_requirements'), '指令草案必须支持配置交付要求文案');
   assert.ok(html.includes('renderAgentCommandTemplate'), '指令草案必须通过模板渲染函数展开任务字段');
-  assert.ok(html.includes('{{task.id}}'), '源码中必须保留项目模板占位符支持');
+  assert.ok(html.includes("'task.id'"), '源码中必须保留项目模板占位符支持');
   assert.ok(html.includes('task.blocked_reason'), '源码中必须保留阻塞模板占位符支持');
   assert.ok(html.includes('task.missing_dependencies'), '源码中必须保留缺失依赖模板占位符支持');
   assert.ok(!html.includes('bash scripts/new-task.sh'), '指令草案不得要求代理自行创建任务分支');

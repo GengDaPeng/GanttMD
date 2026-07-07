@@ -13,7 +13,8 @@ const EXPECTED_KEYS = ['todo', 'in_progress', 'review', 'done', 'cancelled', 'bl
 // web/index.html renderAgentCommandTemplate 的 values 表支持的占位符。
 // 内置模板只能用这些占位符，否则页面会渲染成空串。改这张表时必须同步页面。
 const SUPPORTED_PLACEHOLDERS = new Set([
-  'task.id', 'task.title', 'task.status', 'task.file', 'task.next_action',
+  'task.id', 'task.title', 'task.status', 'task.file',
+  'task.purpose', 'task.user_visible_outcome', 'task.next_action',
   'task.execution_scope', 'task.output_target', 'task.acceptance',
   'task.downstream_constraints', 'task.verification_commands', 'task.source_docs',
   'task.blocked_reason', 'task.open_dependencies', 'task.missing_dependencies',
@@ -83,6 +84,53 @@ test('页面 renderAgentCommandTemplate 的占位符表与守卫集合一致', (
       `页面 values 表缺少占位符：${placeholder}`
     );
   }
+});
+
+function loadRenderAgentCommandTemplate() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'web', 'index.html'), 'utf8');
+  const match = html.match(/function renderAgentCommandTemplate[\s\S]*?\n\}/);
+  assert.ok(match, '页面缺少 renderAgentCommandTemplate');
+  // 该函数是纯函数（不触碰 DOM / state），可直接求值验证渲染行为。
+  return eval(`(${match[0]})`);
+}
+
+test('renderAgentCommandTemplate 输出 purpose 与 user_visible_outcome，未知占位符保留原样', () => {
+  const render = loadRenderAgentCommandTemplate();
+  const task = { id: 'T1', purpose: '背景与目标正文', user_visible_outcome: '用户可感知结果' };
+  const context = {};
+  const warnings = [];
+  const origWarn = console.warn;
+  console.warn = (msg) => warnings.push(msg);
+  try {
+    const out = render(
+      '{{task.purpose}}|{{task.user_visible_outcome}}|{{task.bogus}}',
+      task,
+      context
+    );
+    assert.equal(out, '背景与目标正文|用户可感知结果|{{task.bogus}}');
+  } finally {
+    console.warn = origWarn;
+  }
+  assert.equal(warnings.length, 1, '未知占位符应触发一次告警');
+  assert.match(warnings[0], /task\.bogus/);
+});
+
+test('renderAgentCommandTemplate 动态回退到任务卡自定义字段，未知字段才告警', () => {
+  const render = loadRenderAgentCommandTemplate();
+  // 不同项目用不同字段名（background / risks），任务卡透传后应可直接渲染。
+  const task = { id: 'T1', background: '自定义背景', risks: ['r1', 'r2'] };
+  const context = {};
+  const warnings = [];
+  const origWarn = console.warn;
+  console.warn = (msg) => warnings.push(msg);
+  try {
+    const out = render('{{task.background}}|{{task.risks}}|{{task.nope}}', task, context);
+    assert.equal(out, '自定义背景|r1\nr2|{{task.nope}}');
+  } finally {
+    console.warn = origWarn;
+  }
+  assert.equal(warnings.length, 1, '仅任务卡不存在的字段应告警');
+  assert.match(warnings[0], /task\.nope/);
 });
 
 test('loadProject 在项目未自定义时注入全部内置模板', () => {

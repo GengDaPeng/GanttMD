@@ -622,13 +622,16 @@ ganttmd template eject [path] --dry-run  # 只看 config.yaml 写入计划，不
 支持的占位符：
 
 - `{{task.id}}`、`{{task.title}}`、`{{task.status}}`、`{{task.file}}`
+- `{{task.purpose}}`（任务背景与目标）、`{{task.user_visible_outcome}}`（用户可感知结果）
 - `{{task.next_action}}`、`{{task.execution_scope}}`、`{{task.output_target}}`
 - `{{task.acceptance}}`、`{{task.downstream_constraints}}`、`{{task.verification_commands}}`
 - `{{task.source_docs}}`
 - `{{task.blocked_reason}}`、`{{task.open_dependencies}}`、`{{task.missing_dependencies}}`、`{{task.downstream}}`
 - `{{execution_setup}}`、`{{delivery_requirements}}`、`{{critical_path_note}}`
 
-未识别的占位符会渲染为空字符串。
+除上面列出的占位符外，`{{task.<任意字段>}}` 会自动取任务卡上对应字段的值（字符串原样、数组按行拼接），因此各项目自定义的任务卡字段无需在页面登记即可用于模板。
+
+任务卡上也不存在的占位符（多半是拼错）不会静默变空：复制结果里保留原样（如 `{{task.foo}}`），并在浏览器控制台打印 warning，避免项目误以为字段已生效。
 
 ### 9.5 最低成功标准
 
