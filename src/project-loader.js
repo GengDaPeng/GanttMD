@@ -249,7 +249,7 @@ function parseChecklist(raw, sourceFile) {
 }
 
 function parseConfig(text) {
-  const config = { ganttmd: {}, project: {}, views: {}, milestones: [], agent_command: parseAgentCommandConfig(text) };
+  const config = { ganttmd: {}, project: {}, views: {}, validation: {}, milestones: [], agent_command: parseAgentCommandConfig(text) };
   let section = '';
   let currentMilestone = null;
 
@@ -263,7 +263,7 @@ function parseConfig(text) {
       continue;
     }
 
-    if (section === 'ganttmd' || section === 'project' || section === 'views') {
+    if (section === 'ganttmd' || section === 'project' || section === 'views' || section === 'validation') {
       const match = trimmed.match(/^([a-zA-Z_]+):\s*(.*)$/);
       if (match) {
         config[section][match[1]] = parseScalar(match[2]);
